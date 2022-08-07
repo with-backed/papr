@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {DebtSynth} from "./DebtSynth.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
+
+import {DebtSynth} from "./DebtSynth.sol";
 
 struct Collateral {
     address addr;
@@ -38,10 +39,12 @@ contract LendingStrategy {
     uint128 lastUpdated = uint128(block.number);
     DebtSynth debtSynth;
     ERC20 underlying;
+    address pool;
     mapping(bytes32 => uint256) public loanDebt;
 
     constructor(string memory name, string memory symbol) {
         debtSynth = new DebtSynth(name, symbol);
+        PoolAddress = 
     }
 
     function borrow(uint256 debt, Loan calldata loan, OracleInfo calldata oracleInfo, Sig calldata sig) external {
