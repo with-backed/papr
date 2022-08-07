@@ -2,6 +2,7 @@
 pragma solidity ^0.8.13;
 
 import {DebtSynth} from "./DebtSynth.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 
 struct Collateral {
     address addr;
@@ -15,14 +16,6 @@ struct Loan {
     // there is no oracle based liquidations
     uint256 oraclePrice;
 }
-
-// what if we could give people loans of custom duration with the same insturment? 
-// daily APR is the same no matter what? So if you want a three day loan, you can borrow X much? 
-// the question is just how much the borrowed relative to how much we have a tolerance for?
-// but how is the tolerance set? It is on origination on a per loan basis? So you
-// don't receive any benefit if the price goes up, but you're not hurt if it goes down
-// so we could just save the price, and know that we only ever lend at 50% of the price? 
-// so if you want a longer loan you get less? 
 
 enum OracleInfoPeriod { SevenDays, ThirtyDays, NinetyDays }
 
@@ -44,6 +37,7 @@ contract LendingStrategy {
     uint128 normalization = 1e18;
     uint128 lastUpdated = uint128(block.number);
     DebtSynth debtSynth;
+    ERC20 underlying;
     mapping(bytes32 => uint256) public loanDebt;
 
     constructor(string memory name, string memory symbol) {
@@ -130,5 +124,12 @@ contract LendingStrategy {
 
     function loanKey(Loan calldata loan) public pure returns (bytes32) {
         keccak256(abi.encode(loan));
+    }
+
+    function _oraclePeriod(uint32 _period) internal view returns (uint32) {
+        uint32 maxPeriodPool1 = IOracle(oracle).getMaxPeriod(ethQuoteCurrencyPool);
+
+        uint32 maxSafePeriod = maxPeriodPool1 > maxPeriodPool2 ? maxPeriodPool2 : maxPeriodPool1;
+        return _period > maxSafePeriod ? maxSafePeriod : _period;
     }
 }
