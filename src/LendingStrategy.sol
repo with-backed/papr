@@ -2,6 +2,7 @@
 pragma solidity ^0.8.13;
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
+import {IUniswapV3Factory} from "v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 
 import {DebtSynth} from "./DebtSynth.sol";
 
@@ -32,9 +33,11 @@ struct Sig {
 }
 
 contract LendingStrategy {
+    uint256 constant START = block.timestamp;
     uint256 constant ONE = 1e18;
-    uint256 constant maxLTV = ONE * 5 / 100;
-    uint256 constant perBlockFeeGrowth = ONE / 1e7; // 0.00001%
+    uint256 constant maxLTV = ONE * 5 / 10; // 50%
+    uint256 constant PERIOD = 1 weeks;
+    uint256 targetGrowthPerPeriod = ONE / 100; // 1%
     uint128 normalization = 1e18;
     uint128 lastUpdated = uint128(block.number);
     DebtSynth debtSynth;
@@ -43,8 +46,13 @@ contract LendingStrategy {
     mapping(bytes32 => uint256) public loanDebt;
 
     constructor(string memory name, string memory symbol) {
+        IUniswapV3Factory factory = IUniswapV3Factory(address(0x1F98431c8aD98523631AE4a59f267346ea31F984));
         debtSynth = new DebtSynth(name, symbol);
-        PoolAddress = 
+        pool = factory.createPool(
+            address(underlying),
+            address(debtSynth),
+            10000
+        );
     }
 
     function borrow(uint256 debt, Loan calldata loan, OracleInfo calldata oracleInfo, Sig calldata sig) external {
@@ -96,12 +104,18 @@ contract LendingStrategy {
     }
 
     function newNorm() public view returns (uint256 newNorm) {
-        uint256 passed = block.number - uint256(lastUpdated);
+        uint32 period = uint32(block.timestamp - lastUpdated);
 
-        if (passed == 0) return normalization;
+        uint256 targetGrowth = targetGrowthPerPeriod * period / PERIOD;
+        uint256 index = ((block.timestamp - START) / period) * targetGrowthPerPeriod;
 
-        uint256 cur = normalization;
-        uint256 newNorm = cur + (normalization * passed * perBlockFeeGrowth);
+        uint32 periodForOracle = _getConsistentPeriodForOracle(period);
+        // uint256 mark = // get uniswap TWAP
+
+        return previousExchangeRate
+        * (ONE + targetGrowth)
+        * (index / mark) // slows growth if mark is too high, increases growth if mark is too low
+        / ONE; 
     }
 
     function synthPriceInUnderlying() external view returns (uint256) {
@@ -129,10 +143,9 @@ contract LendingStrategy {
         keccak256(abi.encode(loan));
     }
 
-    function _oraclePeriod(uint32 _period) internal view returns (uint32) {
-        uint32 maxPeriodPool1 = IOracle(oracle).getMaxPeriod(ethQuoteCurrencyPool);
+    function _getConsistentPeriodForOracle(uint32 _period) internal view returns (uint32) {
+        uint32 maxSafePeriod = IOracle(oracle).getMaxPeriod(pool);
 
-        uint32 maxSafePeriod = maxPeriodPool1 > maxPeriodPool2 ? maxPeriodPool2 : maxPeriodPool1;
         return _period > maxSafePeriod ? maxSafePeriod : _period;
     }
 }
