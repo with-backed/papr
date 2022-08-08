@@ -3,11 +3,11 @@
 pragma solidity >=0.5.0;
 
 //interface
-import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import {IUniswapV3Pool} from "v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
 //lib
-import "@uniswap/v3-core/contracts/libraries/FullMath.sol";
-import "@uniswap/v3-core/contracts/libraries/TickMath.sol";
+import {FullMath} from "fullrange/libraries/FullMath.sol";
+import {TickMath} from "fullrange/libraries/TickMath.sol";
 
 /// @title oracle library
 /// @notice provides functions to integrate with uniswap v3 oracle
@@ -23,7 +23,11 @@ library OracleLibrary {
         address pool,
         uint32 _secondsAgoToStartOfTwap,
         uint32 _secondsAgoToEndOfTwap
-    ) internal view returns (int24) {
+    )
+        internal
+        view
+        returns (int24)
+    {
         require(_secondsAgoToStartOfTwap > _secondsAgoToEndOfTwap, "BP");
         int24 timeWeightedAverageTick;
         uint32[] memory secondAgos = new uint32[](2);
@@ -34,13 +38,22 @@ library OracleLibrary {
         secondAgos[0] = _secondsAgoToStartOfTwap;
         secondAgos[1] = _secondsAgoToEndOfTwap;
 
-        (int56[] memory tickCumulatives, ) = IUniswapV3Pool(pool).observe(secondAgos);
+        (int56[] memory tickCumulatives,) =
+            IUniswapV3Pool(pool).observe(secondAgos);
         int56 tickCumulativesDelta = tickCumulatives[1] - tickCumulatives[0];
 
-        timeWeightedAverageTick = int24(tickCumulativesDelta / (twapDuration));
+        int56 int56TwapDuration = int56(uint56(twapDuration));
+
+        timeWeightedAverageTick =
+            int24(tickCumulativesDelta / (int56TwapDuration));
 
         // Always round to negative infinity
-        if (tickCumulativesDelta < 0 && (tickCumulativesDelta % (twapDuration) != 0)) timeWeightedAverageTick--;
+        if (
+            tickCumulativesDelta < 0
+                && (tickCumulativesDelta % (int56TwapDuration) != 0)
+        ) {
+            timeWeightedAverageTick--;
+        }
 
         return timeWeightedAverageTick;
     }
@@ -56,18 +69,25 @@ library OracleLibrary {
         uint128 baseAmount,
         address baseToken,
         address quoteToken
-    ) internal pure returns (uint256 quoteAmount) {
+    )
+        internal
+        pure
+        returns (uint256 quoteAmount)
+    {
         uint160 sqrtRatioX96 = TickMath.getSqrtRatioAtTick(tick);
 
         // Calculate quoteAmount with better precision if it doesn't overflow when multiplied by itself
         if (sqrtRatioX96 <= type(uint128).max) {
             uint256 ratioX192 = uint256(sqrtRatioX96) * sqrtRatioX96;
-            quoteAmount = baseToken < quoteToken
+            quoteAmount =
+                baseToken < quoteToken
                 ? FullMath.mulDiv(ratioX192, baseAmount, 1 << 192)
                 : FullMath.mulDiv(1 << 192, baseAmount, ratioX192);
         } else {
-            uint256 ratioX128 = FullMath.mulDiv(sqrtRatioX96, sqrtRatioX96, 1 << 64);
-            quoteAmount = baseToken < quoteToken
+            uint256 ratioX128 =
+                FullMath.mulDiv(sqrtRatioX96, sqrtRatioX96, 1 << 64);
+            quoteAmount =
+                baseToken < quoteToken
                 ? FullMath.mulDiv(ratioX128, baseAmount, 1 << 128)
                 : FullMath.mulDiv(1 << 128, baseAmount, ratioX128);
         }
