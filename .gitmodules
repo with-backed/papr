@@ -13,3 +13,6 @@
 [submodule "lib/fullrange"]
 	path = lib/fullrange
 	url = https://github.com/0xTomoyo/fullrange
+[submodule "lib/openzeppelin-contracts"]
+	path = lib/openzeppelin-contracts
+	url = https://github.com/openzeppelin/openzeppelin-contracts
