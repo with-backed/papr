@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {ERC721} from "solmate/tokens/ERC721.sol";
 import {TickMath} from "fullrange/libraries/TickMath.sol";
-import {INonfungiblePositionManager} from "v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol";
+// import {INonfungiblePositionManager} from "v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol";
 
 import {Oracle} from "src/squeeth/Oracle.sol";
 import {LendingStrategy} from "src/LendingStrategy.sol";
@@ -18,6 +18,40 @@ contract TestERC721 is ERC721("TEST", "TEST") {
     function tokenURI(uint256 id) public view override returns (string memory) {
 
     }
+}
+
+interface INonfungiblePositionManager {
+    struct MintParams {
+        address token0;
+        address token1;
+        uint24 fee;
+        int24 tickLower;
+        int24 tickUpper;
+        uint256 amount0Desired;
+        uint256 amount1Desired;
+        uint256 amount0Min;
+        uint256 amount1Min;
+        address recipient;
+        uint256 deadline;
+    }
+
+    /// @notice Creates a new position wrapped in a NFT
+    /// @dev Call this when the pool does exist and is initialized. Note that if the pool is created but not initialized
+    /// a method does not exist, i.e. the pool is assumed to be initialized.
+    /// @param params The params necessary to mint a position, encoded as `MintParams` in calldata
+    /// @return tokenId The ID of the token that represents the minted position
+    /// @return liquidity The amount of liquidity for this position
+    /// @return amount0 The amount of token0
+    /// @return amount1 The amount of token1
+    function mint(MintParams calldata params)
+        external
+        payable
+        returns (
+            uint256 tokenId,
+            uint128 liquidity,
+            uint256 amount0,
+            uint256 amount1
+        );
 }
 
 contract LendingStrategyTest is Test {
@@ -51,26 +85,31 @@ contract LendingStrategyTest is Test {
         vm.prank(lender);
         weth.approve(address(positionManager), 1e18);
 
+        vm.warp(10);
+
         INonfungiblePositionManager.MintParams memory mintParams = INonfungiblePositionManager.MintParams(
             strategy.pool().token0(),
             strategy.pool().token1(),
             10000,
-            TickMath.MIN_TICK(),
-            TickMath.MAX_TICK(),
+            TickMath.MIN_TICK + 1,
+            TickMath.MAX_TICK - 1,
             token0Amount,
             token1Amount,
-            token0Amount, 
-            token1Amount,
+            0, 
+            0,
             lender,
-            block.timestamp
+            block.timestamp + 1
         );
 
+        strategy.pool().initialize(
+            uint160(((10 ** ERC20(token1).decimals()) << 96) / (10 ** ERC20(token0).decimals())
+         / 2));
         positionManager.mint(mintParams);
     }
 
     function testExample() public {
         uint256 p = oracle.getTwap(
-            strategy.pool(), address(strategy.debtSynth()), address(weth), 1, false
+            address(strategy.pool()), address(strategy.debtSynth()), address(weth), 1, false
         );
         emit log_uint(p);
     }

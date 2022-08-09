@@ -5,6 +5,8 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 import {ERC721} from "solmate/tokens/ERC721.sol";
 import {IUniswapV3Factory} from
     "v3-core/contracts/interfaces/IUniswapV3Factory.sol";
+import {IUniswapV3Pool} from
+    "v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
 import {DebtSynth} from "./DebtSynth.sol";
 import {IOracle} from "src/squeeth/IOracle.sol";
@@ -51,7 +53,7 @@ contract LendingStrategy {
     ERC20 public underlying;
     ERC721 public collateral;
     IOracle oracle;
-    address public pool;
+    IUniswapV3Pool public pool;
     mapping(bytes32 => uint256) public loanDebt;
 
     constructor(
@@ -65,7 +67,7 @@ contract LendingStrategy {
             IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
         debtSynth = new DebtSynth(name, symbol);
         pool =
-            factory.createPool(address(underlying), address(debtSynth), 10000);
+            IUniswapV3Pool(factory.createPool(address(underlying), address(debtSynth), 10000));
         oracle = _oracle;
         start = block.timestamp;
     }
@@ -136,7 +138,7 @@ contract LendingStrategy {
 
         uint32 periodForOracle = _getConsistentPeriodForOracle(period);
         uint256 mark = oracle.getTwap(
-            pool, address(debtSynth), address(underlying), periodForOracle, false
+            address(pool), address(debtSynth), address(underlying), periodForOracle, false
         );
 
         return previousExchangeRate * (ONE + targetGrowth) * (index / mark)
@@ -178,7 +180,7 @@ contract LendingStrategy {
         view
         returns (uint32)
     {
-        uint32 maxSafePeriod = IOracle(oracle).getMaxPeriod(pool);
+        uint32 maxSafePeriod = IOracle(oracle).getMaxPeriod(address(pool));
 
         return _period > maxSafePeriod ? maxSafePeriod : _period;
     }
