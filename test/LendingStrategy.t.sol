@@ -116,7 +116,9 @@ contract LendingStrategyTest is Test {
         uint256 p = oracle.getTwap(
             address(strategy.pool()), address(strategy.debtSynth()), address(weth), uint32(1), false
         );
-        emit log_uint(strategy.mark(1));
-        emit log_uint(strategy.newNorm());
+        emit log_named_uint('contract thinks each debt token should be worth', strategy.index());
+        emit log_named_uint('but debt token is actually worth', strategy.mark(1));
+        emit log_named_uint('so contract multiplies normal interest by', strategy.targetMultiplier());
+        emit log_named_uint('and so, for the contract, each debt token is now worth', strategy.newNorm());
     }
 }
