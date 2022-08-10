@@ -5,7 +5,6 @@ import "forge-std/Test.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {ERC721} from "solmate/tokens/ERC721.sol";
 import {TickMath} from "fullrange/libraries/TickMath.sol";
-// import {INonfungiblePositionManager} from "v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol";
 
 import {Oracle} from "src/squeeth/Oracle.sol";
 import {LendingStrategy} from "src/LendingStrategy.sol";
@@ -87,12 +86,18 @@ contract LendingStrategyTest is Test {
 
         vm.warp(10);
 
+        uint160 oneToOnePrice = uint160(((10 ** ERC20(token1).decimals()) << 96) / (10 ** ERC20(token0).decimals()) / 2);
+
         INonfungiblePositionManager.MintParams memory mintParams = INonfungiblePositionManager.MintParams(
             strategy.pool().token0(),
             strategy.pool().token1(),
             10000,
-            TickMath.MIN_TICK + 1,
-            TickMath.MAX_TICK - 1,
+            TickMath.getTickAtSqrtRatio(
+                oneToOnePrice
+            ),
+            TickMath.getTickAtSqrtRatio(
+                oneToOnePrice
+            ),
             token0Amount,
             token1Amount,
             0, 
@@ -101,16 +106,14 @@ contract LendingStrategyTest is Test {
             block.timestamp + 1
         );
 
-        strategy.pool().initialize(
-            uint160(((10 ** ERC20(token1).decimals()) << 96) / (10 ** ERC20(token0).decimals())
-         / 2));
+        strategy.pool().initialize(TickMath.getSqrtRatioAtTick(TickMath.MAX_TICK - 1));
         positionManager.mint(mintParams);
     }
 
     function testExample() public {
-        uint256 p = oracle.getTwap(
-            address(strategy.pool()), address(strategy.debtSynth()), address(weth), 1, false
-        );
-        emit log_uint(p);
+        // uint256 p = oracle.getTwap(
+        //     address(strategy.pool()), address(strategy.debtSynth()), address(weth), 1, false
+        // );
+        // emit log_uint(p);
     }
 }

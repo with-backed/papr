@@ -141,9 +141,7 @@ contract LendingStrategy {
             address(pool), address(debtSynth), address(underlying), periodForOracle, false
         );
 
-        return previousExchangeRate * (ONE + targetGrowth) * (index / mark)
-            / // slows growth if mark is too high, increases growth if mark is too low
-            ONE;
+        return previousExchangeRate * (ONE + targetGrowth) * (index / mark) / ONE;// slows growth if mark is too high, increases growth if mark is too low
     }
 
     function synthPriceInUnderlying() external view returns (uint256) {
