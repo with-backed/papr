@@ -3,6 +3,7 @@ pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
+import {WETH} from "solmate/tokens/WETH.sol";
 import {ERC721} from "solmate/tokens/ERC721.sol";
 import {TickMath} from "fullrange/libraries/TickMath.sol";
 
@@ -53,18 +54,19 @@ interface INonfungiblePositionManager {
         );
 }
 
+
 contract LendingStrategyTest is Test {
     TestERC721 nft = new TestERC721();
-    ERC20 weth = ERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+    WETH weth = WETH(payable(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2));
     Oracle oracle = new Oracle();
-    LendingStrategy strategy =
-        new LendingStrategy("PUNKs Loans", "PL", weth, oracle);
+    LendingStrategy strategy;
     INonfungiblePositionManager positionManager = INonfungiblePositionManager(0xC36442b4a4522E871399CD717aBDD847Ab11FE88);
     address borrower = address(1);
     address lender = address(2);
 
     function setUp() public {
-        vm.deal(lender, 1e30);
+        vm.warp(1);
+        strategy = new LendingStrategy("PUNKs Loans", "PL", weth, oracle);
         nft.mint(borrower, 1);
         vm.prank(borrower);
         nft.approve(address(strategy), 1);
@@ -81,8 +83,11 @@ contract LendingStrategyTest is Test {
             token1Amount = 1e18;
         }
 
-        vm.prank(lender);
+        vm.startPrank(lender);
         weth.approve(address(positionManager), 1e18);
+        vm.deal(lender, 1e30);
+        weth.deposit{value: 1e30}();
+        // weth.approve(address(strategy.pool()), 1e18);
 
         vm.warp(10);
 
@@ -92,12 +97,8 @@ contract LendingStrategyTest is Test {
             strategy.pool().token0(),
             strategy.pool().token1(),
             10000,
-            TickMath.getTickAtSqrtRatio(
-                oneToOnePrice
-            ),
-            TickMath.getTickAtSqrtRatio(
-                oneToOnePrice
-            ),
+            0,
+            200,
             token0Amount,
             token1Amount,
             0, 
@@ -106,14 +107,16 @@ contract LendingStrategyTest is Test {
             block.timestamp + 1
         );
 
-        strategy.pool().initialize(TickMath.getSqrtRatioAtTick(TickMath.MAX_TICK - 1));
+        strategy.pool().initialize(TickMath.getSqrtRatioAtTick(0));
         positionManager.mint(mintParams);
     }
 
     function testExample() public {
-        // uint256 p = oracle.getTwap(
-        //     address(strategy.pool()), address(strategy.debtSynth()), address(weth), 1, false
-        // );
-        // emit log_uint(p);
+        vm.warp(1 weeks);
+        uint256 p = oracle.getTwap(
+            address(strategy.pool()), address(strategy.debtSynth()), address(weth), uint32(1), false
+        );
+        emit log_uint(strategy.mark(1));
+        emit log_uint(strategy.newNorm());
     }
 }

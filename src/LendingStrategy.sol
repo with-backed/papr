@@ -46,9 +46,9 @@ contract LendingStrategy {
     uint256 constant ONE = 1e18;
     uint256 constant maxLTV = ONE * 5 / 10; // 50%
     uint256 constant PERIOD = 1 weeks;
-    uint256 targetGrowthPerPeriod = ONE / 100; // 1%
-    uint128 normalization = 1e18;
-    uint128 lastUpdated = uint128(block.number);
+    uint256 public targetGrowthPerPeriod = ONE / 100; // 1%
+    uint128 public normalization = 1e18;
+    uint128 public lastUpdated = uint128(block.timestamp);
     DebtSynth public debtSynth;
     ERC20 public underlying;
     ERC721 public collateral;
@@ -70,6 +70,7 @@ contract LendingStrategy {
             IUniswapV3Pool(factory.createPool(address(underlying), address(debtSynth), 10000));
         oracle = _oracle;
         start = block.timestamp;
+        lastUpdated = uint128(block.timestamp);
     }
 
     function borrow(
@@ -124,32 +125,52 @@ contract LendingStrategy {
     }
 
     function updateNormalization() public returns (uint256) {
-        lastUpdated = uint128(block.number);
+        lastUpdated = uint128(block.timestamp);
         normalization = uint128(newNorm());
     }
 
     function newNorm() public view returns (uint256 newNorm) {
+        // exchange rate: <uints of debt token> * exchangeRate = units of underlying
         uint256 previousExchangeRate = normalization;
         uint32 period = uint32(block.timestamp - lastUpdated);
-
         uint256 targetGrowth = targetGrowthPerPeriod * period / PERIOD;
-        uint256 index =
-            ((block.timestamp - start) / period) * targetGrowthPerPeriod;
 
+        return previousExchangeRate 
+        * (((ONE + targetGrowth) *  targetMultiplier()) / ONE) 
+        / ONE;
+    }
+
+    // what each Debt Token is worth in underlying
+    function index() public view returns (uint256) {
+        // should we only be looking at the most recent period? 
+        return ((block.timestamp - start) * ONE / PERIOD) * targetGrowthPerPeriod / ONE + ONE;
+    }
+
+    // price of debt token, quoted in underlying units
+    // i.e. greater than (1 ** underlying.decimals()) when 1 mark is worth more than 1 underlying
+    function mark(uint32 period) public view returns (uint256){
+        // period stuff is kinda weird? Don't we just always want the longest period?
         uint32 periodForOracle = _getConsistentPeriodForOracle(period);
-        uint256 mark = oracle.getTwap(
+        return oracle.getTwap(
             address(pool), address(debtSynth), address(underlying), periodForOracle, false
         );
-
-        return previousExchangeRate * (ONE + targetGrowth) * (index / mark) / ONE;// slows growth if mark is too high, increases growth if mark is too low
     }
 
-    function synthPriceInUnderlying() external view returns (uint256) {
-        return normalization / ONE;
+    // ratio of index to mark, if > 1e18 means mark is too low
+    // if < 1e18 means mark is too high
+    function targetMultiplier() public view returns (uint256 indexMarkRatio) {
+        indexMarkRatio = index() * ONE / mark(uint32(block.timestamp - lastUpdated));
+        if (indexMarkRatio > 5e18) {
+            // cap growth at 5x target
+            indexMarkRatio = 5e18;
+        } else if (indexMarkRatio < 2e17) {
+            // floor growth at 1/5 target
+            indexMarkRatio = 2e17;
+        }
     }
 
-    // returns price in terms of underlying:debtSynth
-    // i.e. when debt synth reaches this price in underlying terms
+    // returns price in terms of underlying:debt token
+    // i.e. when debt token reaches this price in underlying terms
     // the loan will be liquidatable
     function liquidationPrice(Loan calldata loan)
         public
