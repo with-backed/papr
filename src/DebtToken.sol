@@ -3,13 +3,15 @@ pragma solidity ^0.8.13;
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
 
-contract DebtSynth is ERC20 {
+import {CreatorGuarded} from "./CreatorGuarded.sol";
+
+contract DebtToken is ERC20 {
     address creator;
 
     constructor(string memory strategy, string memory symbol)
         ERC20(
-            string.concat(strategy, "debt synth"),
-            string.concat("ds", symbol),
+            string.concat(strategy, "debt token"),
+            string.concat("dt", symbol),
             18
         )
     {

@@ -8,20 +8,18 @@ import {IUniswapV3Factory} from
 import {IUniswapV3Pool} from
     "v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
-import {DebtSynth} from "./DebtSynth.sol";
+import {DebtToken} from "./DebtToken.sol";
+import {DebtVault} from "./DebtVault.sol";
 import {IOracle} from "src/squeeth/IOracle.sol";
 
 struct Collateral {
-    address addr;
-    uint256 amountOrId;
+    ERC721 nft;
+    uint256 id;
 }
 
-struct Loan {
-    uint256 nonce;
-    Collateral collateral;
-    // the oracle price is frozen when loan is created
-    // there is no oracle based liquidations
-    uint256 oraclePrice;
+struct VaultInfo {
+    uint128 debt;
+    uint128 price;
 }
 
 enum OracleInfoPeriod {
@@ -31,7 +29,7 @@ enum OracleInfoPeriod {
 }
 
 struct OracleInfo {
-    uint256 price;
+    uint128 price;
     OracleInfoPeriod period;
 }
 
@@ -46,15 +44,16 @@ contract LendingStrategy {
     uint256 constant ONE = 1e18;
     uint256 constant maxLTV = ONE * 5 / 10; // 50%
     uint256 constant PERIOD = 1 weeks;
-    uint256 public targetGrowthPerPeriod = ONE / 100; // 1%
+    uint256 public targetGrowthPerPeriod = ONE / 1000; // .1%
     uint128 public normalization = 1e18;
     uint128 public lastUpdated = uint128(block.timestamp);
-    DebtSynth public debtSynth;
+    DebtToken public debtToken;
+    DebtVault public debtVault;
     ERC20 public underlying;
     ERC721 public collateral;
     IOracle oracle;
     IUniswapV3Pool public pool;
-    mapping(bytes32 => uint256) public loanDebt;
+    mapping(bytes32 => VaultInfo) public vaultInfo;
 
     constructor(
         string memory name,
@@ -65,18 +64,19 @@ contract LendingStrategy {
         underlying = _underlying;
         IUniswapV3Factory factory =
             IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
-        debtSynth = new DebtSynth(name, symbol);
+        debtToken = new DebtToken(name, symbol);
+        debtVault = new DebtVault(name, symbol);
         pool =
-            IUniswapV3Pool(factory.createPool(address(underlying), address(debtSynth), 10000));
+            IUniswapV3Pool(factory.createPool(address(underlying), address(debtToken), 10000));
         oracle = _oracle;
         start = block.timestamp;
         lastUpdated = uint128(block.timestamp);
     }
 
-    function borrow(
-        uint256 tokenId,
-        uint256 debt,
-        Loan calldata loan,
+    function openVault(
+        address mintTo,
+        uint128 debt,
+        Collateral calldata collateral,
         OracleInfo calldata oracleInfo,
         Sig calldata sig
     )
@@ -84,13 +84,13 @@ contract LendingStrategy {
     {
         updateNormalization();
 
-        bytes32 k = loanKey(loan);
+        bytes32 k = vaultKey(collateral);
 
-        if (loanDebt[k] != 0) {
+        if (vaultInfo[k].price != 0) {
             revert("exists");
         }
 
-        if (debt == 0) {
+        if (debt == 0 || oracleInfo.price == 0) {
             revert("zero");
         }
 
@@ -98,45 +98,63 @@ contract LendingStrategy {
             revert("too much debt");
         }
 
-        if (loan.oraclePrice != oracleInfo.price) {
-            revert("mismatch");
+        vaultInfo[k].debt = debt;
+        vaultInfo[k].price = oracleInfo.price;
+        
+        debtToken.mint(mintTo, debt);
+        debtVault.mint(mintTo, uint256(k));
+
+        if (collateral.nft.ownerOf(collateral.id) != address(this)) {
+            revert('not owner');
+        }
+    }
+
+    function increaseDebt(bytes32 vaultKey, uint128 amount) external {
+        if (msg.sender != debtVault.ownerOf(uint256(vaultKey))) {
+            revert('only owner');
         }
 
-        /// check hash(oracleInfo) matches sig recovery
-        /// post collateral
 
-        collateral.transferFrom(msg.sender, address(this), tokenId);
+        vaultInfo[vaultKey].debt += amount;
+        debtToken.mint(msg.sender, amount);
 
-        loanDebt[k] = debt;
-        debtSynth.mint(msg.sender, debt);
+        if (vaultInfo[vaultKey].debt > maxDebt(vaultInfo[vaultKey].price)) {
+            revert('too much debt');
+        }
     }
 
-    function payDebt(bytes32 loanKey, uint256 amount) external {
-        loanDebt[loanKey] -= amount;
-        debtSynth.burn(msg.sender, amount);
+    function reduceDebt(bytes32 vaultKey, uint128 amount) external {
+        vaultInfo[vaultKey].debt -= amount;
+        debtToken.burn(msg.sender, amount);
     }
 
-    function liquidate(Loan calldata loan) external {
+    function liquidate(bytes32 vaultKey) external {
         updateNormalization();
 
-        if (normalization < liquidationPrice(loan) * ONE) {
+        if (normalization < liquidationPrice(vaultKey) * ONE) {
             revert("not liquidatable");
         }
     }
 
-    function updateNormalization() public returns (uint256) {
-        lastUpdated = uint128(block.timestamp);
+    function updateNormalization() public {
+        if (lastUpdated == block.timestamp) {
+            return;
+        }
         normalization = uint128(newNorm());
+        lastUpdated = uint128(block.timestamp);
     }
 
     function newNorm() public view returns (uint256 newNorm) {
+        if (lastUpdated == block.timestamp) {
+            return normalization;
+        }
         // exchange rate: <uints of debt token> * exchangeRate = units of underlying
         uint256 previousExchangeRate = normalization;
         uint32 period = uint32(block.timestamp - lastUpdated);
         uint256 targetGrowth = targetGrowthPerPeriod * period / PERIOD;
 
         return previousExchangeRate 
-        * (((ONE + targetGrowth) *  targetMultiplier()) / ONE) 
+        * (((ONE + targetGrowth) *  targetMultiplier()) / ONE) // TODO I think we might want targetMultiplier to be period adjusted? e.g. don't multiply by a lot if it's only been a few seconds?
         / ONE;
     }
 
@@ -152,14 +170,15 @@ contract LendingStrategy {
         // period stuff is kinda weird? Don't we just always want the longest period?
         uint32 periodForOracle = _getConsistentPeriodForOracle(period);
         return oracle.getTwap(
-            address(pool), address(debtSynth), address(underlying), periodForOracle, false
+            address(pool), address(debtToken), address(underlying), periodForOracle, false
         );
     }
 
     // ratio of index to mark, if > 1e18 means mark is too low
     // if < 1e18 means mark is too high
     function targetMultiplier() public view returns (uint256 indexMarkRatio) {
-        indexMarkRatio = index() * ONE / mark(uint32(block.timestamp - lastUpdated));
+        /// TODO: mark 1 is a temp fix, do we always want that?
+        indexMarkRatio = index() * ONE / mark(1);
         if (indexMarkRatio > 5e18) {
             // cap growth at 5x target
             indexMarkRatio = 5e18;
@@ -172,26 +191,25 @@ contract LendingStrategy {
     // returns price in terms of underlying:debt token
     // i.e. when debt token reaches this price in underlying terms
     // the loan will be liquidatable
-    function liquidationPrice(Loan calldata loan)
+    function liquidationPrice(bytes32 key)
         public
         view
         returns (uint256)
     {
-        bytes32 k = loanKey(loan);
 
-        uint256 maxLoanUnderlying = loan.oraclePrice * maxLTV / ONE;
-        return maxLoanUnderlying / loanDebt[k];
+        uint256 maxLoanUnderlying = vaultInfo[key].price * maxLTV / ONE;
+        return maxLoanUnderlying / vaultInfo[key].debt;
     }
 
     /// @notice given a supposed asset price (would have to be passed on oracle message to be realized)
     /// returns how much synthDebt could be minted
     function maxDebt(uint256 price) public returns (uint256) {
-        uint256 maxLoanUnderlying = price * maxLTV / ONE;
+        uint256 maxLoanUnderlying = price * maxLTV;
         return maxLoanUnderlying / normalization;
     }
 
-    function loanKey(Loan calldata loan) public pure returns (bytes32) {
-        keccak256(abi.encode(loan));
+    function vaultKey(Collateral calldata collateral) public pure returns (bytes32) {
+        keccak256(abi.encode(collateral));
     }
 
     function _getConsistentPeriodForOracle(uint32 _period)
