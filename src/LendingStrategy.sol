@@ -7,6 +7,7 @@ import {IUniswapV3Factory} from
     "v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import {IUniswapV3Pool} from
     "v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import {TickMath} from "fullrange/libraries/TickMath.sol";
 
 import {DebtToken} from "./DebtToken.sol";
 import {DebtVault} from "./DebtVault.sol";
@@ -55,6 +56,13 @@ contract LendingStrategy {
     IUniswapV3Pool public pool;
     mapping(bytes32 => VaultInfo) public vaultInfo;
 
+    modifier onlyVaultOwner(bytes32 vaultKey) {
+        if (msg.sender != debtVault.ownerOf(uint256(vaultKey))) {
+            revert('only owner');
+        }
+        _;
+    }
+
     constructor(
         string memory name,
         string memory symbol,
@@ -68,6 +76,7 @@ contract LendingStrategy {
         debtVault = new DebtVault(name, symbol);
         pool =
             IUniswapV3Pool(factory.createPool(address(underlying), address(debtToken), 10000));
+        pool.initialize(TickMath.getSqrtRatioAtTick(0));
         oracle = _oracle;
         start = block.timestamp;
         lastUpdated = uint128(block.timestamp);
@@ -109,12 +118,7 @@ contract LendingStrategy {
         }
     }
 
-    function increaseDebt(bytes32 vaultKey, uint128 amount) external {
-        if (msg.sender != debtVault.ownerOf(uint256(vaultKey))) {
-            revert('only owner');
-        }
-
-
+    function increaseDebt(bytes32 vaultKey, uint128 amount) external onlyVaultOwner(vaultKey) {
         vaultInfo[vaultKey].debt += amount;
         debtToken.mint(msg.sender, amount);
 
@@ -128,12 +132,31 @@ contract LendingStrategy {
         debtToken.burn(msg.sender, amount);
     }
 
+    function closeVault(Collateral calldata collateral) external {
+        bytes32 key = vaultKey(collateral);
+
+        if (msg.sender != debtVault.ownerOf(uint256(key))) {
+            revert('only owner');
+        }
+
+        if (vaultInfo[key].debt != 0) {
+            revert('still has debt');
+        }
+
+        debtVault.burn(uint256(key));
+        delete vaultInfo[key];
+
+        collateral.nft.transferFrom(address(this), msg.sender, collateral.id);
+    }
+
     function liquidate(bytes32 vaultKey) external {
         updateNormalization();
 
         if (normalization < liquidationPrice(vaultKey) * ONE) {
             revert("not liquidatable");
         }
+
+        // TODO
     }
 
     function updateNormalization() public {

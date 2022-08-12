@@ -11,6 +11,7 @@ import {ISwapRouter} from 'v3-periphery/interfaces/ISwapRouter.sol';
 
 import {Oracle} from "src/squeeth/Oracle.sol";
 import {LendingStrategy, Collateral, VaultInfo, Sig, OracleInfo, OracleInfoPeriod} from "src/LendingStrategy.sol";
+import {StrategyFactory} from "src/StrategyFactory.sol";
 
 contract TestERC721 is ERC721("TEST", "TEST") {
     function mint(address to, uint256 id) external {
@@ -58,6 +59,7 @@ interface INonfungiblePositionManager {
 
 
 contract LendingStrategyTest is Test {
+    StrategyFactory factory;
     TestERC721 nft = new TestERC721();
     WETH weth = WETH(payable(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2));
     Oracle oracle = new Oracle();
@@ -71,7 +73,8 @@ contract LendingStrategyTest is Test {
 
     function setUp() public {
         vm.warp(1);
-        strategy = new LendingStrategy("PUNKs Loans", "PL", weth, oracle);
+        factory = new StrategyFactory();
+        strategy = factory.newStrategy("PUNKs Loans", "PL", weth);
         nft.mint(borrower, 1);
         vm.prank(borrower);
         nft.approve(address(strategy), 1);
@@ -92,18 +95,15 @@ contract LendingStrategyTest is Test {
         weth.approve(address(positionManager), 1e18);
         vm.deal(lender, 1e30);
         weth.deposit{value: 1e30}();
-        // weth.approve(address(strategy.pool()), 1e18);
 
         vm.warp(10);
-
-        uint160 oneToOnePrice = uint160(((10 ** ERC20(token1).decimals()) << 96) / (10 ** ERC20(token0).decimals()) / 2);
 
         INonfungiblePositionManager.MintParams memory mintParams = INonfungiblePositionManager.MintParams(
             strategy.pool().token0(),
             strategy.pool().token1(),
             feeTier,
+            -200,
             0,
-            200,
             token0Amount,
             token1Amount,
             0, 
@@ -112,7 +112,6 @@ contract LendingStrategyTest is Test {
             block.timestamp + 1
         );
 
-        strategy.pool().initialize(TickMath.getSqrtRatioAtTick(0));
         positionManager.mint(mintParams);
         vm.stopPrank();
     }
@@ -121,7 +120,7 @@ contract LendingStrategyTest is Test {
         vm.warp(block.timestamp + 1);
         vm.startPrank(borrower);
         nft.transferFrom(borrower, address(strategy), 1);
-        emit log_named_uint("max debt", strategy.maxDebt(3e18));
+
         strategy.openVault(
             borrower,
             1e18,
@@ -147,7 +146,7 @@ contract LendingStrategyTest is Test {
             1e18,
             0
         );
-        emit log_named_uint('quote', q);
+        emit log_named_uint('quote 1 eth', q);
 
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
             tokenIn: address(strategy.debtToken()),
@@ -167,6 +166,22 @@ contract LendingStrategyTest is Test {
         vm.warp(block.timestamp + 1);
 
         _print();
+
+         q = quoter.quoteExactInputSingle(
+            address(strategy.underlying()),
+            address(strategy.debtToken()),
+            feeTier,
+            1e18,
+            0
+        );
+        emit log_string(
+            string.concat(
+                'quote 1 debt token ',
+                UintStrings.decimalString(q, 18, false),
+                ' ', 
+                strategy.underlying().symbol()
+            )
+        );
     }
 
     function testExample() public {
@@ -177,12 +192,6 @@ contract LendingStrategyTest is Test {
         );
         strategy.newNorm();
         strategy.updateNormalization();
-        // emit log_named_uint('contract thinks each debt token should be worth', strategy.index());
-        // emit log_named_uint('but debt token is actually worth', strategy.mark(1));
-        // emit log_named_uint('so contract multiplies normal interest by', strategy.targetMultiplier());
-        // emit log_named_uint('and so, for the contract, each debt token is now worth', strategy.newNorm());
-
-        
     }
 
     function _print() internal {
