@@ -48,6 +48,8 @@ contract LendingStrategy {
     uint256 public targetGrowthPerPeriod = ONE / 1000; // .1%
     uint128 public normalization = 1e18;
     uint128 public lastUpdated = uint128(block.timestamp);
+    string public name;
+    string public symbol;
     DebtToken public debtToken;
     DebtVault public debtVault;
     ERC20 public underlying;
@@ -64,22 +66,26 @@ contract LendingStrategy {
     }
 
     constructor(
-        string memory name,
-        string memory symbol,
+        string memory _name,
+        string memory _symbol,
+        ERC721 _collateral,
         ERC20 _underlying,
         IOracle _oracle
     ) {
         underlying = _underlying;
+        collateral = _collateral;
         IUniswapV3Factory factory =
             IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
-        debtToken = new DebtToken(name, symbol);
-        debtVault = new DebtVault(name, symbol);
+        debtToken = new DebtToken(_name, _symbol, _underlying.symbol());
+        debtVault = new DebtVault(_name, _symbol);
         pool =
             IUniswapV3Pool(factory.createPool(address(underlying), address(debtToken), 10000));
         pool.initialize(TickMath.getSqrtRatioAtTick(0));
         oracle = _oracle;
         start = block.timestamp;
         lastUpdated = uint128(block.timestamp);
+        name = _name;
+        symbol = _symbol;
     }
 
     function openVault(

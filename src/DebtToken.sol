@@ -8,10 +8,10 @@ import {CreatorGuarded} from "./CreatorGuarded.sol";
 contract DebtToken is ERC20 {
     address creator;
 
-    constructor(string memory strategy, string memory symbol)
+    constructor(string memory strategy, string memory symbol, string memory underlyingSymbol)
         ERC20(
-            string.concat(strategy, "debt token"),
-            string.concat("dt", symbol),
+            string.concat(strategy, " debt token"),
+            string.concat("dt", symbol, "_", underlyingSymbol),
             18
         )
     {

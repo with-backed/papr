@@ -74,7 +74,7 @@ contract LendingStrategyTest is Test {
     function setUp() public {
         vm.warp(1);
         factory = new StrategyFactory();
-        strategy = factory.newStrategy("PUNKs Loans", "PL", weth);
+        strategy = factory.newStrategy("PUNKs Loans", "PL", nft, weth);
         nft.mint(borrower, 1);
         vm.prank(borrower);
         nft.approve(address(strategy), 1);
@@ -111,6 +111,15 @@ contract LendingStrategyTest is Test {
             lender,
             block.timestamp + 1
         );
+
+        // uint256 q = quoter.quoteExactInputSingle(
+        //     address(strategy.debtToken()),
+        //     address(strategy.underlying()),
+        //     feeTier,
+        //     1e18,
+        //     0
+        // );
+        // emit log_named_uint('quote 1 eth', q);
 
         positionManager.mint(mintParams);
         vm.stopPrank();

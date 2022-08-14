@@ -15,13 +15,13 @@ contract TestERC20 is ERC20("USDC", "USDC", 18) {
     }
 }
 
-contract TestERC721 is ERC721("APE", "APE") {
-    function mint(address to, uint256 id) external {
-        _mint(to, id);
+contract TestERC721 is ERC721("Fake Bored Apes", "fAPE") {
+    uint256 _nonce; 
+    function mint(address to) external {
+        _mint(to, ++_nonce);
     }
 
     function tokenURI(uint256 id) public view override returns (string memory) {
-
     }
 }
 
@@ -30,7 +30,7 @@ contract ContractScript is Script {
 
     function run() public {
         vm.startBroadcast();
-        new TestERC20();
+        // new TestERC20();
         new TestERC721();
         new StrategyFactory();
     }
