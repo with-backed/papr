@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
-import {ERC721} from "solmate/tokens/ERC721.sol";
+import {ERC721, ERC721TokenReceiver} from "solmate/tokens/ERC721.sol";
 import {IUniswapV3Factory} from
     "v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import {IUniswapV3Pool} from
@@ -40,7 +40,15 @@ struct Sig {
     bytes32 s;
 }
 
-contract LendingStrategy {
+struct OpenVaultRequest {
+    address mintTo;
+    uint128 debt;
+    Collateral collateral;
+    OracleInfo oracleInfo;
+    Sig sig;
+}
+
+contract LendingStrategy is ERC721TokenReceiver {
     uint256 immutable start;
     uint256 constant ONE = 1e18;
     uint256 constant maxLTV = ONE * 5 / 10; // 50%
@@ -89,39 +97,50 @@ contract LendingStrategy {
     }
 
     function openVault(
-        address mintTo,
-        uint128 debt,
-        Collateral calldata collateral,
-        OracleInfo calldata oracleInfo,
-        Sig calldata sig
+        OpenVaultRequest memory request
     )
-        external
+        public
     {
         updateNormalization();
 
-        bytes32 k = vaultKey(collateral);
+        bytes32 k = vaultKey(request.collateral);
 
         if (vaultInfo[k].price != 0) {
             revert("exists");
         }
 
-        if (debt == 0 || oracleInfo.price == 0) {
+        // can probably make opening vault and minting debt two seperate
+        // funcs and use a multicall
+        if (request.debt == 0 || request.oracleInfo.price == 0) {
             revert("zero");
         }
 
-        if (debt > maxDebt(oracleInfo.price)) {
+        if (request.debt > maxDebt(request.oracleInfo.price)) {
             revert("too much debt");
         }
 
-        vaultInfo[k].debt = debt;
-        vaultInfo[k].price = oracleInfo.price;
+        vaultInfo[k].debt = request.debt;
+        vaultInfo[k].price = request.oracleInfo.price;
         
-        debtToken.mint(mintTo, debt);
-        debtVault.mint(mintTo, uint256(k));
+        debtToken.mint(request.mintTo, request.debt);
+        debtVault.mint(request.mintTo, uint256(k));
 
-        if (collateral.nft.ownerOf(collateral.id) != address(this)) {
+        if (request.collateral.nft.ownerOf(request.collateral.id) != address(this)) {
             revert('not owner');
         }
+    }
+
+    function onERC721Received(
+        address,
+        address,
+        uint256 _id,
+        bytes calldata data
+    ) external override returns (bytes4) {
+        OpenVaultRequest memory request = abi.decode(data, (OpenVaultRequest));
+
+        openVault(request);
+
+        return ERC721TokenReceiver.onERC721Received.selector;
     }
 
     function increaseDebt(bytes32 vaultKey, uint128 amount) external onlyVaultOwner(vaultKey) {
@@ -237,7 +256,7 @@ contract LendingStrategy {
         return maxLoanUnderlying / normalization;
     }
 
-    function vaultKey(Collateral calldata collateral) public pure returns (bytes32) {
+    function vaultKey(Collateral memory collateral) public pure returns (bytes32) {
         keccak256(abi.encode(collateral));
     }
 

@@ -10,7 +10,7 @@ import {IQuoter} from "v3-periphery/interfaces/IQuoter.sol";
 import {ISwapRouter} from 'v3-periphery/interfaces/ISwapRouter.sol';
 
 import {Oracle} from "src/squeeth/Oracle.sol";
-import {LendingStrategy, Collateral, VaultInfo, Sig, OracleInfo, OracleInfoPeriod} from "src/LendingStrategy.sol";
+import {LendingStrategy, Collateral, VaultInfo, Sig, OracleInfo, OracleInfoPeriod, OpenVaultRequest} from "src/LendingStrategy.sol";
 import {StrategyFactory} from "src/StrategyFactory.sol";
 
 contract TestERC721 is ERC721("TEST", "TEST") {
@@ -128,9 +128,9 @@ contract LendingStrategyTest is Test {
     function testBorrow() public {
         vm.warp(block.timestamp + 1);
         vm.startPrank(borrower);
-        nft.transferFrom(borrower, address(strategy), 1);
+        // nft.transferFrom(borrower, address(strategy), 1);
 
-        strategy.openVault(
+        OpenVaultRequest memory request = OpenVaultRequest(
             borrower,
             1e18,
             Collateral({
@@ -146,6 +146,17 @@ contract LendingStrategyTest is Test {
                 r: keccak256('x'),
                 s: keccak256('x')
             })
+        );
+
+        // strategy.openVault(
+        //     request
+        // );
+
+        nft.safeTransferFrom(
+            borrower,
+            address(strategy),
+            1,
+            abi.encode(request)
         );
 
         uint256 q = quoter.quoteExactInputSingle(
