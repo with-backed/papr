@@ -51,7 +51,8 @@ struct OpenVaultRequest {
 contract LendingStrategy is ERC721TokenReceiver {
     uint256 immutable start;
     uint256 constant ONE = 1e18;
-    uint256 constant maxLTV = ONE * 5 / 10; // 50%
+    uint24 constant UNISWAP_FEE_TIER = 10000;
+    uint256 public constant maxLTV = ONE * 5 / 10; // 50%
     uint256 constant PERIOD = 1 weeks;
     uint256 public targetGrowthPerPeriod = ONE / 1000; // .1%
     uint128 public normalization = 1e18;
@@ -87,7 +88,7 @@ contract LendingStrategy is ERC721TokenReceiver {
         debtToken = new DebtToken(_name, _symbol, _underlying.symbol());
         debtVault = new DebtVault(_name, _symbol);
         pool =
-            IUniswapV3Pool(factory.createPool(address(underlying), address(debtToken), 10000));
+            IUniswapV3Pool(factory.createPool(address(underlying), address(debtToken), UNISWAP_FEE_TIER));
         pool.initialize(TickMath.getSqrtRatioAtTick(0));
         oracle = _oracle;
         start = block.timestamp;
@@ -105,6 +106,7 @@ contract LendingStrategy is ERC721TokenReceiver {
 
         bytes32 k = vaultKey(request.collateral);
 
+        /// actually don't need this check cause the vault mint should fail
         if (vaultInfo[k].price != 0) {
             revert("exists");
         }
@@ -257,7 +259,7 @@ contract LendingStrategy is ERC721TokenReceiver {
     }
 
     function vaultKey(Collateral memory collateral) public pure returns (bytes32) {
-        keccak256(abi.encode(collateral));
+        return keccak256(abi.encode(collateral));
     }
 
     function _getConsistentPeriodForOracle(uint32 _period)

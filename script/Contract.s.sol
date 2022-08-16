@@ -31,7 +31,7 @@ contract ContractScript is Script {
     function run() public {
         vm.startBroadcast();
         // new TestERC20();
-        new TestERC721();
+        // new TestERC721();
         new StrategyFactory();
     }
 }
