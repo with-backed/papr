@@ -54,7 +54,7 @@ contract LendingStrategy is ERC721TokenReceiver {
     uint24 constant UNISWAP_FEE_TIER = 10000;
     uint256 public constant maxLTV = ONE * 5 / 10; // 50%
     uint256 constant PERIOD = 1 weeks;
-    uint256 public targetGrowthPerPeriod = ONE / 1000; // .1%
+    uint256 public targetGrowthPerPeriod = (ONE / 10000) * 38; // .38% => ~20% APR
     uint128 public normalization = 1e18;
     uint128 public lastUpdated = uint128(block.timestamp);
     string public name;
@@ -105,11 +105,6 @@ contract LendingStrategy is ERC721TokenReceiver {
         updateNormalization();
 
         bytes32 k = vaultKey(request.collateral);
-
-        /// actually don't need this check cause the vault mint should fail
-        if (vaultInfo[k].price != 0) {
-            revert("exists");
-        }
 
         // can probably make opening vault and minting debt two seperate
         // funcs and use a multicall
@@ -184,6 +179,9 @@ contract LendingStrategy is ERC721TokenReceiver {
         }
 
         // TODO
+        // show start an auction, maybe at like 
+        // vault.price * 3 => converted to debt vault
+        // burn debt used to buy token
     }
 
     function updateNormalization() public {
