@@ -72,6 +72,13 @@ contract LendingStrategyTest is Test {
     address lender = address(2);
     uint24 feeTier = 10000;
 
+    event LendingStrategyCreated(address indexed strategyAddress, address indexed collateral, address indexed underlying, string name, string symbol);
+    event VaultCreated(address indexed strategyAddress, address indexed user, uint256 indexed tokenId, uint256 amount);
+    event DebtAdded(address indexed strategyAddress, address indexed user, uint256 amount);
+    event DebtReduced(address indexed strategyAddress, address indexed user, uint256 amount);
+    event VaultClosed(address indexed strategyAddress, address indexed user, uint256 indexed tokenId);
+    event NormalizationFactorUpdated(address indexed strategyAddress, uint128 oldNorm, uint128 newNorm);
+
     function setUp() public {
         vm.warp(1);
         factory = new StrategyFactory();
@@ -150,6 +157,8 @@ contract LendingStrategyTest is Test {
         );
         strategy.updateNormalization();
 
+        vm.expectEmit(true, true, true, false);
+        emit VaultCreated(address(strategy), borrower, 1, 1e18);
         nft.safeTransferFrom(
             borrower,
             address(strategy),

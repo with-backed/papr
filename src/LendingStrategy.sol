@@ -68,6 +68,13 @@ contract LendingStrategy is ERC721TokenReceiver {
     IUniswapV3Pool public pool;
     mapping(bytes32 => VaultInfo) public vaultInfo;
 
+    event LendingStrategyCreated(address indexed strategyAddress, address indexed collateral, address indexed underlying, string name, string symbol);
+    event VaultCreated(address indexed strategyAddress, address indexed user, uint256 indexed tokenId, uint256 amount);
+    event DebtAdded(address indexed strategyAddress, address indexed user, uint256 amount);
+    event DebtReduced(address indexed strategyAddress, address indexed user, uint256 amount);
+    event VaultClosed(address indexed strategyAddress, address indexed user, uint256 indexed tokenId);
+    event NormalizationFactorUpdated(address indexed strategyAddress, uint128 oldNorm, uint128 newNorm);
+
     modifier onlyVaultOwner(bytes32 vaultKey) {
         if (msg.sender != debtVault.ownerOf(uint256(vaultKey))) {
             revert('only owner');
@@ -96,6 +103,8 @@ contract LendingStrategy is ERC721TokenReceiver {
         lastUpdated = uint128(block.timestamp);
         name = _name;
         symbol = _symbol;
+
+        emit LendingStrategyCreated(address(this), address(_collateral), address(_underlying), _name, _symbol);
     }
 
     function openVault(
@@ -126,6 +135,8 @@ contract LendingStrategy is ERC721TokenReceiver {
         if (request.collateral.nft.ownerOf(request.collateral.id) != address(this)) {
             revert('not owner');
         }
+
+        emit VaultCreated(address(this), request.mintTo, request.collateral.id, request.debt);
     }
 
     function onERC721Received(
@@ -148,11 +159,14 @@ contract LendingStrategy is ERC721TokenReceiver {
         if (vaultInfo[vaultKey].debt > maxDebt(vaultInfo[vaultKey].price)) {
             revert('too much debt');
         }
+
+        emit DebtAdded(address(this), msg.sender, amount);
     }
 
     function reduceDebt(bytes32 vaultKey, uint128 amount) external {
         vaultInfo[vaultKey].debt -= amount;
         debtToken.burn(msg.sender, amount);
+        emit DebtReduced(address(this), msg.sender, amount);
     }
 
     function closeVault(Collateral calldata collateral) external {
@@ -170,6 +184,8 @@ contract LendingStrategy is ERC721TokenReceiver {
         delete vaultInfo[key];
 
         collateral.nft.transferFrom(address(this), msg.sender, collateral.id);
+
+        emit VaultClosed(address(this), msg.sender, collateral.id);
     }
 
     function liquidate(bytes32 vaultKey) external {
@@ -189,8 +205,13 @@ contract LendingStrategy is ERC721TokenReceiver {
         if (lastUpdated == block.timestamp) {
             return;
         }
-        normalization = uint128(newNorm());
+        uint128 previousNormalization = normalization;
+        uint128 newNormalization = uint128(newNorm());
+        
+        normalization = newNormalization;
         lastUpdated = uint128(block.timestamp);
+
+        emit NormalizationFactorUpdated(address(this), previousNormalization, newNormalization);
     }
 
     function newNorm() public view returns (uint256 newNorm) {
