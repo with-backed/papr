@@ -12,6 +12,7 @@ import {TickMath} from "fullrange/libraries/TickMath.sol";
 import {DebtToken} from "./DebtToken.sol";
 import {DebtVault} from "./DebtVault.sol";
 import {IOracle} from "src/squeeth/IOracle.sol";
+import {FixedPointMathLib} from "src/libraries/FixedPointMathLib.sol";
 
 struct Collateral {
     ERC721 nft;
@@ -66,6 +67,9 @@ contract LendingStrategy is ERC721TokenReceiver {
     IOracle oracle;
     IUniswapV3Pool public pool;
     mapping(bytes32 => VaultInfo) public vaultInfo;
+
+    uint256 internal constant LOWER_MARK_RATIO = ONE * 8 / 10; // 80%
+    uint256 internal constant UPPER_MARK_RATIO = ONE * 14 / 10; // 140%
 
     modifier onlyVaultOwner(bytes32 vaultKey) {
         if (msg.sender != debtVault.ownerOf(uint256(vaultKey))) {
@@ -196,25 +200,21 @@ contract LendingStrategy is ERC721TokenReceiver {
         if (lastUpdated == block.timestamp) {
             return normalization;
         }
-        // exchange rate: <uints of debt token> * exchangeRate = units of underlying
-        uint256 previousExchangeRate = normalization;
-        uint32 period = uint32(block.timestamp - lastUpdated);
-        uint256 targetGrowth = targetGrowthPerPeriod * period / PERIOD;
-
-        return previousExchangeRate 
-        * (((ONE + targetGrowth) *  targetMultiplier()) / ONE) // TODO I think we might want targetMultiplier to be period adjusted? e.g. don't multiply by a lot if it's only been a few seconds?
-        / ONE;
+       
+        return FixedPointMathLib.mulWadDown(normalization, uint256(multiplier()));
     }
 
     // what each Debt Token is worth in underlying
     function index() public view returns (uint256) {
-        // should we only be looking at the most recent period? 
-        return ((block.timestamp - start) * ONE / PERIOD) * targetGrowthPerPeriod / ONE + ONE;
+        return FixedPointMathLib.divWadDown(block.timestamp - start, PERIOD) 
+        * targetGrowthPerPeriod
+        / FixedPointMathLib.WAD
+        + FixedPointMathLib.WAD;
     }
 
     // price of debt token, quoted in underlying units
     // i.e. greater than (1 ** underlying.decimals()) when 1 mark is worth more than 1 underlying
-    function mark(uint32 period) public view returns (uint256){
+    function mark(uint32 period) public view returns (uint256) {
         // period stuff is kinda weird? Don't we just always want the longest period?
         uint32 periodForOracle = _getConsistentPeriodForOracle(period);
         return oracle.getTwap(
@@ -222,18 +222,24 @@ contract LendingStrategy is ERC721TokenReceiver {
         );
     }
 
-    // ratio of index to mark, if > 1e18 means mark is too low
-    // if < 1e18 means mark is too high
-    function targetMultiplier() public view returns (uint256 indexMarkRatio) {
-        /// TODO: mark 1 is a temp fix, do we always want that?
-        indexMarkRatio = index() * ONE / mark(1);
-        if (indexMarkRatio > 5e18) {
-            // cap growth at 5x target
-            indexMarkRatio = 5e18;
-        } else if (indexMarkRatio < 2e17) {
-            // floor growth at 1/5 target
-            indexMarkRatio = 2e17;
+    /// aka norm growth if updated right now, 
+    /// e.g. a result of 12e17 = 1.2 = 20% growth since lastUpdate
+    function multiplier() public view returns (int256) {
+        // TODO: do we need signed ints? when does powWAD return a negative? 
+        uint256 period = block.timestamp - lastUpdated;
+        uint256 periodRatio = FixedPointMathLib.divWadDown(period, PERIOD);
+        uint256 targetGrowth = FixedPointMathLib.mulWadDown(targetGrowthPerPeriod, periodRatio) + FixedPointMathLib.WAD;
+        uint256 indexMarkRatio = FixedPointMathLib.divWadDown(index(), mark(uint32(period)));
+        // cap at 140%, floor at 80%
+        if (indexMarkRatio > 14e17) {
+            indexMarkRatio = 14e17;
+        } else if (indexMarkRatio < 8e17) {
+            indexMarkRatio = 8e17;
         }
+        /// accelerate or deccelerate apprecation based in index/mark. If mark is too high, slow down. If mark is too low, speed up.
+        int256 deviationMultiplier = FixedPointMathLib.powWad(int256(indexMarkRatio), int256(periodRatio));
+
+        return deviationMultiplier * int256(targetGrowth) / int256(FixedPointMathLib.WAD);
     }
 
     // returns price in terms of underlying:debt token
@@ -251,7 +257,7 @@ contract LendingStrategy is ERC721TokenReceiver {
 
     /// @notice given a supposed asset price (would have to be passed on oracle message to be realized)
     /// returns how much synthDebt could be minted
-    function maxDebt(uint256 price) public returns (uint256) {
+    function maxDebt(uint256 price) public view returns (uint256) {
         uint256 maxLoanUnderlying = price * maxLTV;
         return maxLoanUnderlying / normalization;
     }

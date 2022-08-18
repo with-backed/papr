@@ -12,6 +12,7 @@ import {ISwapRouter} from 'v3-periphery/interfaces/ISwapRouter.sol';
 import {Oracle} from "src/squeeth/Oracle.sol";
 import {LendingStrategy, Collateral, VaultInfo, Sig, OracleInfo, OracleInfoPeriod, OpenVaultRequest} from "src/LendingStrategy.sol";
 import {StrategyFactory} from "src/StrategyFactory.sol";
+import {FixedPointMathLib} from "src/libraries/FixedPointMathLib.sol";
 
 contract TestERC721 is ERC721("TEST", "TEST") {
     function mint(address to, uint256 id) external {
@@ -147,10 +148,7 @@ contract LendingStrategyTest is Test {
                 s: keccak256('x')
             })
         );
-
-        // strategy.openVault(
-        //     request
-        // );
+        strategy.updateNormalization();
 
         nft.safeTransferFrom(
             borrower,
@@ -234,7 +232,7 @@ contract LendingStrategyTest is Test {
         emit log_string(
             string.concat(
                 'so contract multiplies normal interest by ', 
-                UintStrings.decimalString(strategy.targetMultiplier(), 18, false)
+                UintStrings.decimalString(uint256(strategy.multiplier()), 18, false)
             )
         );
         emit log_string(
@@ -246,6 +244,47 @@ contract LendingStrategyTest is Test {
             )
         );
     }
+}
+
+contract TestMath is Test {
+    uint256 constant PERIOD = 4 weeks;
+    uint256 annualAPR = FixedPointMathLib.WAD * 52 / 100;
+    uint256 targetGrowthPerPeriod = annualAPR / (52 weeks / PERIOD); // 1% weekly
+    uint256 start;
+    uint256 lastUpdate;
+    function testMath1() public {
+        vm.warp(1 weeks);
+        uint256 index = index();
+        // uint256 mark = 102e16;
+        uint256 mark = 1e18;
+        uint256 rFunding = FixedPointMathLib.divWadDown(block.timestamp - start, PERIOD);
+        uint256 indexMarkRatio = FixedPointMathLib.divWadDown(index, mark);
+        int256 multiplier = FixedPointMathLib.powWad(int256(indexMarkRatio), int256(rFunding));
+        if (multiplier > 5 * 1e18) {
+            multiplier = 5 * 1e18;
+        }
+        uint256 targetGrowth = FixedPointMathLib.mulWadDown(targetGrowthPerPeriod, rFunding) + FixedPointMathLib.WAD;
+        emit log_named_uint("rFunding", rFunding);
+        emit log_string(string.concat("target annual growth ",  UintStrings.decimalString(annualAPR, 16, true)));
+        emit log_named_uint("PERIOD in weeks", PERIOD / 1 weeks);
+        emit log_named_uint("mark", mark);
+        emit log_named_uint("index", index);
+        emit log_named_uint("index/mark", indexMarkRatio);
+
+        emit log_named_uint("target growth", targetGrowth);
+        emit log_named_int("multiplier", multiplier);
+        emit log_named_int('new norm', multiplier * int256(targetGrowth) / int256(FixedPointMathLib.WAD));
+
+        
+    }
+
+    function index() public returns (uint256) {
+        return FixedPointMathLib.divWadDown(block.timestamp - start, PERIOD) 
+        * targetGrowthPerPeriod
+        / FixedPointMathLib.WAD
+        + FixedPointMathLib.WAD;
+    }
+
 }
 
 library UintStrings {
