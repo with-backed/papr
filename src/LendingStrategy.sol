@@ -54,8 +54,8 @@ contract LendingStrategy is ERC721TokenReceiver {
     uint256 constant ONE = 1e18;
     uint24 constant UNISWAP_FEE_TIER = 10000;
     uint256 public constant maxLTV = ONE * 5 / 10; // 50%
-    uint256 constant PERIOD = 1 weeks;
-    uint256 public targetGrowthPerPeriod = (ONE / 10000) * 38; // .38% => ~20% APR
+    uint256 constant PERIOD = 4 weeks;
+    uint256 public targetGrowthPerPeriod = 20 * ONE / 52 / 4; // 20% APR
     uint128 public normalization = 1e18;
     uint128 public lastUpdated = uint128(block.timestamp);
     string public name;
