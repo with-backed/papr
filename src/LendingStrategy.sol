@@ -68,9 +68,6 @@ contract LendingStrategy is ERC721TokenReceiver {
     IUniswapV3Pool public pool;
     mapping(bytes32 => VaultInfo) public vaultInfo;
 
-    uint256 internal constant LOWER_MARK_RATIO = ONE * 8 / 10; // 80%
-    uint256 internal constant UPPER_MARK_RATIO = ONE * 14 / 10; // 140%
-
     modifier onlyVaultOwner(bytes32 vaultKey) {
         if (msg.sender != debtVault.ownerOf(uint256(vaultKey))) {
             revert('only owner');
