@@ -14,7 +14,7 @@ contract StrategyFactory {
         oracle = new Oracle();
     }
 
-    event NewStrategy(LendingStrategy indexed strategy);
+    event LendingStrategyCreated(address indexed strategyAddress, address indexed collateral, address indexed underlying, string name, string symbol);
 
     function newStrategy(
         string memory name,
@@ -30,7 +30,7 @@ contract StrategyFactory {
             oracle
         );
 
-        emit NewStrategy(s);
+        emit LendingStrategyCreated(address(s), address(collateral), address(underlying), name, symbol);
 
         return s;
     }

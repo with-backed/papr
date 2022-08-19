@@ -68,12 +68,11 @@ contract LendingStrategy is ERC721TokenReceiver {
     IUniswapV3Pool public pool;
     mapping(bytes32 => VaultInfo) public vaultInfo;
 
-    event LendingStrategyCreated(address indexed strategyAddress, address indexed collateral, address indexed underlying, string name, string symbol);
-    event VaultCreated(address indexed strategyAddress, bytes32 indexed vaultKey, address indexed user, uint256 tokenId, uint256 amount);
-    event DebtAdded(address indexed strategyAddress, bytes32 indexed vaultKey, address indexed user, uint256 amount);
-    event DebtReduced(address indexed strategyAddress, bytes32 indexed vaultKey, address indexed user, uint256 amount);
-    event VaultClosed(address indexed strategyAddress, bytes32 indexed vaultKey, address indexed user, uint256 tokenId);
-    event NormalizationFactorUpdated(address indexed strategyAddress, uint128 oldNorm, uint128 newNorm);
+    event VaultCreated(bytes32 indexed vaultKey, address indexed mintTo, uint256 tokenId, uint256 amount);
+    event DebtAdded(bytes32 indexed vaultKey, uint256 amount);
+    event DebtReduced(bytes32 indexed vaultKey, uint256 amount);
+    event VaultClosed(bytes32 indexed vaultKey, uint256 tokenId);
+    event NormalizationFactorUpdated(uint128 oldNorm, uint128 newNorm);
 
     modifier onlyVaultOwner(bytes32 vaultKey) {
         if (msg.sender != debtVault.ownerOf(uint256(vaultKey))) {
@@ -103,8 +102,6 @@ contract LendingStrategy is ERC721TokenReceiver {
         lastUpdated = uint128(block.timestamp);
         name = _name;
         symbol = _symbol;
-
-        emit LendingStrategyCreated(address(this), address(_collateral), address(_underlying), _name, _symbol);
     }
 
     function openVault(
@@ -136,7 +133,7 @@ contract LendingStrategy is ERC721TokenReceiver {
             revert('not owner');
         }
 
-        emit VaultCreated(address(this), k, request.mintTo, request.collateral.id, request.debt);
+        emit VaultCreated(k, request.mintTo, request.collateral.id, request.debt);
     }
 
     function onERC721Received(
@@ -160,13 +157,13 @@ contract LendingStrategy is ERC721TokenReceiver {
             revert('too much debt');
         }
 
-        emit DebtAdded(address(this), vaultKey, msg.sender, amount);
+        emit DebtAdded(vaultKey, amount);
     }
 
     function reduceDebt(bytes32 vaultKey, uint128 amount) external {
         vaultInfo[vaultKey].debt -= amount;
         debtToken.burn(msg.sender, amount);
-        emit DebtReduced(address(this), vaultKey, msg.sender, amount);
+        emit DebtReduced(vaultKey, amount);
     }
 
     function closeVault(Collateral calldata collateral) external {
@@ -185,7 +182,7 @@ contract LendingStrategy is ERC721TokenReceiver {
 
         collateral.nft.transferFrom(address(this), msg.sender, collateral.id);
 
-        emit VaultClosed(address(this), key, msg.sender, collateral.id);
+        emit VaultClosed(key, collateral.id);
     }
 
     function liquidate(bytes32 vaultKey) external {
@@ -211,7 +208,7 @@ contract LendingStrategy is ERC721TokenReceiver {
         normalization = newNormalization;
         lastUpdated = uint128(block.timestamp);
 
-        emit NormalizationFactorUpdated(address(this), previousNormalization, newNormalization);
+        emit NormalizationFactorUpdated(previousNormalization, newNormalization);
     }
 
     function newNorm() public view returns (uint256 newNorm) {
