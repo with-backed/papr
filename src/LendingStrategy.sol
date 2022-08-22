@@ -249,7 +249,7 @@ contract LendingStrategy is ERC721TokenReceiver {
         if (m == 0) {
             indexMarkRatio = 14e17;
         } else {
-             uint256 indexMarkRatio = FixedPointMathLib.divWadDown(index(), m);
+            indexMarkRatio = FixedPointMathLib.divWadDown(index(), m);
             // cap at 140%, floor at 80%
             if (indexMarkRatio > 14e17) {
                 indexMarkRatio = 14e17;
