@@ -37,7 +37,7 @@ contract ContractScript is Script {
     function run() public {
         vm.startBroadcast();
 
-        address deployer = 0xE89CB2053A04Daf86ABaa1f4bC6D50744e57d39E;
+        // address deployer = 0xE89CB2053A04Daf86ABaa1f4bC6D50744e57d39E;
 
         address collateral = 0x5A409e46b2CAc2CFDa73134690E3a28Bb444f7E7;
         address underlying = 0xe357188e6A0B663bc7dF668abc6D76a4f534F588;
@@ -50,22 +50,22 @@ contract ContractScript is Script {
             ERC20(underlying)
         );
 
-        uint256 tokenId = 17;
+        // uint256 tokenId = 17;
 
-        OpenVaultRequest memory request = OpenVaultRequest(
-            deployer,
-            1e18,
-            Collateral({nft: ERC721(collateral), id: tokenId}),
-            OracleInfo({price: 3e18, period: OracleInfoPeriod.SevenDays}),
-            Sig({v: 1, r: keccak256("x"), s: keccak256("x")})
-        );
+        // OpenVaultRequest memory request = OpenVaultRequest(
+        //     address(this),
+        //     1e18,
+        //     Collateral({nft: ERC721(collateral), id: tokenId}),
+        //     OracleInfo({price: 3e18, period: OracleInfoPeriod.SevenDays}),
+        //     Sig({v: 1, r: keccak256("x"), s: keccak256("x")})
+        // );
 
-        ERC721(collateral).safeTransferFrom(
-            deployer,
-            address(strategy),
-            tokenId,
-            abi.encode(request)
-        );
+        // ERC721(collateral).safeTransferFrom(
+        //     address(this),
+        //     address(strategy),
+        //     tokenId,
+        //     abi.encode(request)
+        // );
 
         vm.stopBroadcast();
     }
