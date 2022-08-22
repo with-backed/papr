@@ -55,7 +55,7 @@ contract LendingStrategy is ERC721TokenReceiver {
     uint24 constant UNISWAP_FEE_TIER = 10000;
     uint256 public constant maxLTV = ONE * 5 / 10; // 50%
     uint256 constant PERIOD = 4 weeks;
-    uint256 public targetGrowthPerPeriod = 20 * ONE / 52 / 4; // 20% APR
+    uint256 public targetGrowthPerPeriod = 20 * ONE / 100 / (52 / 4); // 20% APR
     uint128 public normalization = 1e18;
     uint128 public lastUpdated = uint128(block.timestamp);
     string public name;
@@ -244,13 +244,20 @@ contract LendingStrategy is ERC721TokenReceiver {
         uint256 period = block.timestamp - lastUpdated;
         uint256 periodRatio = FixedPointMathLib.divWadDown(period, PERIOD);
         uint256 targetGrowth = FixedPointMathLib.mulWadDown(targetGrowthPerPeriod, periodRatio) + FixedPointMathLib.WAD;
-        uint256 indexMarkRatio = FixedPointMathLib.divWadDown(index(), mark(uint32(period)));
-        // cap at 140%, floor at 80%
-        if (indexMarkRatio > 14e17) {
+        uint256 m = mark(uint32(period));
+        uint256 indexMarkRatio;
+        if (m == 0) {
             indexMarkRatio = 14e17;
-        } else if (indexMarkRatio < 8e17) {
-            indexMarkRatio = 8e17;
+        } else {
+             uint256 indexMarkRatio = FixedPointMathLib.divWadDown(index(), m);
+            // cap at 140%, floor at 80%
+            if (indexMarkRatio > 14e17) {
+                indexMarkRatio = 14e17;
+            } else if (indexMarkRatio < 8e17) {
+                indexMarkRatio = 8e17;
+            }
         }
+       
         /// accelerate or deccelerate apprecation based in index/mark. If mark is too high, slow down. If mark is too low, speed up.
         int256 deviationMultiplier = FixedPointMathLib.powWad(int256(indexMarkRatio), int256(periodRatio));
 
