@@ -14,14 +14,23 @@ contract StrategyFactory {
         oracle = new Oracle();
     }
 
-    event LendingStrategyCreated(address indexed strategyAddress, address indexed collateral, address indexed underlying, string name, string symbol);
+    event LendingStrategyCreated(
+        address indexed strategyAddress,
+        address indexed collateral,
+        address indexed underlying,
+        string name,
+        string symbol
+    );
 
     function newStrategy(
         string memory name,
         string memory symbol,
         ERC721 collateral,
         ERC20 underlying
-    ) external returns (LendingStrategy) {
+    )
+        external
+        returns (LendingStrategy)
+    {
         LendingStrategy s = new LendingStrategy(
             name,
             symbol,
@@ -30,7 +39,9 @@ contract StrategyFactory {
             oracle
         );
 
-        emit LendingStrategyCreated(address(s), address(collateral), address(underlying), name, symbol);
+        emit LendingStrategyCreated(
+            address(s), address(collateral), address(underlying), name, symbol
+            );
 
         return s;
     }
