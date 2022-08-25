@@ -7,8 +7,6 @@ pragma solidity ^0.8.13;
 abstract contract Multicall {
     function multicall(bytes[] calldata data)
         public
-        payable
-        override
         returns (bytes[] memory results)
     {
         results = new bytes[](data.length);

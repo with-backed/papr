@@ -8,9 +8,7 @@ import {ERC721} from "solmate/tokens/ERC721.sol";
 import {DebtToken} from "src/DebtToken.sol";
 import {Oracle} from "src/squeeth/Oracle.sol";
 import {StrategyFactory} from "src/StrategyFactory.sol";
-import {
-    LendingStrategy
-} from "src/LendingStrategy.sol";
+import {LendingStrategy} from "src/LendingStrategy.sol";
 
 contract TestERC20 is ERC20("USDC", "USDC", 18) {
     function mint(address to, uint256 amount) external {

@@ -13,7 +13,8 @@ import {DebtVault} from "./DebtVault.sol";
 import {Multicall} from "./Multicall.sol";
 import {IOracle} from "src/squeeth/IOracle.sol";
 import {FixedPointMathLib} from "src/libraries/FixedPointMathLib.sol";
-import {IPostCollateralCallback} from "src/interfaces/IPostCollateralCallback.sol";
+import {IPostCollateralCallback} from
+    "src/interfaces/IPostCollateralCallback.sol";
 import {ILendingStrategy} from "src/interfaces/IPostCollateralCallback.sol";
 
 contract LendingStrategy is ERC721TokenReceiver, Multicall {
@@ -39,15 +40,14 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
     mapping(uint256 => ILendingStrategy.VaultInfo) public vaultInfo;
     mapping(bytes32 => uint256) public price;
 
-    event VaultCreated(
+    event DebtAdded(uint256 indexed vaultId, uint256 amount);
+    event CollateralAdded(
         uint256 indexed vaultId,
-        address indexed mintTo,
-        uint256 tokenId,
-        uint256 amount
+        ILendingStrategy.Collateral collateral,
+        ILendingStrategy.OracleInfo oracleInfo
     );
-    event DebtAdded(bytes32 indexed vaultKey, uint256 amount);
-    event DebtReduced(bytes32 indexed vaultKey, uint256 amount);
-    event VaultClosed(bytes32 indexed vaultKey, uint256 tokenId);
+    event DebtReduced(uint256 indexed vaultId, uint256 amount);
+    event VaultClosed(uint256 indexed vaultId);
     event NormalizationFactorUpdated(uint128 oldNorm, uint128 newNorm);
 
     modifier onlyVaultOwner(uint256 vaultId) {
@@ -81,41 +81,12 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         symbol = _symbol;
     }
 
-    function openVault(ILendingStrategy.OpenVaultRequest memory request) public returns (uint256 id) {
-        updateNormalization();
-
+    function openVault(address mintTo)
+        public
+        returns (uint256 id)
+    {
         id = ++_nonce;
-        /// TODO need to think about how best to compose this, 
-        /// ideally you could 1. deposit nft, 2. open vault, 3. swap on uniswap
-        /// all in one. But that might require a periphery contract. Just annoying because it's more gas  
-
-        // bytes32 k = vaultKey(request.collateral);
-
-        // can probably make opening vault and minting debt two seperate
-        // funcs and use a multicall
-        // if (request.debt == 0 || request.oracleInfo.price == 0) {
-        //     revert("zero");
-        // }
-
-        // if (request.debt > maxDebt(request.oracleInfo.price)) {
-        //     revert("too much debt");
-        // }
-
-        // vaultInfo[id].debt = request.debt;
-        // vaultInfo[id].price = request.oracleInfo.price;
-
-        // debtToken.mint(request.mintTo, request.debt);
-        debtVault.mint(request.mintTo, id);
-
-        if (
-            request.collateral.addr.ownerOf(request.collateral.id) != address(this)
-        ) {
-            revert("not owner");
-        }
-
-        emit VaultCreated(
-            id, request.mintTo, request.collateral.id, request.debt
-            );
+        debtVault.mint(mintTo, id);
     }
 
     function addCollateralToVaultWithPull(
@@ -127,9 +98,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         public
     {
         _addCollateralToVault(vaultId, collateral, oracleInfo, sig);
-        collateral.addr.transferFrom(
-            msg.sender, address(this), collateral.id
-        );
+        collateral.addr.transferFrom(msg.sender, address(this), collateral.id);
     }
 
     // allows for sending the NFT to the contract out of band
@@ -161,7 +130,9 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         public
     {
         _addCollateralToVault(vaultId, collateral, oracleInfo, sig);
-        IPostCollateralCallback(msg.sender).postCollateralCallback(collateral, data);
+        IPostCollateralCallback(msg.sender).postCollateralCallback(
+            collateral, data
+        );
         if (collateral.addr.ownerOf(collateral.id) != address(this)) {
             revert();
         }
@@ -176,7 +147,9 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         internal
     {
         bytes32 h = collateralHash(collateral);
+        
         if (price[h] != 0) {
+            // collateral is already here
             revert();
         }
 
@@ -193,6 +166,16 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         /// that might have a maxLTV unique to each NFT, if we want
         /// to allow for that
         vaultInfo[vaultId].price += oracleInfo.price;
+
+        emit CollateralAdded(vaultId, collateral, oracleInfo);
+    }
+
+    struct ERC721ReceivedInfo {
+        uint256 vaultId;
+        address mintVaultTo;
+        uint256 debtAmount;
+        uint256 mintDebtTo;
+        OracleInfo oracleInfo;
     }
 
     function onERC721Received(
@@ -205,9 +188,11 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         override
         returns (bytes4)
     {
-        ILendingStrategy.OpenVaultRequest memory request = abi.decode(data, (ILendingStrategy.OpenVaultRequest));
+        bytes[] memory multicallData =
+            abi.decode(data, (bytes[]));
 
-        openVault(request);
+        multicall(multicallData);
+        
 
         return ERC721TokenReceiver.onERC721Received.selector;
     }
@@ -228,15 +213,19 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         emit DebtAdded(vaultId, amount);
     }
 
-    function reduceDebt(bytes32 vaultKey, uint128 amount) external {
-        vaultInfo[vaultKey].debt -= amount;
+    function reduceDebt(uint256 vaultId, uint128 amount) external {
+        vaultInfo[vaultId].debt -= amount;
         debtToken.burn(msg.sender, amount);
-        emit DebtReduced(vaultKey, amount);
+        emit DebtReduced(vaultId, amount);
     }
 
     function closeVault(uint256 vaultId) external onlyVaultOwner(vaultId) {
         if (vaultInfo[vaultId].debt != 0) {
             revert("still has debt");
+        }
+
+        if (vaultInfo[vaultId].price != 0) {
+            revert("vault still has collateral");
         }
 
         debtVault.burn(vaultId);
@@ -245,13 +234,13 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         // TODO allow batch removing of collateral
         // collateral.addr.transferFrom(address(this), msg.sender, collateral.id);
 
-        emit VaultClosed(vaultId, 1);
+        emit VaultClosed(vaultId);
     }
 
-    function liquidate(bytes32 vaultKey) external {
+    function liquidate(uint256 vaultId) external {
         updateNormalization();
 
-        if (normalization < liquidationPrice(vaultKey) * ONE) {
+        if (normalization < liquidationPrice(vaultId) * ONE) {
             revert("not liquidatable");
         }
 
@@ -334,12 +323,12 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
             / int256(FixedPointMathLib.WAD);
     }
 
-    // returns price in terms of underlying:debt token
-    // i.e. when debt token reaches this price in underlying terms
-    // the loan will be liquidatable
-    function liquidationPrice(bytes32 key) public view returns (uint256) {
-        uint256 maxLoanUnderlying = vaultInfo[key].price * maxLTV / ONE;
-        return maxLoanUnderlying / vaultInfo[key].debt;
+    // normalization value at liquidation
+    // i.e. the debt token:underlying internal contract exchange rate (normalization)
+    // at which this vault will be liquidated
+    function liquidationPrice(uint256 vaultId) public view returns (uint256) {
+        uint256 maxLoanUnderlying = vaultInfo[vaultId].price * maxLTV / ONE;
+        return maxLoanUnderlying / vaultInfo[vaultId].debt;
     }
 
     /// @notice given a supposed asset price (would have to be passed on oracle message to be realized)
