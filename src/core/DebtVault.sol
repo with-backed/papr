@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 
 import {ERC721} from "solmate/tokens/ERC721.sol";
 
-import {CreatorGuarded} from "./CreatorGuarded.sol";
+import {CreatorGuarded} from "src/core/base/CreatorGuarded.sol";
 
 contract DebtVault is ERC721, CreatorGuarded {
     constructor(string memory strategy, string memory symbol)

@@ -10,13 +10,9 @@ import {IQuoter} from "v3-periphery/interfaces/IQuoter.sol";
 import {ISwapRouter} from "v3-periphery/interfaces/ISwapRouter.sol";
 
 import {Oracle} from "src/squeeth/Oracle.sol";
-import {
-    LendingStrategy
-} from "src/LendingStrategy.sol";
-import {
-    ILendingStrategy
-} from "src/interfaces/ILendingStrategy.sol";
-import {StrategyFactory} from "src/StrategyFactory.sol";
+import {LendingStrategy} from "src/core/LendingStrategy.sol";
+import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
+import {StrategyFactory} from "src/core/StrategyFactory.sol";
 import {FixedPointMathLib} from "src/libraries/FixedPointMathLib.sol";
 
 contract TestERC721 is ERC721("TEST", "TEST") {
@@ -79,6 +75,7 @@ contract LendingStrategyForkingTest is Test {
     address borrower = address(1);
     address lender = address(2);
     uint24 feeTier = 10000;
+    bytes32 allowedCollateralRoot;
 
     event VaultCreated(
         bytes32 indexed vaultKey,
@@ -94,7 +91,9 @@ contract LendingStrategyForkingTest is Test {
     function setUp() public {
         vm.warp(1);
         factory = new StrategyFactory();
-        strategy = factory.newStrategy("PUNKs Loans", "PL", nft, weth);
+        strategy = factory.newStrategy(
+            "PUNKs Loans", "PL", allowedCollateralRoot, 1e17, 5e17, weth
+        );
         nft.mint(borrower, 1);
         vm.prank(borrower);
         nft.approve(address(strategy), 1);
@@ -138,17 +137,31 @@ contract LendingStrategyForkingTest is Test {
         vm.stopPrank();
     }
 
+    bytes[] data;
+
     function testBorrow() public {
         vm.warp(block.timestamp + 1);
         vm.startPrank(borrower);
         // nft.transferFrom(borrower, address(strategy), 1);
+        data.push(
+            abi.encodeWithSelector(LendingStrategy.openVault.selector, borrower)
+        );
 
-        ILendingStrategy.OpenVaultRequest memory request = ILendingStrategy.OpenVaultRequest(
+        data.push(
+            abi.encodeWithSelector(LendingStrategy.addCollateral.selector, borrower)
+        );
+
+        ILendingStrategy.OpenVaultRequest memory request = ILendingStrategy
+            .OpenVaultRequest(
             borrower,
             1e18,
             ILendingStrategy.Collateral({addr: nft, id: 1}),
-            ILendingStrategy.OracleInfo({price: 3e18, period: ILendingStrategy.OracleInfoPeriod.SevenDays}),
-            ILendingStrategy.Sig({v: 1, r: keccak256("x"), s: keccak256("x")})
+            ILendingStrategy.OracleInfo({
+                price: 3e18,
+                period: ILendingStrategy.OracleInfoPeriod.SevenDays
+            }),
+            ILendingStrategy.Sig({v: 1, r: keccak256("x"), s: keccak256("x")}),
+            ""
         );
         strategy.updateNormalization();
 

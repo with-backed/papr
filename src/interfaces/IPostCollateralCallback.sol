@@ -7,6 +7,7 @@ interface IPostCollateralCallback {
     /// TODO: how will callers verify this is the right strategy?
     /// ours are not deterministic like uniswap, on just a few parameters.
     function postCollateralCallback(
+        ILendingStrategy.StrategyDefinition calldata strategyDefinition,
         ILendingStrategy.Collateral calldata collateral,
         bytes calldata data
     )

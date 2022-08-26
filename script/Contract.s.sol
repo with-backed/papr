@@ -5,10 +5,10 @@ import "forge-std/Script.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {ERC721} from "solmate/tokens/ERC721.sol";
 
-import {DebtToken} from "src/DebtToken.sol";
+import {DebtToken} from "src/core/DebtToken.sol";
 import {Oracle} from "src/squeeth/Oracle.sol";
-import {StrategyFactory} from "src/StrategyFactory.sol";
-import {LendingStrategy} from "src/LendingStrategy.sol";
+import {StrategyFactory} from "src/core/StrategyFactory.sol";
+import {LendingStrategy} from "src/core/LendingStrategy.sol";
 
 contract TestERC20 is ERC20("USDC", "USDC", 18) {
     function mint(address to, uint256 amount) external {
@@ -44,7 +44,7 @@ contract ContractScript is Script {
 
         StrategyFactory s = new StrategyFactory();
         LendingStrategy strategy =
-            s.newStrategy("APE Loans", "AP", ERC721(collateral), ERC20(underlying));
+            s.newStrategy("APE Loans", "AP", "", 2e17, 5e17, ERC20(underlying));
 
         // uint256 tokenId = 17;
 

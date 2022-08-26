@@ -8,9 +8,10 @@ import {IUniswapV3Factory} from
 import {IUniswapV3Pool} from "v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {TickMath} from "fullrange/libraries/TickMath.sol";
 
+import {StrategyFactory} from "./StrategyFactory.sol";
 import {DebtToken} from "./DebtToken.sol";
 import {DebtVault} from "./DebtVault.sol";
-import {Multicall} from "./Multicall.sol";
+import {Multicall} from "src/core/base/Multicall.sol";
 import {IOracle} from "src/squeeth/IOracle.sol";
 import {FixedPointMathLib} from "src/libraries/FixedPointMathLib.sol";
 import {IPostCollateralCallback} from
@@ -20,18 +21,18 @@ import {ILendingStrategy} from "src/interfaces/IPostCollateralCallback.sol";
 contract LendingStrategy is ERC721TokenReceiver, Multicall {
     uint256 immutable start;
     uint256 constant ONE = 1e18;
-    uint24 constant UNISWAP_FEE_TIER = 10000;
-    uint256 public constant maxLTV = ONE * 5 / 10; // 50%
-    uint256 public constant PERIOD = 4 weeks;
-    uint256 public targetGrowthPerPeriod = 20 * ONE / 100 / (52 / 4); // 20% APR
-    uint128 public normalization = 1e18;
-    uint128 public lastUpdated = uint128(block.timestamp);
+    uint256 public immutable maxLTV;
+    uint256 public immutable targetAPR;
     string public name;
     string public symbol;
+    ERC20 public immutable underlying;
+    uint256 public PERIOD = 4 weeks;
+    uint256 public targetGrowthPerPeriod;
+    uint128 public normalization;
+    uint128 public lastUpdated;
     DebtToken public debtToken;
     DebtVault public debtVault;
-    ERC20 public underlying;
-    ERC721 public collateral;
+    bytes32 public allowedCollateralRoot;
     IOracle oracle;
     IUniswapV3Pool public pool;
     uint256 _nonce;
@@ -57,70 +58,110 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         _;
     }
 
-    constructor(
-        string memory _name,
-        string memory _symbol,
-        ERC721 _collateral,
-        ERC20 _underlying,
-        IOracle _oracle
-    ) {
-        underlying = _underlying;
-        collateral = _collateral;
+    constructor() {
+        (name, symbol, allowedCollateralRoot, targetAPR, maxLTV, underlying) =
+            StrategyFactory(msg.sender).parameters();
+        targetGrowthPerPeriod = targetAPR / (365 days / PERIOD);
+        oracle = StrategyFactory(msg.sender).oracle();
+        debtToken = new DebtToken(name, symbol, underlying.symbol());
+        debtVault = new DebtVault(name, symbol);
+
         IUniswapV3Factory factory =
             IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
-        debtToken = new DebtToken(_name, _symbol, _underlying.symbol());
-        debtVault = new DebtVault(_name, _symbol);
+
         pool = IUniswapV3Pool(
-            factory.createPool(address(underlying), address(debtToken), UNISWAP_FEE_TIER)
+            factory.createPool(address(underlying), address(debtToken), 10000)
         );
         pool.initialize(TickMath.getSqrtRatioAtTick(0));
-        oracle = _oracle;
+
         start = block.timestamp;
         lastUpdated = uint128(block.timestamp);
-        name = _name;
-        symbol = _symbol;
+        normalization = uint128(FixedPointMathLib.WAD);
     }
 
-    function openVault(address mintTo)
+    function openVault(
+        address mintVaultTo,
+        address mintDebtTo,
+        uint128 debt,
+        ILendingStrategy.Collateral memory collateral,
+        ILendingStrategy.OracleInfo memory oracleInfo,
+        ILendingStrategy.Sig memory sig,
+        bytes memory postCollateralCallbackData
+    )
         public
         returns (uint256 id)
     {
         id = ++_nonce;
-        debtVault.mint(mintTo, id);
+        debtVault.mint(mintVaultTo, id);
+
+        // addCollateral(
+        //     id, collateral, oracleInfo, sig, postCollateralCallbackData
+        // );
+
+        // if (debt > 0) {
+        //     _increaseDebt(id, mintDebtTo, debt);
+        // }
     }
 
-    function addCollateralToVaultWithPull(
-        uint256 vaultId,
-        ILendingStrategy.Collateral calldata collateral,
-        ILendingStrategy.OracleInfo calldata oracleInfo,
-        ILendingStrategy.Sig calldata sig
-    )
-        public
-    {
-        _addCollateralToVault(vaultId, collateral, oracleInfo, sig);
-        collateral.addr.transferFrom(msg.sender, address(this), collateral.id);
-    }
-
-    // allows for sending the NFT to the contract out of band
-    function addCollateralWithPossessionCheck(
-        uint256 vaultId,
-        ILendingStrategy.Collateral calldata collateral,
-        ILendingStrategy.OracleInfo calldata oracleInfo,
-        ILendingStrategy.Sig calldata sig,
+    function onERC721Received(
+        address from,
+        address,
+        uint256 _id,
         bytes calldata data
     )
-        public
+        external
+        override
+        returns (bytes4)
     {
-        _addCollateralToVault(vaultId, collateral, oracleInfo, sig);
-        if (collateral.addr.ownerOf(collateral.id) != address(this)) {
-            revert();
+        (
+            uint256 vaultId,
+            address mintVaultTo,
+            address mintDebtTo,
+            uint128 debt,
+            ILendingStrategy.OracleInfo memory oracleInfo,
+            ILendingStrategy.Sig memory sig,
+            bytes memory postCollateralCallbackData
+        ) = abi.decode(
+            data,
+            (
+                uint256,
+                address,
+                address,
+                uint128,
+                ILendingStrategy.OracleInfo,
+                ILendingStrategy.Sig,
+                bytes
+            )
+        );
+
+        ILendingStrategy.Collateral memory collateral = ILendingStrategy.Collateral(ERC721(msg.sender), _id);
+
+        if (vaultId == 0) {
+            vaultId = openVault(mintVaultTo, mintDebtTo, debt, collateral, oracleInfo, sig, postCollateralCallbackData);
+        } else {
+            if (debtVault.ownerOf(vaultId) != from) {
+                revert();
+            }
         }
+
+        _addCollateralToVault(vaultId, collateral, oracleInfo, sig);
+
+        if (debt > 0) {
+            _increaseDebt(vaultId, mintDebtTo, debt);
+        }
+
+        return ERC721TokenReceiver.onERC721Received.selector;
     }
 
-    /// enables borrowers to mint and sell debt in callback
-    /// ahead of passing collateral
-    /// i.e. loan to buy
-    function addCollateralToVaultWithCallback(
+    /// NOTE: I debated whether to only have one method to add
+    /// collateral, which uses a callback. It means every EOA has to use
+    /// a periphery. I like the simplicity, but we could also add
+    /// an addCollateral method to pull it from msg.sender that would allow
+    /// EOAs calling directly. But a callback is necessary for the loan to buy
+    /// case, and I think putting the mint and sell functionality at the periphery
+    /// is cleaner than having it in the core. Also less byte code and one approval for a single
+    /// periphery rather than many strategies
+    function addCollateral(
         uint256 vaultId,
         ILendingStrategy.Collateral calldata collateral,
         ILendingStrategy.OracleInfo calldata oracleInfo,
@@ -131,80 +172,31 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
     {
         _addCollateralToVault(vaultId, collateral, oracleInfo, sig);
         IPostCollateralCallback(msg.sender).postCollateralCallback(
-            collateral, data
+            ILendingStrategy.StrategyDefinition(
+                allowedCollateralRoot, targetAPR, maxLTV, underlying
+            ),
+            collateral,
+            data
         );
         if (collateral.addr.ownerOf(collateral.id) != address(this)) {
             revert();
         }
     }
 
-    function _addCollateralToVault(
-        uint256 vaultId,
-        ILendingStrategy.Collateral calldata collateral,
-        ILendingStrategy.OracleInfo calldata oracleInfo,
-        ILendingStrategy.Sig calldata sig
-    )
-        internal
-    {
-        bytes32 h = collateralHash(collateral);
-        
-        if (price[h] != 0) {
-            // collateral is already here
-            revert();
-        }
-
-        if (oracleInfo.price == 0) {
-            revert();
-        }
-
-        // TODO check signature
-        // TODO check collateral is allowed in this strategy
-
-        /// TODO re multiple nfts in a single vault
-        /// for now we can just add their oracle prices together
-        /// but this doesn't work well for strategies in the future
-        /// that might have a maxLTV unique to each NFT, if we want
-        /// to allow for that
-        vaultInfo[vaultId].price += oracleInfo.price;
-
-        emit CollateralAdded(vaultId, collateral, oracleInfo);
-    }
-
-    struct ERC721ReceivedInfo {
-        uint256 vaultId;
-        address mintVaultTo;
-        uint256 debtAmount;
-        uint256 mintDebtTo;
-        OracleInfo oracleInfo;
-    }
-
-    function onERC721Received(
-        address,
-        address,
-        uint256 _id,
-        bytes calldata data
-    )
-        external
-        override
-        returns (bytes4)
-    {
-        bytes[] memory multicallData =
-            abi.decode(data, (bytes[]));
-
-        multicall(multicallData);
-        
-
-        return ERC721TokenReceiver.onERC721Received.selector;
-    }
-
-    function increaseDebt(uint256 vaultId, uint128 amount)
-        external
+    function increaseDebt(uint256 vaultId, address mintTo, uint128 amount)
+        public
         onlyVaultOwner(vaultId)
+    {
+        _increaseDebt(vaultId, mintTo, amount);
+    }
+
+    function _increaseDebt(uint256 vaultId, address mintTo, uint128 amount)
+        internal 
     {
         updateNormalization();
 
         vaultInfo[vaultId].debt += amount;
-        debtToken.mint(msg.sender, amount);
+        debtToken.mint(mintTo, amount);
 
         if (vaultInfo[vaultId].debt > maxDebt(vaultInfo[vaultId].price)) {
             revert("too much debt");
@@ -213,13 +205,13 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         emit DebtAdded(vaultId, amount);
     }
 
-    function reduceDebt(uint256 vaultId, uint128 amount) external {
+    function reduceDebt(uint256 vaultId, uint128 amount) public {
         vaultInfo[vaultId].debt -= amount;
         debtToken.burn(msg.sender, amount);
         emit DebtReduced(vaultId, amount);
     }
 
-    function closeVault(uint256 vaultId) external onlyVaultOwner(vaultId) {
+    function closeVault(uint256 vaultId) public onlyVaultOwner(vaultId) {
         if (vaultInfo[vaultId].debt != 0) {
             revert("still has debt");
         }
@@ -237,7 +229,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         emit VaultClosed(vaultId);
     }
 
-    function liquidate(uint256 vaultId) external {
+    function liquidate(uint256 vaultId) public {
         updateNormalization();
 
         if (normalization < liquidationPrice(vaultId) * ONE) {
@@ -344,6 +336,42 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         returns (bytes32)
     {
         return keccak256(abi.encode(collateral));
+    }
+
+    function _addCollateralToVault(
+        uint256 vaultId,
+        ILendingStrategy.Collateral memory collateral,
+        ILendingStrategy.OracleInfo memory oracleInfo,
+        ILendingStrategy.Sig memory sig
+    )
+        internal
+    {
+        bytes32 h = collateralHash(collateral);
+
+        if (price[h] != 0) {
+            // collateral is already here
+            revert();
+        }
+
+        if (oracleInfo.price == 0) {
+            revert();
+        }
+
+        if (vaultInfo[vaultId].price == 0) {
+            revert("vault does not exist");
+        }
+
+        // TODO check signature
+        // TODO check collateral is allowed in this strategy
+
+        /// TODO re multiple nfts in a single vault
+        /// for now we can just add their oracle prices together
+        /// but this doesn't work well for strategies in the future
+        /// that might have a maxLTV unique to each NFT, if we want
+        /// to allow for that
+        vaultInfo[vaultId].price += oracleInfo.price;
+
+        emit CollateralAdded(vaultId, collateral, oracleInfo);
     }
 
     function _getConsistentPeriodForOracle(uint32 _period)

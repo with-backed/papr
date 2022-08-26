@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
 
-import {CreatorGuarded} from "./CreatorGuarded.sol";
+import {CreatorGuarded} from "src/core/base/CreatorGuarded.sol";
 
 contract DebtToken is ERC20 {
     address creator;
