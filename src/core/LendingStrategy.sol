@@ -19,8 +19,9 @@ import {IPostCollateralCallback} from
 import {ILendingStrategy} from "src/interfaces/IPostCollateralCallback.sol";
 
 contract LendingStrategy is ERC721TokenReceiver, Multicall {
-    uint256 immutable start;
     uint256 constant ONE = 1e18;
+    bool immutable token0IsUnderlying;
+    uint256 immutable start;
     uint256 public immutable maxLTV;
     uint256 public immutable targetAPR;
     string public name;
@@ -73,36 +74,21 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
             factory.createPool(address(underlying), address(debtToken), 10000)
         );
         pool.initialize(TickMath.getSqrtRatioAtTick(0));
+        token0IsUnderlying = pool.token0() == address(underlying);
 
         start = block.timestamp;
         lastUpdated = uint128(block.timestamp);
         normalization = uint128(FixedPointMathLib.WAD);
     }
 
-    function openVault(
-        address mintVaultTo,
-        address mintDebtTo,
-        uint128 debt,
-        ILendingStrategy.Collateral memory collateral,
-        ILendingStrategy.OracleInfo memory oracleInfo,
-        ILendingStrategy.Sig memory sig,
-        bytes memory postCollateralCallbackData
-    )
-        public
-        returns (uint256 id)
-    {
+    function openVault(address mintTo) public returns (uint256 id) {
         id = ++_nonce;
-        debtVault.mint(mintVaultTo, id);
-
-        // addCollateral(
-        //     id, collateral, oracleInfo, sig, postCollateralCallbackData
-        // );
-
-        // if (debt > 0) {
-        //     _increaseDebt(id, mintDebtTo, debt);
-        // }
+        debtVault.mint(mintTo, id);
     }
 
+    /// Kinda an ugly func, possibly could be orchestrated at periphery
+    /// instead, but nice that this allows for borrowers to do it all in a single
+    /// tx and low gas
     function onERC721Received(
         address from,
         address,
@@ -113,54 +99,92 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         override
         returns (bytes4)
     {
-        (
-            uint256 vaultId,
-            address mintVaultTo,
-            address mintDebtTo,
-            uint128 debt,
-            ILendingStrategy.OracleInfo memory oracleInfo,
-            ILendingStrategy.Sig memory sig,
-            bytes memory postCollateralCallbackData
-        ) = abi.decode(
-            data,
-            (
-                uint256,
-                address,
-                address,
-                uint128,
-                ILendingStrategy.OracleInfo,
-                ILendingStrategy.Sig,
-                bytes
-            )
-        );
+        ILendingStrategy.OnERC721ReceivedArgs memory request =
+            abi.decode(data, (ILendingStrategy.OnERC721ReceivedArgs));
 
-        ILendingStrategy.Collateral memory collateral = ILendingStrategy.Collateral(ERC721(msg.sender), _id);
+        ILendingStrategy.Collateral memory collateral =
+            ILendingStrategy.Collateral(ERC721(msg.sender), _id);
 
-        if (vaultId == 0) {
-            vaultId = openVault(mintVaultTo, mintDebtTo, debt, collateral, oracleInfo, sig, postCollateralCallbackData);
+        if (request.vaultId == 0) {
+            request.vaultId = openVault(request.mintVaultTo);
         } else {
-            if (debtVault.ownerOf(vaultId) != from) {
+            if (debtVault.ownerOf(request.vaultId) != from) {
                 revert();
             }
         }
 
-        _addCollateralToVault(vaultId, collateral, oracleInfo, sig);
+        _addCollateralToVault(
+            request.vaultId, collateral, request.oracleInfo, request.sig
+        );
 
-        if (debt > 0) {
-            _increaseDebt(vaultId, mintDebtTo, debt);
+        if (request.minOut > 0) {
+            mintAndSellDebt(
+                request.vaultId,
+                request.debt,
+                request.minOut,
+                request.sqrtPriceLimitX96,
+                request.mintDebtOrProceedsTo
+            );
+        } else if (request.debt > 0) {
+            _increaseDebt(
+                request.vaultId,
+                request.mintDebtOrProceedsTo,
+                uint256(request.debt)
+            );
         }
 
         return ERC721TokenReceiver.onERC721Received.selector;
     }
 
-    /// NOTE: I debated whether to only have one method to add
-    /// collateral, which uses a callback. It means every EOA has to use
-    /// a periphery. I like the simplicity, but we could also add
-    /// an addCollateral method to pull it from msg.sender that would allow
-    /// EOAs calling directly. But a callback is necessary for the loan to buy
-    /// case, and I think putting the mint and sell functionality at the periphery
-    /// is cleaner than having it in the core. Also less byte code and one approval for a single
-    /// periphery rather than many strategies
+    // debated a lot about whether this should be at the periphery. A bit of extra deploy code to put this in each strategy
+    // but it saves some gas (don't have to do pool check), and pretty much everything else
+    // can be done with the strategy, so I think it's nice
+    function mintAndSellDebt(
+        uint256 vaultId,
+        int256 debt,
+        int256 minOut,
+        uint160 sqrtPriceLimitX96,
+        address proceedsTo
+    ) public {
+        (int256 amount0, int256 amount1) = pool.swap(
+            proceedsTo,
+            !token0IsUnderlying, // zeroForOne, true if DT is 0
+            debt,
+            sqrtPriceLimitX96, //sqrtx96
+            abi.encode(vaultId)
+        );
+
+        if (token0IsUnderlying) {
+            if (amount0 < minOut) {
+                revert();
+            }
+        }
+    }
+
+    function uniswapV3SwapCallback(
+        int256 amount0Delta,
+        int256 amount1Delta,
+        bytes calldata _data
+    )
+        external
+    {
+        require(amount0Delta > 0 || amount1Delta > 0); // swaps entirely within 0-liquidity regions are not supported
+
+        if (msg.sender != address(pool)) {
+            revert();
+        }
+
+        uint256 vaultId = abi.decode(_data, (uint256));
+
+        //determine the amount that needs to be repaid as part of the flashswap
+        uint256 amountToPay =
+            amount0Delta > 0 ? uint256(amount0Delta) : uint256(amount1Delta);
+
+        _increaseDebt(vaultId, msg.sender, amountToPay);
+    }
+
+    /// Alternative to using safeTransferFrom, 
+    /// allows for loan to buy flows
     function addCollateral(
         uint256 vaultId,
         ILendingStrategy.Collateral calldata collateral,
@@ -183,19 +207,20 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         }
     }
 
-    function increaseDebt(uint256 vaultId, address mintTo, uint128 amount)
+    function increaseDebt(uint256 vaultId, address mintTo, uint256 amount)
         public
         onlyVaultOwner(vaultId)
     {
         _increaseDebt(vaultId, mintTo, amount);
     }
 
-    function _increaseDebt(uint256 vaultId, address mintTo, uint128 amount)
-        internal 
+    function _increaseDebt(uint256 vaultId, address mintTo, uint256 amount)
+        internal
     {
         updateNormalization();
 
-        vaultInfo[vaultId].debt += amount;
+        // TODO, safe to uint128 ?
+        vaultInfo[vaultId].debt += uint128(amount);
         debtToken.mint(mintTo, amount);
 
         if (vaultInfo[vaultId].debt > maxDebt(vaultInfo[vaultId].price)) {
@@ -255,7 +280,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         emit NormalizationFactorUpdated(previousNormalization, newNormalization);
     }
 
-    function newNorm() public view returns (uint256 newNorm) {
+    function newNorm() public view returns (uint256) {
         if (lastUpdated == block.timestamp) {
             return normalization;
         }
@@ -325,8 +350,8 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
 
     /// @notice given a supposed asset price (would have to be passed on oracle message to be realized)
     /// returns how much synthDebt could be minted
-    function maxDebt(uint256 price) public view returns (uint256) {
-        uint256 maxLoanUnderlying = price * maxLTV;
+    function maxDebt(uint256 assetPrice) public view returns (uint256) {
+        uint256 maxLoanUnderlying = assetPrice * maxLTV;
         return maxLoanUnderlying / normalization;
     }
 
@@ -355,10 +380,6 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
 
         if (oracleInfo.price == 0) {
             revert();
-        }
-
-        if (vaultInfo[vaultId].price == 0) {
-            revert("vault does not exist");
         }
 
         // TODO check signature

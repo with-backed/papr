@@ -142,31 +142,26 @@ contract LendingStrategyForkingTest is Test {
     function testBorrow() public {
         vm.warp(block.timestamp + 1);
         vm.startPrank(borrower);
-        // nft.transferFrom(borrower, address(strategy), 1);
-        data.push(
-            abi.encodeWithSelector(LendingStrategy.openVault.selector, borrower)
-        );
-
-        data.push(
-            abi.encodeWithSelector(LendingStrategy.addCollateral.selector, borrower)
-        );
-
-        ILendingStrategy.OpenVaultRequest memory request = ILendingStrategy
-            .OpenVaultRequest(
+        ILendingStrategy.OnERC721ReceivedArgs memory args = ILendingStrategy.OnERC721ReceivedArgs(
+            0,
             borrower,
+            borrower,
+            0,
             1e18,
-            ILendingStrategy.Collateral({addr: nft, id: 1}),
-            ILendingStrategy.OracleInfo({
-                price: 3e18,
-                period: ILendingStrategy.OracleInfoPeriod.SevenDays
-            }),
-            ILendingStrategy.Sig({v: 1, r: keccak256("x"), s: keccak256("x")}),
-            ""
+            0,
+            ILendingStrategy.OracleInfo(
+                3e18,
+                ILendingStrategy.OracleInfoPeriod.SevenDays
+            ),
+            ILendingStrategy.Sig({
+                v: 1,
+                r: keccak256('x'),
+                s: keccak256('x')
+            })
         );
-        strategy.updateNormalization();
 
         nft.safeTransferFrom(
-            borrower, address(strategy), 1, abi.encode(request)
+            borrower, address(strategy), 1, abi.encode(args)
         );
 
         uint256 q = quoter.quoteExactInputSingle(

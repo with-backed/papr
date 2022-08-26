@@ -32,13 +32,15 @@ interface ILendingStrategy {
         bytes32 s;
     }
 
-    struct OpenVaultRequest {
-        address mintTo;
-        uint128 debt;
-        Collateral collateral;
-        OracleInfo oracleInfo;
-        Sig sig;
-        bytes postCollateralCallbackData;
+    struct OnERC721ReceivedArgs {
+        uint256 vaultId;
+        address mintVaultTo;
+        address mintDebtOrProceedsTo;
+        int256 minOut;
+        int256 debt;
+        uint160 sqrtPriceLimitX96;
+        ILendingStrategy.OracleInfo oracleInfo;
+        ILendingStrategy.Sig sig;
     }
 
     struct StrategyDefinition {
