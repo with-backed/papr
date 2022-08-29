@@ -79,6 +79,8 @@ contract LendingStrategyForkingTest is Test {
     address lender = address(2);
     uint24 feeTier = 10000;
     bytes32 allowedCollateralRoot;
+    int24 tickLower;
+    int24 tickUpper;
 
     event VaultCreated(
         bytes32 indexed vaultKey,
@@ -120,13 +122,19 @@ contract LendingStrategyForkingTest is Test {
 
         vm.warp(block.timestamp + 1);
 
+        if (strategy.token0IsUnderlying()) {
+            tickUpper = 200;
+        } else {
+            tickLower = -200;
+        }
+
         INonfungiblePositionManager.MintParams memory mintParams =
         INonfungiblePositionManager.MintParams(
             strategy.pool().token0(),
             strategy.pool().token1(),
             feeTier,
-            -200,
-            0,
+            tickLower,
+            tickUpper,
             token0Amount,
             token1Amount,
             0,
@@ -149,38 +157,42 @@ contract LendingStrategyForkingTest is Test {
             0,
             borrower,
             borrower,
-            0,
+            1,
             1e18,
-            0,
+            TickMath.getSqrtRatioAtTick(
+                strategy.token0IsUnderlying() ? tickUpper - 1 : tickLower + 1
+            ),
             ILendingStrategy.OracleInfo(3e18, ILendingStrategy.OracleInfoPeriod.SevenDays),
             ILendingStrategy.Sig({v: 1, r: keccak256("x"), s: keccak256("x")})
         );
-
+        emit log_uint(block.timestamp);
+        emit log_uint(strategy.lastUpdated());
+        emit log_uint(strategy._getConsistentPeriodForOracle(2));
         nft.safeTransferFrom(borrower, address(strategy), 1, abi.encode(args));
 
-        uint256 q = quoter.quoteExactInputSingle(
-            address(strategy.debtToken()),
-            address(strategy.underlying()),
-            feeTier,
-            1e18,
-            0
-        );
-        emit log_named_uint("quote 1 eth", q);
+        // uint256 q = quoter.quoteExactInputSingle(
+        //     address(strategy.debtToken()),
+        //     address(strategy.underlying()),
+        //     feeTier,
+        //     1e18,
+        //     0
+        // );
+        // emit log_named_uint("quote 1 eth", q);
 
-        ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
-            .ExactInputSingleParams({
-            tokenIn: address(strategy.debtToken()),
-            tokenOut: address(strategy.underlying()),
-            fee: feeTier,
-            recipient: borrower,
-            deadline: block.timestamp + 15,
-            amountIn: 1e18,
-            amountOutMinimum: 0,
-            sqrtPriceLimitX96: 0
-        });
+        // ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
+        //     .ExactInputSingleParams({
+        //     tokenIn: address(strategy.debtToken()),
+        //     tokenOut: address(strategy.underlying()),
+        //     fee: feeTier,
+        //     recipient: borrower,
+        //     deadline: block.timestamp + 15,
+        //     amountIn: 1e18,
+        //     amountOutMinimum: 0,
+        //     sqrtPriceLimitX96: 0
+        // });
 
-        strategy.debtToken().approve(address(router), 1e18);
+        // strategy.debtToken().approve(address(router), 1e18);
 
-        router.exactInputSingle(params);
+        // router.exactInputSingle(params);
     }
 }

@@ -20,7 +20,7 @@ import {ILendingStrategy} from "src/interfaces/IPostCollateralCallback.sol";
 
 contract LendingStrategy is ERC721TokenReceiver, Multicall {
     uint256 constant ONE = 1e18;
-    bool immutable token0IsUnderlying;
+    bool public immutable token0IsUnderlying;
     uint256 immutable start;
     uint256 public immutable maxLTV;
     uint256 public immutable targetAPR;
@@ -142,24 +142,26 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
     function mintAndSellDebt(
         uint256 vaultId,
         int256 debt,
-        int256 minOut,
+        uint256 minOut,
         uint160 sqrtPriceLimitX96,
         address proceedsTo
     )
         public
     {
+        // zeroForOne, true if debt token is token0
+        bool zeroForOne = !token0IsUnderlying;
         (int256 amount0, int256 amount1) = pool.swap(
             proceedsTo,
-            !token0IsUnderlying, // zeroForOne, true if DT is 0
+            zeroForOne,
             debt,
             sqrtPriceLimitX96, //sqrtx96
             abi.encode(vaultId)
         );
 
-        if (token0IsUnderlying) {
-            if (amount0 < minOut) {
-                revert();
-            }
+        uint256 out = uint256(-(zeroForOne ? amount1 : amount0));
+
+        if (out < minOut) {
+            revert("too little out");
         }
     }
 
@@ -173,7 +175,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         require(amount0Delta > 0 || amount1Delta > 0); // swaps entirely within 0-liquidity regions are not supported
 
         if (msg.sender != address(pool)) {
-            revert();
+            revert("wrong caller");
         }
 
         uint256 vaultId = abi.decode(_data, (uint256));
@@ -302,6 +304,10 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
     function mark(uint32 period) public view returns (uint256) {
         // period stuff is kinda weird? Don't we just always want the longest period?
         uint32 periodForOracle = _getConsistentPeriodForOracle(period);
+        if (periodForOracle == 0) {
+            /// TODO fix when we make oracle changes
+            return 1e18;
+        }
         return oracle.getTwap(
             address(pool),
             address(debtToken),
@@ -398,7 +404,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
     }
 
     function _getConsistentPeriodForOracle(uint32 _period)
-        internal
+        public
         view
         returns (uint32)
     {

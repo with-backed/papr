@@ -36,7 +36,7 @@ interface ILendingStrategy {
         uint256 vaultId;
         address mintVaultTo;
         address mintDebtOrProceedsTo;
-        int256 minOut;
+        uint256 minOut;
         int256 debt;
         uint160 sqrtPriceLimitX96;
         ILendingStrategy.OracleInfo oracleInfo;
