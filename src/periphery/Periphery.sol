@@ -7,7 +7,6 @@ import {LendingStrategy} from "src/core/LendingStrategy.sol";
 import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
 
 contract Periphery is IPostCollateralCallback {
-    
     function postCollateralCallback(
         ILendingStrategy.StrategyDefinition calldata strategyDefinition,
         ILendingStrategy.Collateral calldata collateral,

@@ -145,7 +145,9 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         int256 minOut,
         uint160 sqrtPriceLimitX96,
         address proceedsTo
-    ) public {
+    )
+        public
+    {
         (int256 amount0, int256 amount1) = pool.swap(
             proceedsTo,
             !token0IsUnderlying, // zeroForOne, true if DT is 0
@@ -183,7 +185,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         _increaseDebt(vaultId, msg.sender, amountToPay);
     }
 
-    /// Alternative to using safeTransferFrom, 
+    /// Alternative to using safeTransferFrom,
     /// allows for loan to buy flows
     function addCollateral(
         uint256 vaultId,

@@ -63,7 +63,10 @@ interface INonfungiblePositionManager {
 }
 
 contract LendingStrategyForkingTest is Test {
+    uint256 forkId =
+        vm.createSelectFork(vm.envString("MAINNET_RPC_URL"), 15434809);
     StrategyFactory factory;
+
     TestERC721 nft = new TestERC721();
     WETH weth = WETH(payable(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2));
     Oracle oracle = new Oracle();
@@ -89,7 +92,6 @@ contract LendingStrategyForkingTest is Test {
     event NormalizationFactorUpdated(uint128 oldNorm, uint128 newNorm);
 
     function setUp() public {
-        vm.warp(1);
         factory = new StrategyFactory();
         strategy = factory.newStrategy(
             "PUNKs Loans", "PL", allowedCollateralRoot, 1e17, 5e17, weth
@@ -116,7 +118,7 @@ contract LendingStrategyForkingTest is Test {
         vm.deal(lender, 1e30);
         weth.deposit{value: 1e30}();
 
-        vm.warp(10);
+        vm.warp(block.timestamp + 1);
 
         INonfungiblePositionManager.MintParams memory mintParams =
         INonfungiblePositionManager.MintParams(
@@ -142,27 +144,19 @@ contract LendingStrategyForkingTest is Test {
     function testBorrow() public {
         vm.warp(block.timestamp + 1);
         vm.startPrank(borrower);
-        ILendingStrategy.OnERC721ReceivedArgs memory args = ILendingStrategy.OnERC721ReceivedArgs(
+        ILendingStrategy.OnERC721ReceivedArgs memory args = ILendingStrategy
+            .OnERC721ReceivedArgs(
             0,
             borrower,
             borrower,
             0,
             1e18,
             0,
-            ILendingStrategy.OracleInfo(
-                3e18,
-                ILendingStrategy.OracleInfoPeriod.SevenDays
-            ),
-            ILendingStrategy.Sig({
-                v: 1,
-                r: keccak256('x'),
-                s: keccak256('x')
-            })
+            ILendingStrategy.OracleInfo(3e18, ILendingStrategy.OracleInfoPeriod.SevenDays),
+            ILendingStrategy.Sig({v: 1, r: keccak256("x"), s: keccak256("x")})
         );
 
-        nft.safeTransferFrom(
-            borrower, address(strategy), 1, abi.encode(args)
-        );
+        nft.safeTransferFrom(borrower, address(strategy), 1, abi.encode(args));
 
         uint256 q = quoter.quoteExactInputSingle(
             address(strategy.debtToken()),

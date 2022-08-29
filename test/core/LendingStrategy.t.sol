@@ -5,4 +5,6 @@ import "forge-std/Test.sol";
 
 import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
 
-contract LendingStrategyTest is Test {}
+contract LendingStrategyTest is Test {
+    function testDummy() public {}
+}
