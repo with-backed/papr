@@ -4,7 +4,6 @@ pragma solidity ^0.8.13;
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {ERC721} from "solmate/tokens/ERC721.sol";
 
-import {Oracle} from "src/squeeth/Oracle.sol";
 import {LendingStrategy} from "src/core/LendingStrategy.sol";
 
 contract StrategyFactory {
@@ -18,12 +17,6 @@ contract StrategyFactory {
     }
 
     Parameters public parameters;
-
-    Oracle public oracle;
-
-    constructor() {
-        oracle = new Oracle();
-    }
 
     /// TODO we probably want maxLTV and targetAPR indexed?
     event LendingStrategyCreated(

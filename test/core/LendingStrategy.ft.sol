@@ -9,7 +9,6 @@ import {TickMath} from "fullrange/libraries/TickMath.sol";
 import {IQuoter} from "v3-periphery/interfaces/IQuoter.sol";
 import {ISwapRouter} from "v3-periphery/interfaces/ISwapRouter.sol";
 
-import {Oracle} from "src/squeeth/Oracle.sol";
 import {LendingStrategy} from "src/core/LendingStrategy.sol";
 import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
 import {StrategyFactory} from "src/core/StrategyFactory.sol";
@@ -69,7 +68,6 @@ contract LendingStrategyForkingTest is Test {
 
     TestERC721 nft = new TestERC721();
     WETH weth = WETH(payable(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2));
-    Oracle oracle = new Oracle();
     LendingStrategy strategy;
     INonfungiblePositionManager positionManager =
         INonfungiblePositionManager(0xC36442b4a4522E871399CD717aBDD847Ab11FE88);
@@ -99,6 +97,7 @@ contract LendingStrategyForkingTest is Test {
             "PUNKs Loans", "PL", allowedCollateralRoot, 1e17, 5e17, weth
         );
         nft.mint(borrower, 1);
+        nft.mint(borrower, 2);
         vm.prank(borrower);
         nft.approve(address(strategy), 1);
 
@@ -158,41 +157,14 @@ contract LendingStrategyForkingTest is Test {
             borrower,
             borrower,
             1,
-            1e18,
+            1e17,
             TickMath.getSqrtRatioAtTick(
                 strategy.token0IsUnderlying() ? tickUpper - 1 : tickLower + 1
             ),
             ILendingStrategy.OracleInfo(3e18, ILendingStrategy.OracleInfoPeriod.SevenDays),
             ILendingStrategy.Sig({v: 1, r: keccak256("x"), s: keccak256("x")})
         );
-        emit log_uint(block.timestamp);
-        emit log_uint(strategy.lastUpdated());
-        emit log_uint(strategy._getConsistentPeriodForOracle(2));
+
         nft.safeTransferFrom(borrower, address(strategy), 1, abi.encode(args));
-
-        // uint256 q = quoter.quoteExactInputSingle(
-        //     address(strategy.debtToken()),
-        //     address(strategy.underlying()),
-        //     feeTier,
-        //     1e18,
-        //     0
-        // );
-        // emit log_named_uint("quote 1 eth", q);
-
-        // ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
-        //     .ExactInputSingleParams({
-        //     tokenIn: address(strategy.debtToken()),
-        //     tokenOut: address(strategy.underlying()),
-        //     fee: feeTier,
-        //     recipient: borrower,
-        //     deadline: block.timestamp + 15,
-        //     amountIn: 1e18,
-        //     amountOutMinimum: 0,
-        //     sqrtPriceLimitX96: 0
-        // });
-
-        // strategy.debtToken().approve(address(router), 1e18);
-
-        // router.exactInputSingle(params);
     }
 }

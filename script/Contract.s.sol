@@ -6,7 +6,6 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 import {ERC721} from "solmate/tokens/ERC721.sol";
 
 import {DebtToken} from "src/core/DebtToken.sol";
-import {Oracle} from "src/squeeth/Oracle.sol";
 import {StrategyFactory} from "src/core/StrategyFactory.sol";
 import {LendingStrategy} from "src/core/LendingStrategy.sol";
 
