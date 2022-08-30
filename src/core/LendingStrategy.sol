@@ -82,7 +82,6 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         lastUpdated = uint128(block.timestamp);
         normalization = uint128(FixedPointMathLib.WAD);
         lastCumulativeTick = _getLatestCumulativeTick();
-
     }
 
     function openVault(address mintTo) public returns (uint256 id) {
@@ -298,7 +297,11 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         return newNorm(_getLatestCumulativeTick());
     }
 
-    function newNorm(int56 latestCumulativeTick) public view returns (uint256) {
+    function newNorm(int56 latestCumulativeTick)
+        public
+        view
+        returns (uint256)
+    {
         if (lastUpdated == block.timestamp) {
             return normalization;
         }
@@ -318,11 +321,22 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
     }
 
     function mark(int56 latestCumulativeTick) public view returns (uint256) {
-        if(lastUpdated == block.timestamp) {
-            return OracleLibrary.getQuoteAtTick(int24(latestCumulativeTick), 1e18, address(debtToken), address(underlying));
+        if (lastUpdated == block.timestamp) {
+            return OracleLibrary.getQuoteAtTick(
+                int24(latestCumulativeTick),
+                1e18,
+                address(debtToken),
+                address(underlying)
+            );
         } else {
-            int24 twapTick = _timeWeightedAverageTick(lastCumulativeTick, latestCumulativeTick, int56(uint56(block.timestamp - lastUpdated)));
-            return OracleLibrary.getQuoteAtTick(twapTick, 1e18, address(debtToken), address(underlying));
+            int24 twapTick = _timeWeightedAverageTick(
+                lastCumulativeTick,
+                latestCumulativeTick,
+                int56(uint56(block.timestamp - lastUpdated))
+            );
+            return OracleLibrary.getQuoteAtTick(
+                twapTick, 1e18, address(debtToken), address(underlying)
+            );
         }
     }
 
@@ -332,7 +346,11 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
 
     /// aka norm growth if updated right now,
     /// e.g. a result of 12e17 = 1.2 = 20% growth since lastUpdate
-    function multiplier(int56 latestCumulativeTick) public view returns (int256) {
+    function multiplier(int56 latestCumulativeTick)
+        public
+        view
+        returns (int256)
+    {
         uint256 m = mark(latestCumulativeTick);
         // TODO: do we need signed ints? when does powWAD return a negative?
         uint256 period = block.timestamp - lastUpdated;
@@ -416,27 +434,21 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         emit CollateralAdded(vaultId, collateral, oracleInfo);
     }
 
-    function _getConsistentPeriodForOracle(uint32 _period)
-        public
+    function _timeWeightedAverageTick(
+        int56 startTick,
+        int56 endTick,
+        int56 twapDuration
+    )
+        internal
         view
-        returns (uint32)
+        returns (int24 timeWeightedAverageTick)
     {
-        uint32 maxSafePeriod = IOracle(oracle).getMaxPeriod(address(pool));
-
-        return _period > maxSafePeriod ? maxSafePeriod : _period;
-    }
-    
-    function _timeWeightedAverageTick(int56 startTick, int56 endTick, int56 twapDuration) internal view returns (int24 timeWeightedAverageTick) {
         int56 delta = endTick - startTick;
 
-        timeWeightedAverageTick =
-            int24(delta / twapDuration);
+        timeWeightedAverageTick = int24(delta / twapDuration);
 
         // Always round to negative infinity
-        if (
-            delta < 0
-                && (delta % (twapDuration) != 0)
-        ) {
+        if (delta < 0 && (delta % (twapDuration) != 0)) {
             timeWeightedAverageTick--;
         }
 
