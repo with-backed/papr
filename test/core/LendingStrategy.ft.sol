@@ -9,7 +9,6 @@ import {TickMath} from "fullrange/libraries/TickMath.sol";
 import {IQuoter} from "v3-periphery/interfaces/IQuoter.sol";
 import {ISwapRouter} from "v3-periphery/interfaces/ISwapRouter.sol";
 
-import {Oracle} from "src/squeeth/Oracle.sol";
 import {LendingStrategy} from "src/core/LendingStrategy.sol";
 import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
 import {StrategyFactory} from "src/core/StrategyFactory.sol";
@@ -69,7 +68,6 @@ contract LendingStrategyForkingTest is Test {
 
     TestERC721 nft = new TestERC721();
     WETH weth = WETH(payable(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2));
-    Oracle oracle = new Oracle();
     LendingStrategy strategy;
     INonfungiblePositionManager positionManager =
         INonfungiblePositionManager(0xC36442b4a4522E871399CD717aBDD847Ab11FE88);
