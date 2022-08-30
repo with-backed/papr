@@ -158,7 +158,7 @@ contract LendingStrategyForkingTest is Test {
             borrower,
             borrower,
             1,
-            1e18,
+            1e17,
             TickMath.getSqrtRatioAtTick(
                 strategy.token0IsUnderlying() ? tickUpper - 1 : tickLower + 1
             ),
@@ -168,7 +168,10 @@ contract LendingStrategyForkingTest is Test {
         emit log_uint(block.timestamp);
         emit log_uint(strategy.lastUpdated());
         emit log_uint(strategy._getConsistentPeriodForOracle(2));
+        emit log_uint(strategy.mark());
         nft.safeTransferFrom(borrower, address(strategy), 1, abi.encode(args));
+        vm.warp(block.timestamp + 100000);
+        emit log_uint(strategy.mark());
 
         // uint256 q = quoter.quoteExactInputSingle(
         //     address(strategy.debtToken()),

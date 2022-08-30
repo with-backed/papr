@@ -17,6 +17,7 @@ import {FixedPointMathLib} from "src/libraries/FixedPointMathLib.sol";
 import {IPostCollateralCallback} from
     "src/interfaces/IPostCollateralCallback.sol";
 import {ILendingStrategy} from "src/interfaces/IPostCollateralCallback.sol";
+import {OracleLibrary} from "src/squeeth/OracleLibrary.sol";
 
 contract LendingStrategy is ERC721TokenReceiver, Multicall {
     uint256 constant ONE = 1e18;
@@ -37,6 +38,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
     IOracle oracle;
     IUniswapV3Pool public pool;
     uint256 _nonce;
+    int56 lastCumulativeTick;
 
     // id => vault info
     mapping(uint256 => ILendingStrategy.VaultInfo) public vaultInfo;
@@ -79,6 +81,8 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         start = block.timestamp;
         lastUpdated = uint128(block.timestamp);
         normalization = uint128(FixedPointMathLib.WAD);
+        lastCumulativeTick = _getLatestCumulativeTick();
+
     }
 
     function openVault(address mintTo) public returns (uint256 id) {
@@ -276,7 +280,9 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
             return;
         }
         uint128 previousNormalization = normalization;
-        uint128 newNormalization = uint128(newNorm());
+        int56 latestCumulativeTick = _getLatestCumulativeTick();
+        uint128 newNormalization = uint128(newNorm(latestCumulativeTick));
+        lastCumulativeTick = latestCumulativeTick;
 
         normalization = newNormalization;
         lastUpdated = uint128(block.timestamp);
@@ -289,44 +295,51 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
             return normalization;
         }
 
+        return newNorm(_getLatestCumulativeTick());
+    }
+
+    function newNorm(int56 latestCumulativeTick) public view returns (uint256) {
+        if (lastUpdated == block.timestamp) {
+            return normalization;
+        }
+
         return FixedPointMathLib.mulWadDown(normalization, uint256(multiplier()));
     }
 
-    // what each Debt Token is worth in underlying
+    // what each Debt Token is worth in underlying, according to target growth
     function index() public view returns (uint256) {
         return FixedPointMathLib.divWadDown(block.timestamp - start, PERIOD)
             * targetGrowthPerPeriod / FixedPointMathLib.WAD
             + FixedPointMathLib.WAD;
     }
 
-    // price of debt token, quoted in underlying units
-    // i.e. greater than (1 ** underlying.decimals()) when 1 mark is worth more than 1 underlying
-    function mark(uint32 period) public view returns (uint256) {
-        // period stuff is kinda weird? Don't we just always want the longest period?
-        uint32 periodForOracle = _getConsistentPeriodForOracle(period);
-        if (periodForOracle == 0) {
-            /// TODO fix when we make oracle changes
-            return 1e18;
+    function mark() public view returns (uint256) {
+        return mark(_getLatestCumulativeTick());
+    }
+
+    function mark(int56 latestCumulativeTick) public view returns (uint256) {
+        if(lastUpdated == block.timestamp) {
+            return OracleLibrary.getQuoteAtTick(int24(latestCumulativeTick), 1e18, address(debtToken), address(underlying));
+        } else {
+            int24 twapTick = _timeWeightedAverageTick(lastCumulativeTick, latestCumulativeTick, int56(uint56(block.timestamp - lastUpdated)));
+            return OracleLibrary.getQuoteAtTick(twapTick, 1e18, address(debtToken), address(underlying));
         }
-        return oracle.getTwap(
-            address(pool),
-            address(debtToken),
-            address(underlying),
-            periodForOracle,
-            false
-        );
+    }
+
+    function multiplier() public view returns (int256) {
+        return multiplier(_getLatestCumulativeTick());
     }
 
     /// aka norm growth if updated right now,
     /// e.g. a result of 12e17 = 1.2 = 20% growth since lastUpdate
-    function multiplier() public view returns (int256) {
+    function multiplier(int56 latestCumulativeTick) public view returns (int256) {
+        uint256 m = mark(latestCumulativeTick);
         // TODO: do we need signed ints? when does powWAD return a negative?
         uint256 period = block.timestamp - lastUpdated;
         uint256 periodRatio = FixedPointMathLib.divWadDown(period, PERIOD);
         uint256 targetGrowth = FixedPointMathLib.mulWadDown(
             targetGrowthPerPeriod, periodRatio
         ) + FixedPointMathLib.WAD;
-        uint256 m = mark(uint32(period));
         uint256 indexMarkRatio;
         if (m == 0) {
             indexMarkRatio = 14e17;
@@ -411,5 +424,29 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         uint32 maxSafePeriod = IOracle(oracle).getMaxPeriod(address(pool));
 
         return _period > maxSafePeriod ? maxSafePeriod : _period;
+    }
+    
+    function _timeWeightedAverageTick(int56 startTick, int56 endTick, int56 twapDuration) internal view returns (int24 timeWeightedAverageTick) {
+        int56 delta = endTick - startTick;
+
+        timeWeightedAverageTick =
+            int24(delta / twapDuration);
+
+        // Always round to negative infinity
+        if (
+            delta < 0
+                && (delta % (twapDuration) != 0)
+        ) {
+            timeWeightedAverageTick--;
+        }
+
+        return timeWeightedAverageTick;
+    }
+
+    function _getLatestCumulativeTick() internal view returns (int56) {
+        uint32[] memory secondAgos = new uint32[](1);
+        secondAgos[0] = 0;
+        (int56[] memory tickCumulatives,) = pool.observe(secondAgos);
+        return tickCumulatives[0];
     }
 }
