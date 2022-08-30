@@ -19,12 +19,6 @@ contract StrategyFactory {
 
     Parameters public parameters;
 
-    Oracle public oracle;
-
-    constructor() {
-        oracle = new Oracle();
-    }
-
     /// TODO we probably want maxLTV and targetAPR indexed?
     event LendingStrategyCreated(
         LendingStrategy indexed strategyAddress,

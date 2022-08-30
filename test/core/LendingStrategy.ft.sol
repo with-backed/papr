@@ -99,6 +99,7 @@ contract LendingStrategyForkingTest is Test {
             "PUNKs Loans", "PL", allowedCollateralRoot, 1e17, 5e17, weth
         );
         nft.mint(borrower, 1);
+        nft.mint(borrower, 2);
         vm.prank(borrower);
         nft.approve(address(strategy), 1);
 
@@ -165,37 +166,7 @@ contract LendingStrategyForkingTest is Test {
             ILendingStrategy.OracleInfo(3e18, ILendingStrategy.OracleInfoPeriod.SevenDays),
             ILendingStrategy.Sig({v: 1, r: keccak256("x"), s: keccak256("x")})
         );
-        emit log_uint(block.timestamp);
-        emit log_uint(strategy.lastUpdated());
 
-        emit log_uint(strategy.mark());
         nft.safeTransferFrom(borrower, address(strategy), 1, abi.encode(args));
-        vm.warp(block.timestamp + 100000);
-        emit log_uint(strategy.mark());
-
-        // uint256 q = quoter.quoteExactInputSingle(
-        //     address(strategy.debtToken()),
-        //     address(strategy.underlying()),
-        //     feeTier,
-        //     1e18,
-        //     0
-        // );
-        // emit log_named_uint("quote 1 eth", q);
-
-        // ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
-        //     .ExactInputSingleParams({
-        //     tokenIn: address(strategy.debtToken()),
-        //     tokenOut: address(strategy.underlying()),
-        //     fee: feeTier,
-        //     recipient: borrower,
-        //     deadline: block.timestamp + 15,
-        //     amountIn: 1e18,
-        //     amountOutMinimum: 0,
-        //     sqrtPriceLimitX96: 0
-        // });
-
-        // strategy.debtToken().approve(address(router), 1e18);
-
-        // router.exactInputSingle(params);
     }
 }
