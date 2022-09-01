@@ -11,7 +11,6 @@ interface ILendingStrategy {
     }
 
     struct VaultInfo {
-        address owner;
         uint128 debt;
         uint128 price;
     }
@@ -35,6 +34,7 @@ interface ILendingStrategy {
 
     struct OnERC721ReceivedArgs {
         uint256 vaultId;
+        uint256 vaultNonce;
         address mintVaultTo;
         address mintDebtOrProceedsTo;
         uint256 minOut;

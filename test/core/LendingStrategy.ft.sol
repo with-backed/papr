@@ -143,6 +143,7 @@ contract LendingStrategyForkingTest is Test {
         ILendingStrategy.OnERC721ReceivedArgs memory args = ILendingStrategy
             .OnERC721ReceivedArgs(
             0,
+            0,
             borrower,
             borrower,
             1,
@@ -155,6 +156,5 @@ contract LendingStrategyForkingTest is Test {
         );
 
         nft.safeTransferFrom(borrower, address(strategy), 1, abi.encode(args));
-        emit log_uint(strategy.liquidationPrice(1));
     }
 }

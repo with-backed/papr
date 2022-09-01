@@ -49,11 +49,11 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
     );
     event ReduceDebt(uint256 indexed vaultId, uint256 amount);
     event CloseVault(uint256 indexed vaultId);
-    event OpenVault(uint256 indexed vaultId, address indexed owner);
+    event OpenVault(uint256 indexed vaultId, address indexed owner, uint256 vaultNonce);
     event UpdateNormalization(uint256 newNorm);
 
-    modifier onlyVaultOwner(uint256 vaultId) {
-        if (msg.sender != vaultInfo[vaultId].owner) {
+    modifier onlyVaultOwner(uint256 vaultId, uint256 vaultNonce) {
+        if (vaultId != vaultIdentifier(vaultNonce, msg.sender)) {
             revert("only owner");
         }
         _;
@@ -85,10 +85,16 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
     }
 
     function openVault(address mintTo) public returns (uint256 id) {
-        id = ++_nonce;
-        vaultInfo[id].owner = mintTo;
+        uint256 vaultNonce = ++_nonce;
+        id = vaultIdentifier(vaultNonce, mintTo);
 
-        emit OpenVault(id, mintTo);
+        emit OpenVault(id, mintTo, vaultNonce);
+    }
+
+    function vaultIdentifier(uint256 nonce, address account) public view returns (uint256) {
+        return uint256(
+            keccak256(abi.encode(nonce, account))
+        );
     }
 
     /// Kinda an ugly func, possibly could be orchestrated at periphery
@@ -110,10 +116,10 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         ILendingStrategy.Collateral memory collateral =
             ILendingStrategy.Collateral(ERC721(msg.sender), _id);
 
-        if (request.vaultId == 0) {
+        if (request.vaultNonce == 0) {
             request.vaultId = openVault(request.mintVaultTo);
         } else {
-            if (vaultInfo[request.vaultId].owner != from) {
+            if (vaultIdentifier(request.vaultNonce, from) == request.vaultId) {
                 revert();
             }
         }
@@ -153,6 +159,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
     )
         public
     {
+        // TODO only vault owner
         // zeroForOne, true if debt token is token0
         bool zeroForOne = !token0IsUnderlying; 
         (int256 amount0, int256 amount1) = pool.swap(
@@ -216,9 +223,9 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         }
     }
 
-    function increaseDebt(uint256 vaultId, address mintTo, uint256 amount)
+    function increaseDebt(uint256 vaultId, uint256 vaultNonce, address mintTo, uint256 amount)
         public
-        onlyVaultOwner(vaultId)
+        onlyVaultOwner(vaultId, vaultNonce)
     {
         _increaseDebt(vaultId, mintTo, amount);
     }
@@ -229,7 +236,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         emit ReduceDebt(vaultId, amount);
     }
 
-    function closeVault(uint256 vaultId) public onlyVaultOwner(vaultId) {
+    function closeVault(uint256 vaultId, uint256 vaultNonce) public onlyVaultOwner(vaultId, vaultNonce) {
         if (vaultInfo[vaultId].debt != 0) {
             revert("still has debt");
         }
