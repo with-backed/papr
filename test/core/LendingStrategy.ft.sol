@@ -80,17 +80,6 @@ contract LendingStrategyForkingTest is Test {
     int24 tickLower;
     int24 tickUpper;
 
-    event VaultCreated(
-        bytes32 indexed vaultKey,
-        address indexed mintTo,
-        uint256 tokenId,
-        uint256 amount
-    );
-    event DebtAdded(bytes32 indexed vaultKey, uint256 amount);
-    event DebtReduced(bytes32 indexed vaultKey, uint256 amount);
-    event VaultClosed(bytes32 indexed vaultKey, uint256 tokenId);
-    event NormalizationFactorUpdated(uint128 oldNorm, uint128 newNorm);
-
     function setUp() public {
         factory = new StrategyFactory();
         strategy = factory.newStrategy(
@@ -166,5 +155,6 @@ contract LendingStrategyForkingTest is Test {
         );
 
         nft.safeTransferFrom(borrower, address(strategy), 1, abi.encode(args));
+        emit log_uint(strategy.liquidationPrice(1));
     }
 }
