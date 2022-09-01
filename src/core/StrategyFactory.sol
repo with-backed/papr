@@ -10,6 +10,7 @@ contract StrategyFactory {
     struct Parameters {
         string name;
         string symbol;
+        string strategyURI;
         bytes32 allowedCollateralRoot;
         uint256 targetAPR;
         uint256 maxLTV;
@@ -19,17 +20,19 @@ contract StrategyFactory {
     Parameters public parameters;
 
     /// TODO we probably want maxLTV and targetAPR indexed?
-    event LendingStrategyCreated(
+    event CreateLendingStrategy(
         LendingStrategy indexed strategyAddress,
         bytes32 indexed allowedCollateralRoot,
         ERC20 indexed underlying,
         string name,
-        string symbol
+        string symbol,
+        string allowedCollateralURI
     );
 
     function newStrategy(
         string calldata name,
         string calldata symbol,
+        string calldata strategyURI,
         bytes32 allowedCollateralRoot,
         uint256 targetAPR,
         uint256 maxLTV,
@@ -39,13 +42,13 @@ contract StrategyFactory {
         returns (LendingStrategy)
     {
         parameters = Parameters(
-            name, symbol, allowedCollateralRoot, targetAPR, maxLTV, underlying
+            name, symbol, strategyURI, allowedCollateralRoot, targetAPR, maxLTV, underlying
         );
         LendingStrategy s =
         new LendingStrategy{salt: keccak256(abi.encode(allowedCollateralRoot, targetAPR, maxLTV, underlying))}();
 
-        emit LendingStrategyCreated(
-            s, allowedCollateralRoot, underlying, name, symbol
+        emit CreateLendingStrategy(
+            s, allowedCollateralRoot, underlying, name, symbol, strategyURI
             );
 
         return s;
