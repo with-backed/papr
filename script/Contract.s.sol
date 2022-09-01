@@ -43,7 +43,7 @@ contract ContractScript is Script {
 
         StrategyFactory s = new StrategyFactory();
         LendingStrategy strategy =
-            s.newStrategy("APE Loans", "AP", "", 2e17, 5e17, ERC20(underlying));
+            s.newStrategy("APE Loans", "AP", 'uri', "", 2e17, 5e17, ERC20(underlying));
 
         // uint256 tokenId = 17;
 

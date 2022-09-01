@@ -11,6 +11,7 @@ interface ILendingStrategy {
     }
 
     struct VaultInfo {
+        address owner;
         uint128 debt;
         uint128 price;
     }

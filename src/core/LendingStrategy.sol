@@ -23,13 +23,11 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
     uint256 immutable start;
     uint256 public immutable maxLTV;
     uint256 public immutable targetAPR;
-    string public name;
-    string public symbol;
     ERC20 public immutable underlying;
     uint256 public PERIOD = 4 weeks;
     uint256 public targetGrowthPerPeriod;
     DebtToken public debtToken;
-    DebtVault public debtVault;
+    // DebtVault public debtVault;
     bytes32 public allowedCollateralRoot;
     string public strategyURI;
     IUniswapV3Pool public pool;
@@ -51,21 +49,23 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
     );
     event ReduceDebt(uint256 indexed vaultId, uint256 amount);
     event CloseVault(uint256 indexed vaultId);
+    event OpenVault(uint256 indexed vaultId, address indexed owner);
     event UpdateNormalization(uint256 newNorm);
 
     modifier onlyVaultOwner(uint256 vaultId) {
-        if (msg.sender != debtVault.ownerOf(vaultId)) {
+        if (msg.sender != vaultInfo[vaultId].owner) {
             revert("only owner");
         }
         _;
     }
 
     constructor() {
+        string memory name;
+        string memory symbol;
         (name, symbol, strategyURI, allowedCollateralRoot, targetAPR, maxLTV, underlying) =
             StrategyFactory(msg.sender).parameters();
         targetGrowthPerPeriod = targetAPR / (365 days / PERIOD);
         debtToken = new DebtToken(name, symbol, underlying.symbol());
-        debtVault = new DebtVault(name, symbol);
 
         IUniswapV3Factory factory =
             IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
@@ -86,7 +86,9 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
 
     function openVault(address mintTo) public returns (uint256 id) {
         id = ++_nonce;
-        debtVault.mint(mintTo, id);
+        vaultInfo[id].owner = mintTo;
+
+        emit OpenVault(id, mintTo);
     }
 
     /// Kinda an ugly func, possibly could be orchestrated at periphery
@@ -111,7 +113,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         if (request.vaultId == 0) {
             request.vaultId = openVault(request.mintVaultTo);
         } else {
-            if (debtVault.ownerOf(request.vaultId) != from) {
+            if (vaultInfo[request.vaultId].owner != from) {
                 revert();
             }
         }
@@ -236,7 +238,6 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
             revert("vault still has collateral");
         }
 
-        debtVault.burn(vaultId);
         delete vaultInfo[vaultId];
 
         // TODO allow batch removing of collateral
