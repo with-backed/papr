@@ -20,7 +20,7 @@ contract StrategyFactory {
     Parameters public parameters;
 
     /// TODO we probably want maxLTV and targetAPR indexed?
-    event LendingStrategyCreated(
+    event CreateLendingStrategy(
         LendingStrategy indexed strategyAddress,
         bytes32 indexed allowedCollateralRoot,
         ERC20 indexed underlying,
@@ -47,7 +47,7 @@ contract StrategyFactory {
         LendingStrategy s =
         new LendingStrategy{salt: keccak256(abi.encode(allowedCollateralRoot, targetAPR, maxLTV, underlying))}();
 
-        emit LendingStrategyCreated(
+        emit CreateLendingStrategy(
             s, allowedCollateralRoot, underlying, name, symbol, strategyURI
             );
 
