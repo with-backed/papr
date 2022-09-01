@@ -19,7 +19,6 @@ import {ILendingStrategy} from "src/interfaces/IPostCollateralCallback.sol";
 import {OracleLibrary} from "src/squeeth/OracleLibrary.sol";
 
 contract LendingStrategy is ERC721TokenReceiver, Multicall {
-    uint256 constant ONE = 1e18;
     bool public immutable token0IsUnderlying;
     uint256 immutable start;
     uint256 public immutable maxLTV;
@@ -29,28 +28,29 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
     ERC20 public immutable underlying;
     uint256 public PERIOD = 4 weeks;
     uint256 public targetGrowthPerPeriod;
-    uint128 public normalization;
-    uint128 public lastUpdated;
     DebtToken public debtToken;
     DebtVault public debtVault;
     bytes32 public allowedCollateralRoot;
     IUniswapV3Pool public pool;
     uint256 _nonce;
+    // single slot, write together
+    uint128 public normalization;
+    uint72 public lastUpdated;
     int56 lastCumulativeTick;
 
     // id => vault info
     mapping(uint256 => ILendingStrategy.VaultInfo) public vaultInfo;
     mapping(bytes32 => uint256) public price;
 
-    event DebtAdded(uint256 indexed vaultId, uint256 amount);
-    event CollateralAdded(
+    event IncreaseDebt(uint256 indexed vaultId, uint256 amount);
+    event AddCollateral(
         uint256 indexed vaultId,
         ILendingStrategy.Collateral collateral,
         ILendingStrategy.OracleInfo oracleInfo
     );
-    event DebtReduced(uint256 indexed vaultId, uint256 amount);
-    event VaultClosed(uint256 indexed vaultId);
-    event NormalizationFactorUpdated(uint128 oldNorm, uint128 newNorm);
+    event ReduceDebt(uint256 indexed vaultId, uint256 amount);
+    event CloseVault(uint256 indexed vaultId);
+    event UpdateNormalization(uint256 newNorm);
 
     modifier onlyVaultOwner(uint256 vaultId) {
         if (msg.sender != debtVault.ownerOf(vaultId)) {
@@ -76,9 +76,11 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         token0IsUnderlying = pool.token0() == address(underlying);
 
         start = block.timestamp;
-        lastUpdated = uint128(block.timestamp);
+        lastUpdated = uint72(block.timestamp);
         normalization = uint128(FixedPointMathLib.WAD);
         lastCumulativeTick = _latestCumulativeTick();
+        
+        emit UpdateNormalization(FixedPointMathLib.WAD);
     }
 
     function openVault(address mintTo) public returns (uint256 id) {
@@ -149,7 +151,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         public
     {
         // zeroForOne, true if debt token is token0
-        bool zeroForOne = !token0IsUnderlying;
+        bool zeroForOne = !token0IsUnderlying; 
         (int256 amount0, int256 amount1) = pool.swap(
             proceedsTo,
             zeroForOne,
@@ -221,7 +223,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
     function reduceDebt(uint256 vaultId, uint128 amount) public {
         vaultInfo[vaultId].debt -= amount;
         debtToken.burn(msg.sender, amount);
-        emit DebtReduced(vaultId, amount);
+        emit ReduceDebt(vaultId, amount);
     }
 
     function closeVault(uint256 vaultId) public onlyVaultOwner(vaultId) {
@@ -239,13 +241,13 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         // TODO allow batch removing of collateral
         // collateral.addr.transferFrom(address(this), msg.sender, collateral.id);
 
-        emit VaultClosed(vaultId);
+        emit CloseVault(vaultId);
     }
 
     function liquidate(uint256 vaultId) public {
         updateNormalization();
 
-        if (normalization < liquidationPrice(vaultId) * ONE) {
+        if (normalization < liquidationPrice(vaultId) * FixedPointMathLib.WAD) {
             revert("not liquidatable");
         }
 
@@ -261,13 +263,13 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         }
         uint128 previousNormalization = normalization;
         int56 latestCumulativeTick = _latestCumulativeTick();
-        uint128 newNormalization = uint128(_newNorm(latestCumulativeTick));
+        uint256 newNormalization = _newNorm(latestCumulativeTick);
+
+        normalization = uint128(newNormalization);
+        lastUpdated = uint72(block.timestamp);
         lastCumulativeTick = latestCumulativeTick;
 
-        normalization = newNormalization;
-        lastUpdated = uint128(block.timestamp);
-
-        emit NormalizationFactorUpdated(previousNormalization, newNormalization);
+        emit UpdateNormalization(newNormalization);
     }
 
     function newNorm() public view returns (uint256) {
@@ -295,7 +297,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
     // i.e. the debt token:underlying internal contract exchange rate (normalization)
     // at which this vault will be liquidated
     function liquidationPrice(uint256 vaultId) public view returns (uint256) {
-        uint256 maxLoanUnderlying = vaultInfo[vaultId].price * maxLTV / ONE;
+        uint256 maxLoanUnderlying = FixedPointMathLib.mulWadDown(vaultInfo[vaultId].price, maxLTV);
         return maxLoanUnderlying / vaultInfo[vaultId].debt;
     }
 
@@ -327,7 +329,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
             revert("too much debt");
         }
 
-        emit DebtAdded(vaultId, amount);
+        emit IncreaseDebt(vaultId, amount);
     }
 
     function _addCollateralToVault(
@@ -359,7 +361,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         /// to allow for that
         vaultInfo[vaultId].price += oracleInfo.price;
 
-        emit CollateralAdded(vaultId, collateral, oracleInfo);
+        emit AddCollateral(vaultId, collateral, oracleInfo);
     }
 
     function _newNorm(int56 latestCumulativeTick)
