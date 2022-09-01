@@ -10,7 +10,7 @@ contract StrategyFactory {
     struct Parameters {
         string name;
         string symbol;
-        string allowedCollateralURI;
+        string strategyURI;
         bytes32 allowedCollateralRoot;
         uint256 targetAPR;
         uint256 maxLTV;
@@ -32,7 +32,7 @@ contract StrategyFactory {
     function newStrategy(
         string calldata name,
         string calldata symbol,
-        string calldata allowedCollateralURI,
+        string calldata strategyURI,
         bytes32 allowedCollateralRoot,
         uint256 targetAPR,
         uint256 maxLTV,
@@ -42,13 +42,13 @@ contract StrategyFactory {
         returns (LendingStrategy)
     {
         parameters = Parameters(
-            name, symbol, allowedCollateralURI, allowedCollateralRoot, targetAPR, maxLTV, underlying
+            name, symbol, strategyURI, allowedCollateralRoot, targetAPR, maxLTV, underlying
         );
         LendingStrategy s =
         new LendingStrategy{salt: keccak256(abi.encode(allowedCollateralRoot, targetAPR, maxLTV, underlying))}();
 
         emit LendingStrategyCreated(
-            s, allowedCollateralRoot, underlying, name, symbol, allowedCollateralURI
+            s, allowedCollateralRoot, underlying, name, symbol, strategyURI
             );
 
         return s;

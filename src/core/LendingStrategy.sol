@@ -34,7 +34,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
     DebtToken public debtToken;
     DebtVault public debtVault;
     bytes32 public allowedCollateralRoot;
-    string public allowedCollateralURI;
+    string public strategyURI;
     IUniswapV3Pool public pool;
     uint256 _nonce;
     int56 lastCumulativeTick;
@@ -61,7 +61,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
     }
 
     constructor() {
-        (name, symbol, allowedCollateralURI, allowedCollateralRoot, targetAPR, maxLTV, underlying) =
+        (name, symbol, strategyURI, allowedCollateralRoot, targetAPR, maxLTV, underlying) =
             StrategyFactory(msg.sender).parameters();
         targetGrowthPerPeriod = targetAPR / (365 days / PERIOD);
         debtToken = new DebtToken(name, symbol, underlying.symbol());
