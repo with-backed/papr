@@ -94,7 +94,7 @@ contract LendingStrategyForkingTest is Test {
     function setUp() public {
         factory = new StrategyFactory();
         strategy = factory.newStrategy(
-            "PUNKs Loans", "PL", allowedCollateralRoot, 1e17, 5e17, weth
+            "PUNKs Loans", "PL", "ipfs-link", allowedCollateralRoot, 1e17, 5e17, weth
         );
         nft.mint(borrower, 1);
         nft.mint(borrower, 2);
