@@ -19,18 +19,19 @@ import {ILendingStrategy} from "src/interfaces/IPostCollateralCallback.sol";
 import {OracleLibrary} from "src/squeeth/OracleLibrary.sol";
 
 contract LendingStrategy is ERC721TokenReceiver, Multicall {
+    address immutable factory;
     bool public immutable token0IsUnderlying;
     uint256 immutable start;
     uint256 public immutable maxLTV;
     uint256 public immutable targetAPR;
     ERC20 public immutable underlying;
+    IUniswapV3Pool immutable public pool;
     uint256 public PERIOD = 4 weeks;
     uint256 public targetGrowthPerPeriod;
     DebtToken public debtToken;
     // DebtVault public debtVault;
     bytes32 public allowedCollateralRoot;
     string public strategyURI;
-    IUniswapV3Pool public pool;
     uint256 _nonce;
     // single slot, write together
     uint128 public normalization;
@@ -75,6 +76,16 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         );
         pool.initialize(TickMath.getSqrtRatioAtTick(0));
         token0IsUnderlying = pool.token0() == address(underlying);
+    }
+
+    function initialize() {
+        if(msg.sender != factory) {
+            revert();
+        }
+
+        if(normalization != 0) {
+            revert();
+        }
 
         start = block.timestamp;
         lastUpdated = uint72(block.timestamp);
