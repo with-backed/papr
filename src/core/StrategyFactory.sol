@@ -26,7 +26,7 @@ contract StrategyFactory {
         ERC20 indexed underlying,
         string name,
         string symbol,
-        string allowedCollateralURI
+        string strategyURI
     );
 
     function newStrategy(
@@ -49,7 +49,9 @@ contract StrategyFactory {
 
         emit CreateLendingStrategy(
             s, allowedCollateralRoot, underlying, name, symbol, strategyURI
-            );
+        );
+
+        s.initialize();
 
         return s;
     }
