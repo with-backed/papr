@@ -81,7 +81,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         start = block.timestamp;
     }
 
-    function initialize() public {
+    function initialize() external {
         if(msg.sender != factory) {
             revert();
         }
