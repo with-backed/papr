@@ -61,6 +61,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
     }
 
     constructor() {
+        factory = msg.sender;
         string memory name;
         string memory symbol;
         (name, symbol, strategyURI, allowedCollateralRoot, targetAPR, maxLTV, underlying) =
@@ -76,9 +77,11 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         );
         pool.initialize(TickMath.getSqrtRatioAtTick(0));
         token0IsUnderlying = pool.token0() == address(underlying);
+
+        start = block.timestamp;
     }
 
-    function initialize() {
+    function initialize() external {
         if(msg.sender != factory) {
             revert();
         }
@@ -87,7 +90,6 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
             revert();
         }
 
-        start = block.timestamp;
         lastUpdated = uint72(block.timestamp);
         normalization = uint128(FixedPointMathLib.WAD);
         lastCumulativeTick = _latestCumulativeTick();
