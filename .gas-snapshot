@@ -1,2 +1,3 @@
-LendingStrategyForkingTest:testBorrow() (gas: 274424)
-LendingStrategyTest:testDummy() (gas: 120)
+LendingStrategyForkingTest:testAddDebtToExistingVault() (gas: 228065)
+LendingStrategyForkingTest:testAddDebtToExistingVaultRevertsIfNotVaultOwner() (gas: 96159)
+LendingStrategyForkingTest:testOpenVaultAddDebtAndSwap() (gas: 274688)

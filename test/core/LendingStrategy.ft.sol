@@ -4,7 +4,6 @@ pragma solidity ^0.8.13;
 import "forge-std/Test.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {WETH} from "solmate/tokens/WETH.sol";
-import {ERC721} from "solmate/tokens/ERC721.sol";
 import {TickMath} from "fullrange/libraries/TickMath.sol";
 import {IQuoter} from "v3-periphery/interfaces/IQuoter.sol";
 import {ISwapRouter} from "v3-periphery/interfaces/ISwapRouter.sol";
@@ -13,108 +12,115 @@ import {LendingStrategy} from "src/core/LendingStrategy.sol";
 import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
 import {StrategyFactory} from "src/core/StrategyFactory.sol";
 import {FixedPointMathLib} from "src/libraries/FixedPointMathLib.sol";
+import {TestERC721} from "test/mocks/TestERC721.sol";
+import {TestERC20} from "test/mocks/TestERC20.sol";
+import {INonfungiblePositionManager} from
+    "test/mocks/uniswap/INonfungiblePositionManager.sol";
 
-contract TestERC721 is ERC721("TEST", "TEST") {
-    function mint(address to, uint256 id) external {
-        _mint(to, id);
-    }
-
-    function tokenURI(uint256 id)
-        public
-        view
-        override
-        returns (string memory)
-    {}
-}
-
-interface INonfungiblePositionManager {
-    struct MintParams {
-        address token0;
-        address token1;
-        uint24 fee;
-        int24 tickLower;
-        int24 tickUpper;
-        uint256 amount0Desired;
-        uint256 amount1Desired;
-        uint256 amount0Min;
-        uint256 amount1Min;
-        address recipient;
-        uint256 deadline;
-    }
-
-    /// @notice Creates a new position wrapped in a NFT
-    /// @dev Call this when the pool does exist and is initialized. Note that if the pool is created but not initialized
-    /// a method does not exist, i.e. the pool is assumed to be initialized.
-    /// @param params The params necessary to mint a position, encoded as `MintParams` in calldata
-    /// @return tokenId The ID of the token that represents the minted position
-    /// @return liquidity The amount of liquidity for this position
-    /// @return amount0 The amount of token0
-    /// @return amount1 The amount of token1
-    function mint(MintParams calldata params)
-        external
-        payable
-        returns (
-            uint256 tokenId,
-            uint128 liquidity,
-            uint256 amount0,
-            uint256 amount1
-        );
-}
-
-contract LendingStrategyForkingTest is Test {
+contract MainnetForking is Test {
     uint256 forkId =
         vm.createSelectFork(vm.envString("MAINNET_RPC_URL"), 15434809);
-    StrategyFactory factory;
-
-    TestERC721 nft = new TestERC721();
-    WETH weth = WETH(payable(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2));
-    LendingStrategy strategy;
     INonfungiblePositionManager positionManager =
         INonfungiblePositionManager(0xC36442b4a4522E871399CD717aBDD847Ab11FE88);
     IQuoter quoter = IQuoter(0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6);
     ISwapRouter router = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
+}
+
+contract LendingStrategyForkingTest is Test, MainnetForking {
+    TestERC721 nft = new TestERC721();
+    TestERC20 underlying = new TestERC20();
+    LendingStrategy strategy;
+
+    uint256 collateralId = 1;
     address borrower = address(1);
-    address lender = address(2);
     uint24 feeTier = 10000;
     bytes32 allowedCollateralRoot;
-    int24 tickLower;
-    int24 tickUpper;
 
+    ILendingStrategy.OnERC721ReceivedArgs safeTransferReceivedArgs;
+
+    // global args for safe transfer receive data
+    uint256 vaultId;
+    uint256 vaultNonce;
+    uint256 minOut;
+    int256 debt = 1e18;
+    uint160 sqrtPriceLimitX96;
+    uint128 oraclePrice = 3e18;
+    ILendingStrategy.OracleInfo oracleInfo;
+    ILendingStrategy.Sig sig;
+
+    //
     function setUp() public {
-        factory = new StrategyFactory();
+        StrategyFactory factory = new StrategyFactory();
         strategy = factory.newStrategy(
-            "PUNKs Loans", "PL", "ipfs-link", allowedCollateralRoot, 1e17, 5e17, weth
+            "PUNKs Loans",
+            "PL",
+            "ipfs-link",
+            allowedCollateralRoot,
+            0.1e18,
+            0.5e18,
+            underlying
         );
-        nft.mint(borrower, 1);
-        nft.mint(borrower, 2);
+        nft.mint(borrower, collateralId);
         vm.prank(borrower);
-        nft.approve(address(strategy), 1);
+        nft.approve(address(strategy), collateralId);
+        
+        _provideLiquidityAtOneToOne();
+        _populateOnReceivedArgs();
+    }
 
-        address tokenA = address(strategy.debtToken());
-        address tokenB = address(weth);
-        (address token0, address token1) =
-            tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
+    function testOpenVaultAddDebtAndSwap() public {
+        vm.startPrank(borrower);
+        safeTransferReceivedArgs.minOut = 1;
+        safeTransferReceivedArgs.mintDebtOrProceedsTo = address(strategy.pool());
+        nft.safeTransferFrom(
+            borrower,
+            address(strategy),
+            collateralId,
+            abi.encode(safeTransferReceivedArgs)
+        );
+    }
+
+    function testAddDebtToExistingVault() public {
+        vm.startPrank(borrower);
+        (uint256 vaultId, uint256 vaultNonce) = strategy.openVault(borrower);
+        safeTransferReceivedArgs.vaultId = vaultId;
+        safeTransferReceivedArgs.vaultNonce = vaultNonce;
+        nft.safeTransferFrom(
+            borrower,
+            address(strategy),
+            collateralId,
+            abi.encode(safeTransferReceivedArgs)
+        );
+    }
+
+    function testAddDebtToExistingVaultRevertsIfNotVaultOwner() public {
+        vm.startPrank(borrower);
+        safeTransferReceivedArgs.vaultNonce = 1;
+        vm.expectRevert(LendingStrategy.OnlyVaultOwner.selector);
+        nft.safeTransferFrom(
+            borrower,
+            address(strategy),
+            collateralId,
+            abi.encode(safeTransferReceivedArgs)
+        );
+    }
+
+    function _provideLiquidityAtOneToOne() internal {
         uint256 token0Amount;
         uint256 token1Amount;
-
-        if (token0 == tokenB) {
-            token0Amount = 1e18;
-        } else {
-            token1Amount = 1e18;
-        }
-
-        vm.startPrank(lender);
-        weth.approve(address(positionManager), 1e18);
-        vm.deal(lender, 1e30);
-        weth.deposit{value: 1e30}();
-
-        vm.warp(block.timestamp + 1);
+        int24 tickLower;
+        int24 tickUpper;
 
         if (strategy.token0IsUnderlying()) {
+            token0Amount = 1e18;
             tickUpper = 200;
         } else {
+            token1Amount = 1e18;
             tickLower = -200;
         }
+
+        underlying.approve(address(positionManager), 1e18);
+        underlying.mint(address(this), 1e18);
 
         INonfungiblePositionManager.MintParams memory mintParams =
         INonfungiblePositionManager.MintParams(
@@ -127,34 +133,41 @@ contract LendingStrategyForkingTest is Test {
             token1Amount,
             0,
             0,
-            lender,
+            address(this),
             block.timestamp + 1
         );
 
         positionManager.mint(mintParams);
-        vm.stopPrank();
     }
 
-    bytes[] data;
+    function _populateOnReceivedArgs() internal {
+        oracleInfo.price = oraclePrice;
+        safeTransferReceivedArgs = ILendingStrategy.OnERC721ReceivedArgs({
+            vaultId: vaultId,
+            vaultNonce: vaultNonce,
+            mintVaultTo: borrower,
+            mintDebtOrProceedsTo: borrower,
+            minOut: minOut,
+            debt: debt,
+            sqrtPriceLimitX96: _viableSqrtPriceLimit(),
+            oracleInfo: oracleInfo,
+            sig: sig
+        });
+    }
 
-    function testBorrow() public {
-        vm.warp(block.timestamp + 1);
-        vm.startPrank(borrower);
-        ILendingStrategy.OnERC721ReceivedArgs memory args = ILendingStrategy
-            .OnERC721ReceivedArgs(
-            0,
-            0,
-            borrower,
-            borrower,
-            1,
-            1e17,
-            TickMath.getSqrtRatioAtTick(
-                strategy.token0IsUnderlying() ? tickUpper - 1 : tickLower + 1
-            ),
-            ILendingStrategy.OracleInfo(3e18, ILendingStrategy.OracleInfoPeriod.SevenDays),
-            ILendingStrategy.Sig({v: 1, r: keccak256("x"), s: keccak256("x")})
-        );
+    function _viableSqrtPriceLimit() internal returns (uint160) {
+        (uint160 sqrtPrice,,,,,,) = strategy.pool().slot0();
+        int24 tick = TickMath.getTickAtSqrtRatio(sqrtPrice);
 
-        nft.safeTransferFrom(borrower, address(strategy), 1, abi.encode(args));
+        // current strategy only swaps for underlying
+        // if token0 is underlying, we want above the current sqrtPrice
+        // if token1 is underlying, we want below the current sqrtPrice
+        if (strategy.token0IsUnderlying()) {
+            tick += 1;
+        } else {
+            tick -= 1;
+        }
+
+        return TickMath.getSqrtRatioAtTick(tick);
     }
 }

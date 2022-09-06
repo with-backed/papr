@@ -42,14 +42,20 @@ contract StrategyFactory {
         returns (LendingStrategy)
     {
         parameters = Parameters(
-            name, symbol, strategyURI, allowedCollateralRoot, targetAPR, maxLTV, underlying
+            name,
+            symbol,
+            strategyURI,
+            allowedCollateralRoot,
+            targetAPR,
+            maxLTV,
+            underlying
         );
         LendingStrategy s =
         new LendingStrategy{salt: keccak256(abi.encode(allowedCollateralRoot, targetAPR, maxLTV, underlying))}();
 
         emit CreateLendingStrategy(
             s, allowedCollateralRoot, underlying, name, symbol, strategyURI
-        );
+            );
 
         s.initialize();
 

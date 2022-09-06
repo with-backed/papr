@@ -25,7 +25,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
     uint256 public immutable maxLTV;
     uint256 public immutable targetAPR;
     ERC20 public immutable underlying;
-    IUniswapV3Pool immutable public pool;
+    IUniswapV3Pool public immutable pool;
     uint256 public PERIOD = 4 weeks;
     uint256 public targetGrowthPerPeriod;
     DebtToken public debtToken;
@@ -50,12 +50,14 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
     );
     event ReduceDebt(uint256 indexed vaultId, uint256 amount);
     event CloseVault(uint256 indexed vaultId);
-    event OpenVault(uint256 indexed vaultId, address indexed owner, uint256 vaultNonce);
+    event OpenVault(
+        uint256 indexed vaultId, address indexed owner, uint256 vaultNonce
+    );
     event UpdateNormalization(uint256 newNorm);
 
     modifier onlyVaultOwner(uint256 vaultId, uint256 vaultNonce) {
         if (vaultId != vaultIdentifier(vaultNonce, msg.sender)) {
-            revert("only owner");
+            revert OnlyVaultOwner();
         }
         _;
     }
@@ -64,8 +66,15 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         factory = msg.sender;
         string memory name;
         string memory symbol;
-        (name, symbol, strategyURI, allowedCollateralRoot, targetAPR, maxLTV, underlying) =
-            StrategyFactory(msg.sender).parameters();
+        (
+            name,
+            symbol,
+            strategyURI,
+            allowedCollateralRoot,
+            targetAPR,
+            maxLTV,
+            underlying
+        ) = StrategyFactory(msg.sender).parameters();
         targetGrowthPerPeriod = targetAPR / (365 days / PERIOD);
         debtToken = new DebtToken(name, symbol, underlying.symbol());
 
@@ -82,37 +91,38 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
     }
 
     function initialize() external {
-        if(msg.sender != factory) {
+        if (msg.sender != factory) {
             revert();
         }
 
-        if(normalization != 0) {
+        if (normalization != 0) {
             revert();
         }
 
         lastUpdated = uint72(block.timestamp);
         normalization = uint128(FixedPointMathLib.WAD);
         lastCumulativeTick = _latestCumulativeTick();
-        
+
         emit UpdateNormalization(FixedPointMathLib.WAD);
     }
 
-    function openVault(address mintTo) public returns (uint256 id) {
-        uint256 vaultNonce = ++_nonce;
-        id = vaultIdentifier(vaultNonce, mintTo);
+    function openVault(address owner) public returns (uint256 id, uint256 vaultNonce) {
+        vaultNonce = ++_nonce;
+        id = vaultIdentifier(vaultNonce, owner);
 
-        emit OpenVault(id, mintTo, vaultNonce);
+        emit OpenVault(id, owner, vaultNonce);
     }
 
-    function vaultIdentifier(uint256 nonce, address account) public view returns (uint256) {
-        return uint256(
-            keccak256(abi.encode(nonce, account))
-        );
+    function vaultIdentifier(uint256 nonce, address account)
+        public
+        view
+        returns (uint256)
+    {
+        return uint256(keccak256(abi.encode(nonce, account)));
     }
 
-    /// Kinda an ugly func, possibly could be orchestrated at periphery
-    /// instead, but nice that this allows for borrowers to do it all in a single
-    /// tx and low gas
+    error OnlyVaultOwner();
+
     function onERC721Received(
         address from,
         address,
@@ -130,10 +140,10 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
             ILendingStrategy.Collateral(ERC721(msg.sender), _id);
 
         if (request.vaultNonce == 0) {
-            request.vaultId = openVault(request.mintVaultTo);
+            (request.vaultId, ) = openVault(request.mintVaultTo);
         } else {
-            if (vaultIdentifier(request.vaultNonce, from) == request.vaultId) {
-                revert();
+            if (vaultIdentifier(request.vaultNonce, from) != request.vaultId) {
+                revert OnlyVaultOwner();
             }
         }
 
@@ -174,7 +184,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
     {
         // TODO only vault owner
         // zeroForOne, true if debt token is token0
-        bool zeroForOne = !token0IsUnderlying; 
+        bool zeroForOne = !token0IsUnderlying;
         (int256 amount0, int256 amount1) = pool.swap(
             proceedsTo,
             zeroForOne,
@@ -236,7 +246,12 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         }
     }
 
-    function increaseDebt(uint256 vaultId, uint256 vaultNonce, address mintTo, uint256 amount)
+    function increaseDebt(
+        uint256 vaultId,
+        uint256 vaultNonce,
+        address mintTo,
+        uint256 amount
+    )
         public
         onlyVaultOwner(vaultId, vaultNonce)
     {
@@ -249,7 +264,10 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         emit ReduceDebt(vaultId, amount);
     }
 
-    function closeVault(uint256 vaultId, uint256 vaultNonce) public onlyVaultOwner(vaultId, vaultNonce) {
+    function closeVault(uint256 vaultId, uint256 vaultNonce)
+        public
+        onlyVaultOwner(vaultId, vaultNonce)
+    {
         if (vaultInfo[vaultId].debt != 0) {
             revert("still has debt");
         }
@@ -319,7 +337,8 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
     // i.e. the debt token:underlying internal contract exchange rate (normalization)
     // at which this vault will be liquidated
     function liquidationPrice(uint256 vaultId) public view returns (uint256) {
-        uint256 maxLoanUnderlying = FixedPointMathLib.mulWadDown(vaultInfo[vaultId].price, maxLTV);
+        uint256 maxLoanUnderlying =
+            FixedPointMathLib.mulWadDown(vaultInfo[vaultId].price, maxLTV);
         return maxLoanUnderlying / vaultInfo[vaultId].debt;
     }
 
