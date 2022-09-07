@@ -19,9 +19,9 @@ import {ILendingStrategy} from "src/interfaces/IPostCollateralCallback.sol";
 import {OracleLibrary} from "src/squeeth/OracleLibrary.sol";
 
 contract LendingStrategy is ERC721TokenReceiver, Multicall {
-    address immutable factory;
+    address public immutable factory;
     bool public immutable token0IsUnderlying;
-    uint256 immutable start;
+    uint256 public immutable start;
     uint256 public immutable maxLTV;
     uint256 public immutable targetAPR;
     ERC20 public immutable underlying;
@@ -222,9 +222,21 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         _increaseDebt(vaultId, msg.sender, amountToPay);
     }
 
+    function addCollateral(
+        uint256 vaultId,
+        ILendingStrategy.Collateral calldata collateral,
+        ILendingStrategy.OracleInfo calldata oracleInfo,
+        ILendingStrategy.Sig calldata sig
+    )
+        public
+    {
+        _addCollateralToVault(vaultId, collateral, oracleInfo, sig);
+        collateral.addr.transferFrom(msg.sender, address(this), collateral.id);
+    }
+
     /// Alternative to using safeTransferFrom,
     /// allows for loan to buy flows
-    function addCollateral(
+    function addCollateralWithCallback(
         uint256 vaultId,
         ILendingStrategy.Collateral calldata collateral,
         ILendingStrategy.OracleInfo calldata oracleInfo,
