@@ -138,7 +138,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         );
 
         if (request.minOut > 0) {
-            mintAndSellDebt(
+            _mintAndSellDebt(
                 request.vaultId,
                 request.debt,
                 request.minOut,
@@ -161,27 +161,34 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
     // can be done with the strategy, so I think it's nice
     function mintAndSellDebt(
         uint256 vaultId,
+        uint256 vaultNonce,
         int256 debt,
         uint256 minOut,
         uint160 sqrtPriceLimitX96,
         address proceedsTo
     )
         public
+        onlyVaultOwner(vaultId, vaultNonce)
     {
-        // TODO only vault owner
+        _mintAndSellDebt(vaultId, debt, minOut, sqrtPriceLimitX96, proceedsTo);
+    }
+
+    function _mintAndSellDebt(
+        uint256 vaultId,
+        int256 debt,
+        uint256 minOut,
+        uint160 sqrtPriceLimitX96,
+        address proceedsTo
+    )
+        internal
+    {
         // zeroForOne, true if debt token is token0
         bool zeroForOne = !token0IsUnderlying;
         (int256 amount0, int256 amount1) = pool.swap(
-            proceedsTo,
-            zeroForOne,
-            debt,
-            sqrtPriceLimitX96, //sqrtx96
-            abi.encode(vaultId)
+            proceedsTo, zeroForOne, debt, sqrtPriceLimitX96, abi.encode(vaultId)
         );
 
-        uint256 out = uint256(-(zeroForOne ? amount1 : amount0));
-
-        if (out < minOut) {
+        if (uint256(-(zeroForOne ? amount1 : amount0)) < minOut) {
             revert("too little out");
         }
     }

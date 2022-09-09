@@ -63,7 +63,7 @@ contract LendingStrategyForkingTest is Test, MainnetForking {
         nft.mint(borrower, collateralId);
         vm.prank(borrower);
         nft.approve(address(strategy), collateralId);
-        
+
         _provideLiquidityAtOneToOne();
         _populateOnReceivedArgs();
     }
@@ -71,7 +71,12 @@ contract LendingStrategyForkingTest is Test, MainnetForking {
     function testAddCollateral() public {
         vm.startPrank(borrower);
         nft.approve(address(strategy), collateralId);
-        strategy.addCollateral(vaultId, ILendingStrategy.Collateral(nft, collateralId), oracleInfo, sig);
+        strategy.addCollateral(
+            vaultId,
+            ILendingStrategy.Collateral(nft, collateralId),
+            oracleInfo,
+            sig
+        );
     }
 
     function testAddCollateralMulticall() public {
@@ -79,8 +84,20 @@ contract LendingStrategyForkingTest is Test, MainnetForking {
         vm.startPrank(borrower);
         nft.setApprovalForAll(address(strategy), true);
         bytes[] memory data = new bytes[](2);
-        data[0] = abi.encodeWithSelector(strategy.addCollateral.selector, vaultId, ILendingStrategy.Collateral(nft, collateralId), oracleInfo, sig);
-        data[1] = abi.encodeWithSelector(strategy.addCollateral.selector, vaultId, ILendingStrategy.Collateral(nft, collateralId + 1), oracleInfo, sig);
+        data[0] = abi.encodeWithSelector(
+            strategy.addCollateral.selector,
+            vaultId,
+            ILendingStrategy.Collateral(nft, collateralId),
+            oracleInfo,
+            sig
+        );
+        data[1] = abi.encodeWithSelector(
+            strategy.addCollateral.selector,
+            vaultId,
+            ILendingStrategy.Collateral(nft, collateralId + 1),
+            oracleInfo,
+            sig
+        );
         strategy.multicall(data);
     }
 
@@ -88,7 +105,8 @@ contract LendingStrategyForkingTest is Test, MainnetForking {
         vm.startPrank(borrower);
         uint256 nonce = 1;
         safeTransferReceivedArgs.vaultNonce = nonce;
-        safeTransferReceivedArgs.vaultId = strategy.vaultIdentifier(nonce, borrower);
+        safeTransferReceivedArgs.vaultId =
+            strategy.vaultIdentifier(nonce, borrower);
         safeTransferReceivedArgs.minOut = 1;
         safeTransferReceivedArgs.mintDebtOrProceedsTo = address(strategy.pool());
         nft.safeTransferFrom(
@@ -102,7 +120,8 @@ contract LendingStrategyForkingTest is Test, MainnetForking {
     function testAddDebtToExistingVault() public {
         vm.startPrank(borrower);
         uint256 nonce = 1;
-        safeTransferReceivedArgs.vaultId = strategy.vaultIdentifier(nonce, borrower);
+        safeTransferReceivedArgs.vaultId =
+            strategy.vaultIdentifier(nonce, borrower);
         safeTransferReceivedArgs.vaultNonce = nonce;
         nft.safeTransferFrom(
             borrower,
