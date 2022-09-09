@@ -69,14 +69,12 @@ contract LendingStrategyForkingTest is Test, MainnetForking {
     }
 
     function testAddCollateral() public {
-        (uint256 vaultId, ) = strategy.openVault(borrower);
         vm.startPrank(borrower);
         nft.approve(address(strategy), collateralId);
         strategy.addCollateral(vaultId, ILendingStrategy.Collateral(nft, collateralId), oracleInfo, sig);
     }
 
     function testAddCollateralMulticall() public {
-        (uint256 vaultId, ) = strategy.openVault(borrower);
         nft.mint(borrower, collateralId + 1);
         vm.startPrank(borrower);
         nft.setApprovalForAll(address(strategy), true);
@@ -88,6 +86,9 @@ contract LendingStrategyForkingTest is Test, MainnetForking {
 
     function testOpenVaultAddDebtAndSwap() public {
         vm.startPrank(borrower);
+        uint256 nonce = 1;
+        safeTransferReceivedArgs.vaultNonce = nonce;
+        safeTransferReceivedArgs.vaultId = strategy.vaultIdentifier(nonce, borrower);
         safeTransferReceivedArgs.minOut = 1;
         safeTransferReceivedArgs.mintDebtOrProceedsTo = address(strategy.pool());
         nft.safeTransferFrom(
@@ -100,9 +101,9 @@ contract LendingStrategyForkingTest is Test, MainnetForking {
 
     function testAddDebtToExistingVault() public {
         vm.startPrank(borrower);
-        (uint256 vaultId, uint256 vaultNonce) = strategy.openVault(borrower);
-        safeTransferReceivedArgs.vaultId = vaultId;
-        safeTransferReceivedArgs.vaultNonce = vaultNonce;
+        uint256 nonce = 1;
+        safeTransferReceivedArgs.vaultId = strategy.vaultIdentifier(nonce, borrower);
+        safeTransferReceivedArgs.vaultNonce = nonce;
         nft.safeTransferFrom(
             borrower,
             address(strategy),
@@ -113,7 +114,7 @@ contract LendingStrategyForkingTest is Test, MainnetForking {
 
     function testAddDebtToExistingVaultRevertsIfNotVaultOwner() public {
         vm.startPrank(borrower);
-        safeTransferReceivedArgs.vaultNonce = 1;
+        safeTransferReceivedArgs.vaultId = 1;
         vm.expectRevert(LendingStrategy.OnlyVaultOwner.selector);
         nft.safeTransferFrom(
             borrower,

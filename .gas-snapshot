@@ -1,3 +1,5 @@
-LendingStrategyForkingTest:testAddDebtToExistingVault() (gas: 228065)
-LendingStrategyForkingTest:testAddDebtToExistingVaultRevertsIfNotVaultOwner() (gas: 96159)
-LendingStrategyForkingTest:testOpenVaultAddDebtAndSwap() (gas: 274688)
+LendingStrategyForkingTest:testAddCollateral() (gas: 94076)
+LendingStrategyForkingTest:testAddCollateralMulticall() (gas: 161631)
+LendingStrategyForkingTest:testAddDebtToExistingVault() (gas: 203963)
+LendingStrategyForkingTest:testAddDebtToExistingVaultRevertsIfNotVaultOwner() (gas: 96185)
+LendingStrategyForkingTest:testOpenVaultAddDebtAndSwap() (gas: 292111)

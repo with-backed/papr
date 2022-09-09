@@ -50,9 +50,6 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
     );
     event ReduceDebt(uint256 indexed vaultId, uint256 amount);
     event CloseVault(uint256 indexed vaultId);
-    event OpenVault(
-        uint256 indexed vaultId, address indexed owner, uint256 vaultNonce
-    );
     event UpdateNormalization(uint256 newNorm);
 
     modifier onlyVaultOwner(uint256 vaultId, uint256 vaultNonce) {
@@ -106,13 +103,6 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         emit UpdateNormalization(FixedPointMathLib.WAD);
     }
 
-    function openVault(address owner) public returns (uint256 id, uint256 vaultNonce) {
-        vaultNonce = ++_nonce;
-        id = vaultIdentifier(vaultNonce, owner);
-
-        emit OpenVault(id, owner, vaultNonce);
-    }
-
     function vaultIdentifier(uint256 nonce, address account)
         public
         view
@@ -139,12 +129,8 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         ILendingStrategy.Collateral memory collateral =
             ILendingStrategy.Collateral(ERC721(msg.sender), _id);
 
-        if (request.vaultNonce == 0) {
-            (request.vaultId, ) = openVault(request.mintVaultTo);
-        } else {
-            if (vaultIdentifier(request.vaultNonce, from) != request.vaultId) {
-                revert OnlyVaultOwner();
-            }
+        if (vaultIdentifier(request.vaultNonce, from) != request.vaultId) {
+            revert OnlyVaultOwner();
         }
 
         _addCollateralToVault(
