@@ -19,9 +19,9 @@ import {ILendingStrategy} from "src/interfaces/IPostCollateralCallback.sol";
 import {OracleLibrary} from "src/squeeth/OracleLibrary.sol";
 
 contract LendingStrategy is ERC721TokenReceiver, Multicall {
-    address immutable factory;
+    address public immutable factory;
     bool public immutable token0IsUnderlying;
-    uint256 immutable start;
+    uint256 public immutable start;
     uint256 public immutable maxLTV;
     uint256 public immutable targetAPR;
     ERC20 public immutable underlying;
@@ -50,9 +50,6 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
     );
     event ReduceDebt(uint256 indexed vaultId, uint256 amount);
     event CloseVault(uint256 indexed vaultId);
-    event OpenVault(
-        uint256 indexed vaultId, address indexed owner, uint256 vaultNonce
-    );
     event UpdateNormalization(uint256 newNorm);
 
     modifier onlyVaultOwner(uint256 vaultId, uint256 vaultNonce) {
@@ -106,13 +103,6 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         emit UpdateNormalization(FixedPointMathLib.WAD);
     }
 
-    function openVault(address owner) public returns (uint256 id, uint256 vaultNonce) {
-        vaultNonce = ++_nonce;
-        id = vaultIdentifier(vaultNonce, owner);
-
-        emit OpenVault(id, owner, vaultNonce);
-    }
-
     function vaultIdentifier(uint256 nonce, address account)
         public
         view
@@ -139,12 +129,8 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         ILendingStrategy.Collateral memory collateral =
             ILendingStrategy.Collateral(ERC721(msg.sender), _id);
 
-        if (request.vaultNonce == 0) {
-            (request.vaultId, ) = openVault(request.mintVaultTo);
-        } else {
-            if (vaultIdentifier(request.vaultNonce, from) != request.vaultId) {
-                revert OnlyVaultOwner();
-            }
+        if (vaultIdentifier(request.vaultNonce, from) != request.vaultId) {
+            revert OnlyVaultOwner();
         }
 
         _addCollateralToVault(
@@ -152,7 +138,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         );
 
         if (request.minOut > 0) {
-            mintAndSellDebt(
+            _mintAndSellDebt(
                 request.vaultId,
                 request.debt,
                 request.minOut,
@@ -175,29 +161,16 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
     // can be done with the strategy, so I think it's nice
     function mintAndSellDebt(
         uint256 vaultId,
+        uint256 vaultNonce,
         int256 debt,
         uint256 minOut,
         uint160 sqrtPriceLimitX96,
         address proceedsTo
     )
         public
+        onlyVaultOwner(vaultId, vaultNonce)
     {
-        // TODO only vault owner
-        // zeroForOne, true if debt token is token0
-        bool zeroForOne = !token0IsUnderlying;
-        (int256 amount0, int256 amount1) = pool.swap(
-            proceedsTo,
-            zeroForOne,
-            debt,
-            sqrtPriceLimitX96, //sqrtx96
-            abi.encode(vaultId)
-        );
-
-        uint256 out = uint256(-(zeroForOne ? amount1 : amount0));
-
-        if (out < minOut) {
-            revert("too little out");
-        }
+        _mintAndSellDebt(vaultId, debt, minOut, sqrtPriceLimitX96, proceedsTo);
     }
 
     function uniswapV3SwapCallback(
@@ -222,9 +195,21 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         _increaseDebt(vaultId, msg.sender, amountToPay);
     }
 
+    function addCollateral(
+        uint256 vaultId,
+        ILendingStrategy.Collateral calldata collateral,
+        ILendingStrategy.OracleInfo calldata oracleInfo,
+        ILendingStrategy.Sig calldata sig
+    )
+        public
+    {
+        _addCollateralToVault(vaultId, collateral, oracleInfo, sig);
+        collateral.addr.transferFrom(msg.sender, address(this), collateral.id);
+    }
+
     /// Alternative to using safeTransferFrom,
     /// allows for loan to buy flows
-    function addCollateral(
+    function addCollateralWithCallback(
         uint256 vaultId,
         ILendingStrategy.Collateral calldata collateral,
         ILendingStrategy.OracleInfo calldata oracleInfo,
@@ -355,6 +340,26 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         returns (bytes32)
     {
         return keccak256(abi.encode(collateral));
+    }
+
+    function _mintAndSellDebt(
+        uint256 vaultId,
+        int256 debt,
+        uint256 minOut,
+        uint160 sqrtPriceLimitX96,
+        address proceedsTo
+    )
+        internal
+    {
+        // zeroForOne, true if debt token is token0
+        bool zeroForOne = !token0IsUnderlying;
+        (int256 amount0, int256 amount1) = pool.swap(
+            proceedsTo, zeroForOne, debt, sqrtPriceLimitX96, abi.encode(vaultId)
+        );
+
+        if (uint256(-(zeroForOne ? amount1 : amount0)) < minOut) {
+            revert("too little out");
+        }
     }
 
     function _increaseDebt(uint256 vaultId, address mintTo, uint256 amount)
