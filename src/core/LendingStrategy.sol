@@ -229,6 +229,8 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
     /// @param maxDebt the max debt the vault is allowed to have
     error ExceedsMaxDebt(uint256 vaultDebt, uint256 maxDebt);
 
+    event RemoveCollateral(uint256 indexed vaultId, ILendingStrategy.Collateral collateral, uint256 vaultCollateralValue);
+
     function removeCollateral(address sendTo, uint256 vaultNonce, ILendingStrategy.Collateral calldata collateral) external {
         uint256 vaultId = vaultIdentifier(vaultNonce, msg.sender);
         bytes32 h = collateralHash(collateral, vaultId);
@@ -238,17 +240,22 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
             revert InvalidCollateralVaultIDCombination();
         }
 
+        delete collateralFrozenOraclePrice[h];
+        uint256 newVaultCollateralValue = vaultInfo[vaultId].collateralValue - price;
+        vaultInfo[vaultId].collateralValue = uint128(newVaultCollateralValue);
+
         // allows for onReceive hook to sell and repay debt before the 
         // debt check below
         collateral.addr.safeTransferFrom(address(this), sendTo, collateral.id);
 
-        vaultInfo[vaultId].collateralValue -= uint128(price);
-
         uint256 debt = vaultInfo[vaultId].debt;
         uint256 max = maxDebt(vaultInfo[vaultId].collateralValue);
+
         if (debt > max) {
             revert ExceedsMaxDebt(debt, max);
         }
+
+        emit RemoveCollateral(vaultId, collateral, newVaultCollateralValue);
     }
 
     function increaseDebt(
@@ -428,11 +435,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         // TODO check signature
         // TODO check collateral is allowed in this strategy
 
-        /// TODO re multiple nfts in a single vault
-        /// for now we can just add their oracle prices together
-        /// but this doesn't work well for strategies in the future
-        /// that might have a maxLTV unique to each NFT, if we want
-        /// to allow for that
+        collateralFrozenOraclePrice[h] = oracleInfo.price;
         vaultInfo[vaultId].collateralValue += oracleInfo.price;
 
         emit AddCollateral(vaultId, collateral, oracleInfo);
