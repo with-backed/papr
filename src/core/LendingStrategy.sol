@@ -229,9 +229,19 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
     /// @param maxDebt the max debt the vault is allowed to have
     error ExceedsMaxDebt(uint256 vaultDebt, uint256 maxDebt);
 
-    event RemoveCollateral(uint256 indexed vaultId, ILendingStrategy.Collateral collateral, uint256 vaultCollateralValue);
+    event RemoveCollateral(
+        uint256 indexed vaultId,
+        ILendingStrategy.Collateral collateral,
+        uint256 vaultCollateralValue
+    );
 
-    function removeCollateral(address sendTo, uint256 vaultNonce, ILendingStrategy.Collateral calldata collateral) external {
+    function removeCollateral(
+        address sendTo,
+        uint256 vaultNonce,
+        ILendingStrategy.Collateral calldata collateral
+    )
+        external
+    {
         uint256 vaultId = vaultIdentifier(vaultNonce, msg.sender);
         bytes32 h = collateralHash(collateral, vaultId);
         uint256 price = collateralFrozenOraclePrice[h];
@@ -241,10 +251,11 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         }
 
         delete collateralFrozenOraclePrice[h];
-        uint256 newVaultCollateralValue = vaultInfo[vaultId].collateralValue - price;
+        uint256 newVaultCollateralValue =
+            vaultInfo[vaultId].collateralValue - price;
         vaultInfo[vaultId].collateralValue = uint128(newVaultCollateralValue);
 
-        // allows for onReceive hook to sell and repay debt before the 
+        // allows for onReceive hook to sell and repay debt before the
         // debt check below
         collateral.addr.safeTransferFrom(address(this), sendTo, collateral.id);
 
@@ -359,7 +370,10 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         return maxLoanUnderlying / normalization;
     }
 
-    function collateralHash(ILendingStrategy.Collateral memory collateral, uint256 vaultId)
+    function collateralHash(
+        ILendingStrategy.Collateral memory collateral,
+        uint256 vaultId
+    )
         public
         pure
         returns (bytes32)

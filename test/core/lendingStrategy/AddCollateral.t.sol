@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {BaseLendingStrategyTest} from "test/core/lendingStrategy/BaseLendingStrategy.ft.sol";
+import {BaseLendingStrategyTest} from
+    "test/core/lendingStrategy/BaseLendingStrategy.ft.sol";
 import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
 
 contract AddCollateralTest is BaseLendingStrategyTest {
