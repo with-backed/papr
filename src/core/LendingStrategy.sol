@@ -173,26 +173,6 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         _mintAndSellDebt(vaultId, debt, minOut, sqrtPriceLimitX96, proceedsTo);
     }
 
-    function _mintAndSellDebt(
-        uint256 vaultId,
-        int256 debt,
-        uint256 minOut,
-        uint160 sqrtPriceLimitX96,
-        address proceedsTo
-    )
-        internal
-    {
-        // zeroForOne, true if debt token is token0
-        bool zeroForOne = !token0IsUnderlying;
-        (int256 amount0, int256 amount1) = pool.swap(
-            proceedsTo, zeroForOne, debt, sqrtPriceLimitX96, abi.encode(vaultId)
-        );
-
-        if (uint256(-(zeroForOne ? amount1 : amount0)) < minOut) {
-            revert("too little out");
-        }
-    }
-
     function uniswapV3SwapCallback(
         int256 amount0Delta,
         int256 amount1Delta,
@@ -360,6 +340,26 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         returns (bytes32)
     {
         return keccak256(abi.encode(collateral));
+    }
+
+    function _mintAndSellDebt(
+        uint256 vaultId,
+        int256 debt,
+        uint256 minOut,
+        uint160 sqrtPriceLimitX96,
+        address proceedsTo
+    )
+        internal
+    {
+        // zeroForOne, true if debt token is token0
+        bool zeroForOne = !token0IsUnderlying;
+        (int256 amount0, int256 amount1) = pool.swap(
+            proceedsTo, zeroForOne, debt, sqrtPriceLimitX96, abi.encode(vaultId)
+        );
+
+        if (uint256(-(zeroForOne ? amount1 : amount0)) < minOut) {
+            revert("too little out");
+        }
     }
 
     function _increaseDebt(uint256 vaultId, address mintTo, uint256 amount)
