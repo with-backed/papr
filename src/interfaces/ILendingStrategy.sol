@@ -12,7 +12,7 @@ interface ILendingStrategy {
 
     struct VaultInfo {
         uint128 debt;
-        uint128 price;
+        uint128 collateralValue;
     }
 
     enum OracleInfoPeriod {
