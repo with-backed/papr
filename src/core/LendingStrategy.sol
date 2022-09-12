@@ -260,7 +260,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         collateral.addr.safeTransferFrom(address(this), sendTo, collateral.id);
 
         uint256 debt = vaultInfo[vaultId].debt;
-        uint256 max = maxDebt(vaultInfo[vaultId].collateralValue);
+        uint256 max = maxDebt(newVaultCollateralValue);
 
         if (debt > max) {
             revert ExceedsMaxDebt(debt, max);
