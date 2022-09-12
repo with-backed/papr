@@ -40,7 +40,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
 
     // id => vault info
     mapping(uint256 => ILendingStrategy.VaultInfo) public vaultInfo;
-    mapping(bytes32 => uint256) public price;
+    mapping(bytes32 => uint256) public collateralFrozenOraclePrice;
 
     event IncreaseDebt(uint256 indexed vaultId, uint256 amount);
     event AddCollateral(
@@ -101,14 +101,6 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         lastCumulativeTick = _latestCumulativeTick();
 
         emit UpdateNormalization(FixedPointMathLib.WAD);
-    }
-
-    function vaultIdentifier(uint256 nonce, address account)
-        public
-        view
-        returns (uint256)
-    {
-        return uint256(keccak256(abi.encode(nonce, account)));
     }
 
     error OnlyVaultOwner();
@@ -231,6 +223,52 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         }
     }
 
+    error InvalidCollateralVaultIDCombination();
+
+    /// @param vaultDebt how much debt the vault has
+    /// @param maxDebt the max debt the vault is allowed to have
+    error ExceedsMaxDebt(uint256 vaultDebt, uint256 maxDebt);
+
+    event RemoveCollateral(
+        uint256 indexed vaultId,
+        ILendingStrategy.Collateral collateral,
+        uint256 vaultCollateralValue
+    );
+
+    function removeCollateral(
+        address sendTo,
+        uint256 vaultNonce,
+        ILendingStrategy.Collateral calldata collateral
+    )
+        external
+    {
+        uint256 vaultId = vaultIdentifier(vaultNonce, msg.sender);
+        bytes32 h = collateralHash(collateral, vaultId);
+        uint256 price = collateralFrozenOraclePrice[h];
+
+        if (price == 0) {
+            revert InvalidCollateralVaultIDCombination();
+        }
+
+        delete collateralFrozenOraclePrice[h];
+        uint256 newVaultCollateralValue =
+            vaultInfo[vaultId].collateralValue - price;
+        vaultInfo[vaultId].collateralValue = uint128(newVaultCollateralValue);
+
+        // allows for onReceive hook to sell and repay debt before the
+        // debt check below
+        collateral.addr.safeTransferFrom(address(this), sendTo, collateral.id);
+
+        uint256 debt = vaultInfo[vaultId].debt;
+        uint256 max = maxDebt(newVaultCollateralValue);
+
+        if (debt > max) {
+            revert ExceedsMaxDebt(debt, max);
+        }
+
+        emit RemoveCollateral(vaultId, collateral, newVaultCollateralValue);
+    }
+
     function increaseDebt(
         uint256 vaultId,
         uint256 vaultNonce,
@@ -257,7 +295,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
             revert("still has debt");
         }
 
-        if (vaultInfo[vaultId].price != 0) {
+        if (vaultInfo[vaultId].collateralValue != 0) {
             revert("vault still has collateral");
         }
 
@@ -323,23 +361,32 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
     // at which this vault will be liquidated
     function liquidationPrice(uint256 vaultId) public view returns (uint256) {
         uint256 maxLoanUnderlying =
-            FixedPointMathLib.mulWadDown(vaultInfo[vaultId].price, maxLTV);
+            FixedPointMathLib.mulWadDown(vaultInfo[vaultId].collateralValue, maxLTV);
         return maxLoanUnderlying / vaultInfo[vaultId].debt;
     }
 
-    /// @notice given a supposed asset price (would have to be passed on oracle message to be realized)
-    /// returns how much synthDebt could be minted
-    function maxDebt(uint256 assetPrice) public view returns (uint256) {
-        uint256 maxLoanUnderlying = assetPrice * maxLTV;
+    function maxDebt(uint256 collateralValue) public view returns (uint256) {
+        uint256 maxLoanUnderlying = collateralValue * maxLTV;
         return maxLoanUnderlying / normalization;
     }
 
-    function collateralHash(ILendingStrategy.Collateral memory collateral)
+    function collateralHash(
+        ILendingStrategy.Collateral memory collateral,
+        uint256 vaultId
+    )
         public
         pure
         returns (bytes32)
     {
-        return keccak256(abi.encode(collateral));
+        return keccak256(abi.encode(collateral, vaultId));
+    }
+
+    function vaultIdentifier(uint256 nonce, address account)
+        public
+        view
+        returns (uint256)
+    {
+        return uint256(keccak256(abi.encode(nonce, account)));
     }
 
     function _mintAndSellDebt(
@@ -371,8 +418,10 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         vaultInfo[vaultId].debt += uint128(amount);
         debtToken.mint(mintTo, amount);
 
-        if (vaultInfo[vaultId].debt > maxDebt(vaultInfo[vaultId].price)) {
-            revert("too much debt");
+        uint256 debt = vaultInfo[vaultId].debt;
+        uint256 max = maxDebt(vaultInfo[vaultId].collateralValue);
+        if (debt > max) {
+            revert ExceedsMaxDebt(debt, max);
         }
 
         emit IncreaseDebt(vaultId, amount);
@@ -386,9 +435,9 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
     )
         internal
     {
-        bytes32 h = collateralHash(collateral);
+        bytes32 h = collateralHash(collateral, vaultId);
 
-        if (price[h] != 0) {
+        if (collateralFrozenOraclePrice[h] != 0) {
             // collateral is already here
             revert();
         }
@@ -400,12 +449,8 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         // TODO check signature
         // TODO check collateral is allowed in this strategy
 
-        /// TODO re multiple nfts in a single vault
-        /// for now we can just add their oracle prices together
-        /// but this doesn't work well for strategies in the future
-        /// that might have a maxLTV unique to each NFT, if we want
-        /// to allow for that
-        vaultInfo[vaultId].price += oracleInfo.price;
+        collateralFrozenOraclePrice[h] = oracleInfo.price;
+        vaultInfo[vaultId].collateralValue += oracleInfo.price;
 
         emit AddCollateral(vaultId, collateral, oracleInfo);
     }

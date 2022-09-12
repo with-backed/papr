@@ -1,32 +1,20 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import "forge-std/Test.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
-import {WETH} from "solmate/tokens/WETH.sol";
 import {TickMath} from "fullrange/libraries/TickMath.sol";
-import {IQuoter} from "v3-periphery/interfaces/IQuoter.sol";
-import {ISwapRouter} from "v3-periphery/interfaces/ISwapRouter.sol";
 
 import {LendingStrategy} from "src/core/LendingStrategy.sol";
 import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
 import {StrategyFactory} from "src/core/StrategyFactory.sol";
-import {FixedPointMathLib} from "src/libraries/FixedPointMathLib.sol";
 import {TestERC721} from "test/mocks/TestERC721.sol";
 import {TestERC20} from "test/mocks/TestERC20.sol";
+import {MainnetForking} from "test/base/MainnetForking.sol";
+import {UniswapForking} from "test/base/UniswapForking.sol";
 import {INonfungiblePositionManager} from
     "test/mocks/uniswap/INonfungiblePositionManager.sol";
 
-contract MainnetForking is Test {
-    uint256 forkId =
-        vm.createSelectFork(vm.envString("MAINNET_RPC_URL"), 15434809);
-    INonfungiblePositionManager positionManager =
-        INonfungiblePositionManager(0xC36442b4a4522E871399CD717aBDD847Ab11FE88);
-    IQuoter quoter = IQuoter(0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6);
-    ISwapRouter router = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
-}
-
-contract LendingStrategyForkingTest is Test, MainnetForking {
+contract BaseLendingStrategyTest is MainnetForking, UniswapForking {
     TestERC721 nft = new TestERC721();
     TestERC20 underlying = new TestERC20();
     LendingStrategy strategy;
@@ -66,81 +54,6 @@ contract LendingStrategyForkingTest is Test, MainnetForking {
 
         _provideLiquidityAtOneToOne();
         _populateOnReceivedArgs();
-    }
-
-    function testAddCollateral() public {
-        vm.startPrank(borrower);
-        nft.approve(address(strategy), collateralId);
-        strategy.addCollateral(
-            vaultId,
-            ILendingStrategy.Collateral(nft, collateralId),
-            oracleInfo,
-            sig
-        );
-    }
-
-    function testAddCollateralMulticall() public {
-        nft.mint(borrower, collateralId + 1);
-        vm.startPrank(borrower);
-        nft.setApprovalForAll(address(strategy), true);
-        bytes[] memory data = new bytes[](2);
-        data[0] = abi.encodeWithSelector(
-            strategy.addCollateral.selector,
-            vaultId,
-            ILendingStrategy.Collateral(nft, collateralId),
-            oracleInfo,
-            sig
-        );
-        data[1] = abi.encodeWithSelector(
-            strategy.addCollateral.selector,
-            vaultId,
-            ILendingStrategy.Collateral(nft, collateralId + 1),
-            oracleInfo,
-            sig
-        );
-        strategy.multicall(data);
-    }
-
-    function testOpenVaultAddDebtAndSwap() public {
-        vm.startPrank(borrower);
-        uint256 nonce = 1;
-        safeTransferReceivedArgs.vaultNonce = nonce;
-        safeTransferReceivedArgs.vaultId =
-            strategy.vaultIdentifier(nonce, borrower);
-        safeTransferReceivedArgs.minOut = 1;
-        safeTransferReceivedArgs.mintDebtOrProceedsTo = address(strategy.pool());
-        nft.safeTransferFrom(
-            borrower,
-            address(strategy),
-            collateralId,
-            abi.encode(safeTransferReceivedArgs)
-        );
-    }
-
-    function testAddDebtToExistingVault() public {
-        vm.startPrank(borrower);
-        uint256 nonce = 1;
-        safeTransferReceivedArgs.vaultId =
-            strategy.vaultIdentifier(nonce, borrower);
-        safeTransferReceivedArgs.vaultNonce = nonce;
-        nft.safeTransferFrom(
-            borrower,
-            address(strategy),
-            collateralId,
-            abi.encode(safeTransferReceivedArgs)
-        );
-    }
-
-    function testAddDebtToExistingVaultRevertsIfNotVaultOwner() public {
-        vm.startPrank(borrower);
-        safeTransferReceivedArgs.vaultId = 1;
-        vm.expectRevert(LendingStrategy.OnlyVaultOwner.selector);
-        nft.safeTransferFrom(
-            borrower,
-            address(strategy),
-            collateralId,
-            abi.encode(safeTransferReceivedArgs)
-        );
     }
 
     function _provideLiquidityAtOneToOne() internal {
