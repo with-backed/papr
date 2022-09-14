@@ -194,6 +194,9 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
 
     /// Alternative to using safeTransferFrom,
     /// allows for loan to buy flows
+    /// @dev anyone could use this method to add collateral to anyone else's vault
+    /// we think this is acceptable and it is useful so that a periphery contract 
+    /// can modify the tx.origin's vault
     function addCollateralWithCallback(
         uint256 vaultNonce,
         address vaultOwner,
