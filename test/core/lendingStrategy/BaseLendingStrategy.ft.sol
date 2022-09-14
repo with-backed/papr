@@ -94,7 +94,6 @@ contract BaseLendingStrategyTest is MainnetForking, UniswapForking {
     function _populateOnReceivedArgs() internal {
         oracleInfo.price = oraclePrice;
         safeTransferReceivedArgs = ILendingStrategy.OnERC721ReceivedArgs({
-            vaultId: vaultId,
             vaultNonce: vaultNonce,
             mintVaultTo: borrower,
             mintDebtOrProceedsTo: borrower,
