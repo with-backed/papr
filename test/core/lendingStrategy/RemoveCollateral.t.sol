@@ -39,7 +39,7 @@ contract RemoveCollateralTest is BaseLendingStrategyTest {
 
     function testRemoveCollateralFailsIfMaxDebtExceeded() public {
         _addCollateral();
-        strategy.increaseDebt(vaultId, vaultNonce, address(1), 1);
+        strategy.increaseDebt(vaultNonce, address(1), 1);
         vm.expectRevert(
             abi.encodeWithSelector(LendingStrategy.ExceedsMaxDebt.selector, 1, 0)
         );
@@ -49,7 +49,7 @@ contract RemoveCollateralTest is BaseLendingStrategyTest {
     function testRemoveCollateralEmitsCorrectly() public {
         _addCollateral();
         vm.expectEmit(true, true, true, true);
-        emit RemoveCollateral(vaultId, collateral, 0);
+        emit RemoveCollateral(strategy.vaultIdentifier(vaultNonce, borrower), collateral, 0);
         strategy.removeCollateral(address(1), vaultNonce, collateral);
     }
 
@@ -67,10 +67,9 @@ contract RemoveCollateralTest is BaseLendingStrategyTest {
     }
 
     function _addCollateral() internal {
-        vaultId = strategy.vaultIdentifier(vaultNonce, borrower);
         collateral = ILendingStrategy.Collateral(nft, collateralId);
         vm.startPrank(borrower);
         nft.approve(address(strategy), collateralId);
-        strategy.addCollateral(vaultId, collateral, oracleInfo, sig);
+        strategy.addCollateral(vaultNonce, collateral, oracleInfo, sig);
     }
 }

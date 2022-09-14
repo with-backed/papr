@@ -33,7 +33,6 @@ interface ILendingStrategy {
     }
 
     struct OnERC721ReceivedArgs {
-        uint256 vaultId;
         uint256 vaultNonce;
         address mintVaultTo;
         address mintDebtOrProceedsTo;
