@@ -30,7 +30,6 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
     uint256 public targetGrowthPerPeriod;
     DebtToken public debtToken;
     // DebtVault public debtVault;
-    bytes32 public allowedCollateralRoot;
     string public strategyURI;
     uint256 _nonce;
     // single slot, write together
@@ -41,6 +40,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
     // id => vault info
     mapping(uint256 => ILendingStrategy.VaultInfo) public vaultInfo;
     mapping(bytes32 => uint256) public collateralFrozenOraclePrice;
+    mapping(address => bool) public allowedCollateral;
 
     event IncreaseDebt(uint256 indexed vaultId, uint256 amount);
     event AddCollateral(
@@ -65,7 +65,6 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
             name,
             symbol,
             strategyURI,
-            allowedCollateralRoot,
             targetAPR,
             maxLTV,
             underlying
@@ -211,7 +210,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         _addCollateralToVault(vaultId, vaultNonce, collateral, oracleInfo, sig);
         IPostCollateralCallback(msg.sender).postCollateralCallback(
             ILendingStrategy.StrategyDefinition(
-                allowedCollateralRoot, targetAPR, maxLTV, underlying
+                targetAPR, maxLTV, underlying
             ),
             collateral,
             data
@@ -226,6 +225,8 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
     /// @param vaultDebt how much debt the vault has
     /// @param maxDebt the max debt the vault is allowed to have
     error ExceedsMaxDebt(uint256 vaultDebt, uint256 maxDebt);
+
+    error InvalidCollateral(address passedCollateral);
 
     function removeCollateral(
         address sendTo,
@@ -359,6 +360,10 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         return uint256(keccak256(abi.encode(nonce, account)));
     }
 
+    function addAllowedCollateralToStrategy(address addr) public {
+        allowedCollateral[addr] = true;
+    }
+
     function _mintAndSellDebt(
         uint256 vaultId,
         int256 debt,
@@ -419,6 +424,9 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
 
         // TODO check signature
         // TODO check collateral is allowed in this strategy
+        if (!allowedCollateral[address(collateral.addr)]) {
+            revert InvalidCollateral(address(collateral.addr));
+        }
 
         collateralFrozenOraclePrice[h] = oracleInfo.price;
         vaultInfo[vaultId].collateralValue += oracleInfo.price;

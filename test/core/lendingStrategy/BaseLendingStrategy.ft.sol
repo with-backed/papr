@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
+import "forge-std/Test.sol";
+
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {TickMath} from "fullrange/libraries/TickMath.sol";
 
@@ -22,7 +24,6 @@ contract BaseLendingStrategyTest is MainnetForking, UniswapForking {
     uint256 collateralId = 1;
     address borrower = address(1);
     uint24 feeTier = 10000;
-    bytes32 allowedCollateralRoot;
 
     ILendingStrategy.OnERC721ReceivedArgs safeTransferReceivedArgs;
 
@@ -38,16 +39,17 @@ contract BaseLendingStrategyTest is MainnetForking, UniswapForking {
 
     //
     function setUp() public {
+        console.log("this ran");
         StrategyFactory factory = new StrategyFactory();
         strategy = factory.newStrategy(
             "PUNKs Loans",
             "PL",
             "ipfs-link",
-            allowedCollateralRoot,
             0.1e18,
             0.5e18,
             underlying
         );
+        strategy.addAllowedCollateralToStrategy(address(nft));
         nft.mint(borrower, collateralId);
         vm.prank(borrower);
         nft.approve(address(strategy), collateralId);
