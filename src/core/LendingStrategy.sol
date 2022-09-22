@@ -368,7 +368,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
             isAllowed[args[i].addr] = args[i].allowed;
             emit ChangeCollateralAllowed(args[i]);
             unchecked {
-                i++;
+                ++i;
             }
         }
     }
