@@ -17,8 +17,9 @@ import {IPostCollateralCallback} from
     "src/interfaces/IPostCollateralCallback.sol";
 import {ILendingStrategy} from "src/interfaces/IPostCollateralCallback.sol";
 import {OracleLibrary} from "src/squeeth/OracleLibrary.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-contract LendingStrategy is ERC721TokenReceiver, Multicall {
+contract LendingStrategy is ERC721TokenReceiver, Multicall, Ownable {
     address public immutable factory;
     bool public immutable token0IsUnderlying;
     uint256 public immutable start;
@@ -360,7 +361,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         return uint256(keccak256(abi.encode(nonce, account)));
     }
 
-    function addAllowedCollateralToStrategy(address addr) public {
+    function addAllowedCollateralToStrategy(address addr) public onlyOwner {
         allowedCollateral[addr] = true;
     }
 
