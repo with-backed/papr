@@ -48,7 +48,7 @@ contract StrategyFactory {
         );
         LendingStrategy s =
         new LendingStrategy{salt: keccak256(abi.encode(targetAPR, maxLTV, underlying))}();
-        s.transferOwnership(msg.sender);
+        s.transferOwnership(msg.sender, false, false);
 
         emit CreateLendingStrategy(
             s, underlying, name, symbol, strategyURI

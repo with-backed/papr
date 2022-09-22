@@ -18,8 +18,9 @@ import {IPostCollateralCallback} from
 import {ILendingStrategy} from "src/interfaces/IPostCollateralCallback.sol";
 import {OracleLibrary} from "src/squeeth/OracleLibrary.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {BoringOwnable} from "@boringsolidity/BoringOwnable.sol";
 
-contract LendingStrategy is ERC721TokenReceiver, Multicall, Ownable {
+contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
     address public immutable factory;
     bool public immutable token0IsUnderlying;
     uint256 public immutable start;
@@ -57,6 +58,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, Ownable {
         uint256 vaultCollateralValue
     );
     event UpdateNormalization(uint256 newNorm);
+    event ChangeCollateralAllowed(ILendingStrategy.SetAllowedCollateralArg arg);
 
     constructor() {
         factory = msg.sender;
@@ -364,6 +366,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, Ownable {
     function setAllowedCollateral(ILendingStrategy.SetAllowedCollateralArg[] calldata args) public onlyOwner {
         for (uint256 i = 0; i < args.length;) {
             isAllowed[args[i].addr] = args[i].allowed;
+            emit ChangeCollateralAllowed(args[i]);
             unchecked {
                 i++;
             }
