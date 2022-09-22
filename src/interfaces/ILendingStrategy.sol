@@ -44,9 +44,13 @@ interface ILendingStrategy {
     }
 
     struct StrategyDefinition {
-        bytes32 allowedCollateralRoot;
         uint256 targetAPR;
         uint256 maxLTV;
         ERC20 underlying;
+    }
+
+    struct SetAllowedCollateralArg {
+        address addr;
+        bool allowed;
     }
 }

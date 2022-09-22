@@ -11,7 +11,6 @@ contract StrategyFactory {
         string name;
         string symbol;
         string strategyURI;
-        bytes32 allowedCollateralRoot;
         uint256 targetAPR;
         uint256 maxLTV;
         ERC20 underlying;
@@ -22,7 +21,6 @@ contract StrategyFactory {
     /// TODO we probably want maxLTV and targetAPR indexed?
     event CreateLendingStrategy(
         LendingStrategy indexed strategyAddress,
-        bytes32 indexed allowedCollateralRoot,
         ERC20 indexed underlying,
         string name,
         string symbol,
@@ -33,7 +31,6 @@ contract StrategyFactory {
         string calldata name,
         string calldata symbol,
         string calldata strategyURI,
-        bytes32 allowedCollateralRoot,
         uint256 targetAPR,
         uint256 maxLTV,
         ERC20 underlying
@@ -45,16 +42,16 @@ contract StrategyFactory {
             name,
             symbol,
             strategyURI,
-            allowedCollateralRoot,
             targetAPR,
             maxLTV,
             underlying
         );
         LendingStrategy s =
-        new LendingStrategy{salt: keccak256(abi.encode(allowedCollateralRoot, targetAPR, maxLTV, underlying))}();
+        new LendingStrategy{salt: keccak256(abi.encode(targetAPR, maxLTV, underlying))}();
+        s.transferOwnership(msg.sender, false, false);
 
         emit CreateLendingStrategy(
-            s, allowedCollateralRoot, underlying, name, symbol, strategyURI
+            s, underlying, name, symbol, strategyURI
             );
 
         s.initialize();

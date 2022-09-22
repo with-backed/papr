@@ -17,8 +17,10 @@ import {IPostCollateralCallback} from
     "src/interfaces/IPostCollateralCallback.sol";
 import {ILendingStrategy} from "src/interfaces/IPostCollateralCallback.sol";
 import {OracleLibrary} from "src/squeeth/OracleLibrary.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {BoringOwnable} from "@boringsolidity/BoringOwnable.sol";
 
-contract LendingStrategy is ERC721TokenReceiver, Multicall {
+contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
     address public immutable factory;
     bool public immutable token0IsUnderlying;
     uint256 public immutable start;
@@ -30,7 +32,6 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
     uint256 public targetGrowthPerPeriod;
     DebtToken public debtToken;
     // DebtVault public debtVault;
-    bytes32 public allowedCollateralRoot;
     string public strategyURI;
     uint256 _nonce;
     // single slot, write together
@@ -41,6 +42,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
     // id => vault info
     mapping(uint256 => ILendingStrategy.VaultInfo) public vaultInfo;
     mapping(bytes32 => uint256) public collateralFrozenOraclePrice;
+    mapping(address => bool) public isAllowed;
 
     event IncreaseDebt(uint256 indexed vaultId, uint256 amount);
     event AddCollateral(
@@ -56,6 +58,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         uint256 vaultCollateralValue
     );
     event UpdateNormalization(uint256 newNorm);
+    event ChangeCollateralAllowed(ILendingStrategy.SetAllowedCollateralArg arg);
 
     constructor() {
         factory = msg.sender;
@@ -65,7 +68,6 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
             name,
             symbol,
             strategyURI,
-            allowedCollateralRoot,
             targetAPR,
             maxLTV,
             underlying
@@ -211,7 +213,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         _addCollateralToVault(vaultId, vaultNonce, collateral, oracleInfo, sig);
         IPostCollateralCallback(msg.sender).postCollateralCallback(
             ILendingStrategy.StrategyDefinition(
-                allowedCollateralRoot, targetAPR, maxLTV, underlying
+                targetAPR, maxLTV, underlying
             ),
             collateral,
             data
@@ -226,6 +228,8 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
     /// @param vaultDebt how much debt the vault has
     /// @param maxDebt the max debt the vault is allowed to have
     error ExceedsMaxDebt(uint256 vaultDebt, uint256 maxDebt);
+
+    error InvalidCollateral();
 
     function removeCollateral(
         address sendTo,
@@ -359,6 +363,16 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
         return uint256(keccak256(abi.encode(nonce, account)));
     }
 
+    function setAllowedCollateral(ILendingStrategy.SetAllowedCollateralArg[] calldata args) public onlyOwner {
+        for (uint256 i = 0; i < args.length;) {
+            isAllowed[args[i].addr] = args[i].allowed;
+            emit ChangeCollateralAllowed(args[i]);
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
     function _mintAndSellDebt(
         uint256 vaultId,
         int256 debt,
@@ -419,6 +433,9 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall {
 
         // TODO check signature
         // TODO check collateral is allowed in this strategy
+        if (!isAllowed[address(collateral.addr)]) {
+            revert InvalidCollateral();
+        }
 
         collateralFrozenOraclePrice[h] = oracleInfo.price;
         vaultInfo[vaultId].collateralValue += oracleInfo.price;
