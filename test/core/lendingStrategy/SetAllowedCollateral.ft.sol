@@ -24,8 +24,5 @@ contract SetAllowedCollateralTest is Test {
         nft.mint(borrower, collateralId);
         vm.prank(borrower);
         nft.approve(address(strategy), collateralId);
-
-        _provideLiquidityAtOneToOne();
-        _populateOnReceivedArgs();
     }
 }
