@@ -41,7 +41,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, Ownable {
     // id => vault info
     mapping(uint256 => ILendingStrategy.VaultInfo) public vaultInfo;
     mapping(bytes32 => uint256) public collateralFrozenOraclePrice;
-    mapping(address => bool) public allowedCollateral;
+    mapping(address => bool) public isAllowed;
 
     event IncreaseDebt(uint256 indexed vaultId, uint256 amount);
     event AddCollateral(
@@ -227,7 +227,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, Ownable {
     /// @param maxDebt the max debt the vault is allowed to have
     error ExceedsMaxDebt(uint256 vaultDebt, uint256 maxDebt);
 
-    error InvalidCollateral(address passedCollateral);
+    error InvalidCollateral();
 
     function removeCollateral(
         address sendTo,
@@ -361,8 +361,13 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, Ownable {
         return uint256(keccak256(abi.encode(nonce, account)));
     }
 
-    function addAllowedCollateralToStrategy(address addr) public onlyOwner {
-        allowedCollateral[addr] = true;
+    function setAllowedCollateral(ILendingStrategy.SetAllowedCollateralArg[] calldata args) public onlyOwner {
+        for (uint256 i = 0; i < args.length;) {
+            isAllowed[args[i].addr] = args[i].allowed;
+            unchecked {
+                i++;
+            }
+        }
     }
 
     function _mintAndSellDebt(
@@ -425,8 +430,8 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, Ownable {
 
         // TODO check signature
         // TODO check collateral is allowed in this strategy
-        if (!allowedCollateral[address(collateral.addr)]) {
-            revert InvalidCollateral(address(collateral.addr));
+        if (!isAllowed[address(collateral.addr)]) {
+            revert InvalidCollateral();
         }
 
         collateralFrozenOraclePrice[h] = oracleInfo.price;

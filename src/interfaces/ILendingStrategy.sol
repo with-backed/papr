@@ -48,4 +48,9 @@ interface ILendingStrategy {
         uint256 maxLTV;
         ERC20 underlying;
     }
+
+    struct SetAllowedCollateralArg {
+        address addr;
+        bool allowed;
+    }
 }

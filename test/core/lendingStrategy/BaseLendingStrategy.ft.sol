@@ -48,7 +48,9 @@ contract BaseLendingStrategyTest is MainnetForking, UniswapForking {
             0.5e18,
             underlying
         );
-        strategy.addAllowedCollateralToStrategy(address(nft));
+        ILendingStrategy.SetAllowedCollateralArg[] memory args = new ILendingStrategy.SetAllowedCollateralArg[](1);
+        args[0] = ILendingStrategy.SetAllowedCollateralArg(address(nft), true);
+        strategy.setAllowedCollateral(args);
         nft.mint(borrower, collateralId);
         vm.prank(borrower);
         nft.approve(address(strategy), collateralId);

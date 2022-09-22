@@ -22,7 +22,7 @@ contract AddCollateralTest is BaseLendingStrategyTest {
         TestERC721 invalidNFT = new TestERC721();
         vm.startPrank(borrower);
         nft.approve(address(strategy), collateralId);
-        vm.expectRevert(abi.encodeWithSelector(LendingStrategy.InvalidCollateral.selector, address(invalidNFT)));
+        vm.expectRevert(LendingStrategy.InvalidCollateral.selector);
         strategy.addCollateral(
             vaultId,
             ILendingStrategy.Collateral(invalidNFT, collateralId),
