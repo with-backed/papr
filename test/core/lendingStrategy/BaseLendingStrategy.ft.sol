@@ -39,7 +39,6 @@ contract BaseLendingStrategyTest is MainnetForking, UniswapForking {
 
     //
     function setUp() public {
-        console.log("this ran");
         StrategyFactory factory = new StrategyFactory();
         strategy = factory.newStrategy(
             "PUNKs Loans",

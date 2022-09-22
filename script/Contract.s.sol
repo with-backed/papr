@@ -36,14 +36,19 @@ contract ContractScript is Script {
     function run() public {
         vm.startBroadcast();
 
-        // address deployer = 0xE89CB2053A04Daf86ABaa1f4bC6D50744e57d39E;
+        address deployer = 0xE89CB2053A04Daf86ABaa1f4bC6D50744e57d39E;
 
-        address collateral = 0x5A409e46b2CAc2CFDa73134690E3a28Bb444f7E7;
-        address underlying = 0xe357188e6A0B663bc7dF668abc6D76a4f534F588;
+        address collateral = 0xb7D7fe7995D1E347916fAae8e16CFd6dD21a9bAE;
+        address underlying = 0x3089B47853df1b82877bEef6D904a0ce98a12553;
 
         StrategyFactory s = new StrategyFactory();
         LendingStrategy strategy = s.newStrategy(
-            "APE Loans", "AP", "uri", "", 2e17, 5e17, ERC20(underlying)
+            "APE Loans",
+            "AP",
+            "uri",
+            2e17,
+            5e17,
+            ERC20(underlying)
         );
 
         // uint256 tokenId = 17;
