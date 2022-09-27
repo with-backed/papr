@@ -121,9 +121,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
         return ERC721TokenReceiver.onERC721Received.selector;
     }
 
-    // debated a lot about whether this should be at the periphery. A bit of extra deploy code to put this in each strategy
-    // but it saves some gas (don't have to do pool check), and pretty much everything else
-    // can be done with the strategy, so I think it's nice
+    /// TODO consider passing token0IsUnderlying to save an SLOAD
     function mintAndSellDebt(
         uint256 vaultNonce,
         uint256 debt,
