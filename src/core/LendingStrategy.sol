@@ -106,8 +106,13 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
         _addCollateralToVault(vaultId, request.vaultNonce, collateral, request.oracleInfo, request.sig);
 
         if (request.minOut > 0) {
-            _mintAndSellDebt(
-                vaultId, request.debt, request.minOut, request.sqrtPriceLimitX96, request.mintDebtOrProceedsTo
+            _swap(
+                request.mintDebtOrProceedsTo,
+                !token0IsUnderlying,
+                request.debt,
+                request.minOut,
+                request.sqrtPriceLimitX96,
+                abi.encode(vaultId, address(this))
             );
         } else if (request.debt > 0) {
             _increaseDebt(vaultId, request.mintDebtOrProceedsTo, uint256(request.debt));
@@ -126,7 +131,14 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
         uint160 sqrtPriceLimitX96,
         address proceedsTo
     ) public returns (uint256) {
-        return _mintAndSellDebt(vaultIdentifier(vaultNonce, msg.sender), debt, minOut, sqrtPriceLimitX96, proceedsTo);
+        return _swap(
+            proceedsTo,
+            !token0IsUnderlying,
+            debt,
+            minOut,
+            sqrtPriceLimitX96,
+            abi.encode(vaultIdentifier(vaultNonce, msg.sender), address(this))
+        );
     }
 
     function buyAndReduceDebt(
@@ -136,21 +148,9 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
         uint160 sqrtPriceLimitX96,
         address proceedsTo
     ) public returns (uint256 out) {
-        bool zeroForOne = token0IsUnderlying;
-        (int256 amount0, int256 amount1) = pool.swap(
-            proceedsTo,
-            zeroForOne,
-            underlyingAmount.toInt256(),
-            sqrtPriceLimitX96,
-            abi.encode(vaultId, address(msg.sender))
+        out = _swap(
+            proceedsTo, token0IsUnderlying, underlyingAmount, minOut, sqrtPriceLimitX96, abi.encode(vaultId, msg.sender)
         );
-
-        out = uint256(-(zeroForOne ? amount1 : amount0));
-
-        if (out < minOut) {
-            revert ILendingStrategy.TooLittleOut(out, minOut);
-        }
-
         reduceDebt(vaultId, uint128(out));
     }
 
@@ -329,17 +329,23 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
         }
     }
 
-    function _mintAndSellDebt(
-        uint256 vaultId,
-        uint256 debt,
+    function _swap(
+        address recipient,
+        bool zeroForOne,
+        uint256 amountSpecified,
         uint256 minOut,
         uint160 sqrtPriceLimitX96,
-        address proceedsTo
+        bytes memory data
     ) internal returns (uint256 out) {
-        // zeroForOne, true if debt token is token0
-        bool zeroForOne = !token0IsUnderlying;
-        (int256 amount0, int256 amount1) =
-            pool.swap(proceedsTo, zeroForOne, debt.toInt256(), sqrtPriceLimitX96, abi.encode(vaultId, address(this)));
+        (int256 amount0, int256 amount1) = pool.swap(
+            recipient,
+            zeroForOne,
+            amountSpecified.toInt256(),
+            sqrtPriceLimitX96 == 0
+                ? (zeroForOne ? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1)
+                : sqrtPriceLimitX96,
+            data
+        );
 
         out = uint256(-(zeroForOne ? amount1 : amount0));
 

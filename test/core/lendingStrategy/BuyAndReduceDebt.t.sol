@@ -21,6 +21,7 @@ contract BuyAndReduceDebt is BaseLendingStrategyTest {
         underlying.approve(address(strategy), underlyingOut);
         uint256 debtPaid =
             strategy.buyAndReduceDebt(vaultId, underlyingOut, 1, _maxSqrtPriceLimit({sellingPAPR: false}), borrower);
+        assertGt(debtPaid, 0);
         (vaultDebt,) = strategy.vaultInfo(vaultId);
         assertEq(vaultDebt, debt - debtPaid);
     }
