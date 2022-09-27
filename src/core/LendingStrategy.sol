@@ -207,14 +207,6 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
         }
     }
 
-    error InvalidCollateralVaultIDCombination();
-
-    /// @param vaultDebt how much debt the vault has
-    /// @param maxDebt the max debt the vault is allowed to have
-    error ExceedsMaxDebt(uint256 vaultDebt, uint256 maxDebt);
-
-    error InvalidCollateral();
-
     function removeCollateral(address sendTo, uint256 vaultNonce, ILendingStrategy.Collateral calldata collateral)
         external
     {
@@ -223,7 +215,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
         uint256 price = collateralFrozenOraclePrice[h];
 
         if (price == 0) {
-            revert InvalidCollateralVaultIDCombination();
+            revert ILendingStrategy.InvalidCollateralVaultIDCombination();
         }
 
         delete collateralFrozenOraclePrice[h];
@@ -238,7 +230,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
         uint256 max = maxDebt(newVaultCollateralValue);
 
         if (debt > max) {
-            revert ExceedsMaxDebt(debt, max);
+            revert ILendingStrategy.ExceedsMaxDebt(debt, max);
         }
 
         emit RemoveCollateral(vaultId, collateral, newVaultCollateralValue);
@@ -366,7 +358,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
         uint256 debt = vaultInfo[vaultId].debt;
         uint256 max = maxDebt(vaultInfo[vaultId].collateralValue);
         if (debt > max) {
-            revert ExceedsMaxDebt(debt, max);
+            revert ILendingStrategy.ExceedsMaxDebt(debt, max);
         }
 
         emit IncreaseDebt(vaultId, amount);
@@ -393,7 +385,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
         // TODO check signature
         // TODO check collateral is allowed in this strategy
         if (!isAllowed[address(collateral.addr)]) {
-            revert InvalidCollateral();
+            revert ILendingStrategy.InvalidCollateral();
         }
 
         collateralFrozenOraclePrice[h] = oracleInfo.price;

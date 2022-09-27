@@ -17,7 +17,7 @@ contract AddCollateralTest is BaseLendingStrategyTest {
         TestERC721 invalidNFT = new TestERC721();
         vm.startPrank(borrower);
         nft.approve(address(strategy), collateralId);
-        vm.expectRevert(LendingStrategy.InvalidCollateral.selector);
+        vm.expectRevert(ILendingStrategy.InvalidCollateral.selector);
         strategy.addCollateral(vaultNonce, ILendingStrategy.Collateral(invalidNFT, collateralId), oracleInfo, sig);
     }
 

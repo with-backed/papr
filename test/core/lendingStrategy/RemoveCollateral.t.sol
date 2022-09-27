@@ -19,19 +19,19 @@ contract RemoveCollateralTest is BaseLendingStrategyTest {
     function testRemoveCollateralFailsIfWrongAddress() public {
         _addCollateral();
         vm.stopPrank();
-        vm.expectRevert(LendingStrategy.InvalidCollateralVaultIDCombination.selector);
+        vm.expectRevert(ILendingStrategy.InvalidCollateralVaultIDCombination.selector);
         strategy.removeCollateral(address(1), vaultNonce, collateral);
     }
 
     function testRemoveCollateralFailsIfDoesNotExist() public {
-        vm.expectRevert(LendingStrategy.InvalidCollateralVaultIDCombination.selector);
+        vm.expectRevert(ILendingStrategy.InvalidCollateralVaultIDCombination.selector);
         strategy.removeCollateral(address(1), vaultNonce, collateral);
     }
 
     function testRemoveCollateralFailsIfMaxDebtExceeded() public {
         _addCollateral();
         strategy.increaseDebt(vaultNonce, address(1), 1);
-        vm.expectRevert(abi.encodeWithSelector(LendingStrategy.ExceedsMaxDebt.selector, 1, 0));
+        vm.expectRevert(abi.encodeWithSelector(ILendingStrategy.ExceedsMaxDebt.selector, 1, 0));
         strategy.removeCollateral(address(1), vaultNonce, collateral);
     }
 
