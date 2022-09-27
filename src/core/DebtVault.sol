@@ -20,10 +20,5 @@ contract DebtVault is ERC721, CreatorGuarded {
         _burn(id);
     }
 
-    function tokenURI(uint256 id)
-        public
-        view
-        override
-        returns (string memory)
-    {}
+    function tokenURI(uint256 id) public view override returns (string memory) {}
 }

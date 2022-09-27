@@ -15,19 +15,11 @@ contract OwnerTest is MainnetForking, UniswapForking {
 
     function setUp() public {
         StrategyFactory factory = new StrategyFactory();
-        strategy = factory.newStrategy(
-            "PUNKs Loans",
-            "PL",
-            "ipfs-link",
-            0.1e18,
-            0.5e18,
-            underlying
-        );
+        strategy = factory.newStrategy("PUNKs Loans", "PL", "ipfs-link", 0.1e18, 0.5e18, underlying);
     }
 
     function testSetAllowedCollateralFailsIfNotOwner() public {
-        ILendingStrategy.SetAllowedCollateralArg[]
-            memory args = new ILendingStrategy.SetAllowedCollateralArg[](1);
+        ILendingStrategy.SetAllowedCollateralArg[] memory args = new ILendingStrategy.SetAllowedCollateralArg[](1);
         args[0] = ILendingStrategy.SetAllowedCollateralArg(address(nft), true);
 
         vm.expectRevert("Ownable: caller is not the owner");
@@ -35,8 +27,7 @@ contract OwnerTest is MainnetForking, UniswapForking {
     }
 
     function testSetAllowedCollateralWorksIfOwner() public {
-        ILendingStrategy.SetAllowedCollateralArg[]
-            memory args = new ILendingStrategy.SetAllowedCollateralArg[](1);
+        ILendingStrategy.SetAllowedCollateralArg[] memory args = new ILendingStrategy.SetAllowedCollateralArg[](1);
         args[0] = ILendingStrategy.SetAllowedCollateralArg(address(nft), true);
 
         strategy.claimOwnership();

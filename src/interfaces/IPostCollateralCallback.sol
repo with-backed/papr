@@ -10,6 +10,5 @@ interface IPostCollateralCallback {
         ILendingStrategy.StrategyDefinition calldata strategyDefinition,
         ILendingStrategy.Collateral calldata collateral,
         bytes calldata data
-    )
-        external;
+    ) external;
 }

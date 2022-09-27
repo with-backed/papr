@@ -22,12 +22,7 @@ contract TestERC721 is ERC721("Fake Bored Apes", "fAPE") {
         _mint(to, ++_nonce);
     }
 
-    function tokenURI(uint256 id)
-        public
-        view
-        override
-        returns (string memory)
-    {}
+    function tokenURI(uint256 id) public view override returns (string memory) {}
 }
 
 contract ContractScript is Script {
@@ -42,14 +37,7 @@ contract ContractScript is Script {
         address underlying = 0x3089B47853df1b82877bEef6D904a0ce98a12553;
 
         StrategyFactory s = new StrategyFactory();
-        LendingStrategy strategy = s.newStrategy(
-            "APE Loans",
-            "AP",
-            "uri",
-            2e17,
-            5e17,
-            ERC20(underlying)
-        );
+        LendingStrategy strategy = s.newStrategy("APE Loans", "AP", "uri", 2e17, 5e17, ERC20(underlying));
 
         // uint256 tokenId = 17;
 

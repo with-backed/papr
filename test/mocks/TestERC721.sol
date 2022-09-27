@@ -8,10 +8,5 @@ contract TestERC721 is ERC721("TEST", "TEST") {
         _mint(to, id);
     }
 
-    function tokenURI(uint256 id)
-        public
-        view
-        override
-        returns (string memory)
-    {}
+    function tokenURI(uint256 id) public view override returns (string memory) {}
 }
