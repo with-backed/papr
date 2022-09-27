@@ -34,25 +34,12 @@ contract StrategyFactory {
         uint256 targetAPR,
         uint256 maxLTV,
         ERC20 underlying
-    )
-        external
-        returns (LendingStrategy)
-    {
-        parameters = Parameters(
-            name,
-            symbol,
-            strategyURI,
-            targetAPR,
-            maxLTV,
-            underlying
-        );
-        LendingStrategy s =
-        new LendingStrategy{salt: keccak256(abi.encode(targetAPR, maxLTV, underlying))}();
+    ) external returns (LendingStrategy) {
+        parameters = Parameters(name, symbol, strategyURI, targetAPR, maxLTV, underlying);
+        LendingStrategy s = new LendingStrategy{salt: keccak256(abi.encode(targetAPR, maxLTV, underlying))}();
         s.transferOwnership(msg.sender, false, false);
 
-        emit CreateLendingStrategy(
-            s, underlying, name, symbol, strategyURI
-            );
+        emit CreateLendingStrategy(s, underlying, name, symbol, strategyURI);
 
         s.initialize();
 

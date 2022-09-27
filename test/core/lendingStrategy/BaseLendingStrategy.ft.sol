@@ -13,8 +13,7 @@ import {TestERC721} from "test/mocks/TestERC721.sol";
 import {TestERC20} from "test/mocks/TestERC20.sol";
 import {MainnetForking} from "test/base/MainnetForking.sol";
 import {UniswapForking} from "test/base/UniswapForking.sol";
-import {INonfungiblePositionManager} from
-    "test/mocks/uniswap/INonfungiblePositionManager.sol";
+import {INonfungiblePositionManager} from "test/mocks/uniswap/INonfungiblePositionManager.sol";
 
 contract BaseLendingStrategyTest is MainnetForking, UniswapForking {
     TestERC721 nft = new TestERC721();
@@ -31,7 +30,7 @@ contract BaseLendingStrategyTest is MainnetForking, UniswapForking {
     uint256 vaultId;
     uint256 vaultNonce;
     uint256 minOut;
-    int256 debt = 1e18;
+    uint256 debt = 1e18;
     uint160 sqrtPriceLimitX96;
     uint128 oraclePrice = 3e18;
     ILendingStrategy.OracleInfo oracleInfo;
@@ -40,14 +39,7 @@ contract BaseLendingStrategyTest is MainnetForking, UniswapForking {
     //
     function setUp() public {
         StrategyFactory factory = new StrategyFactory();
-        strategy = factory.newStrategy(
-            "PUNKs Loans",
-            "PL",
-            "ipfs-link",
-            0.1e18,
-            0.5e18,
-            underlying
-        );
+        strategy = factory.newStrategy("PUNKs Loans", "PL", "ipfs-link", 0.1e18, 0.5e18, underlying);
         strategy.claimOwnership();
         ILendingStrategy.SetAllowedCollateralArg[] memory args = new ILendingStrategy.SetAllowedCollateralArg[](1);
         args[0] = ILendingStrategy.SetAllowedCollateralArg(address(nft), true);
@@ -61,24 +53,24 @@ contract BaseLendingStrategyTest is MainnetForking, UniswapForking {
     }
 
     function _provideLiquidityAtOneToOne() internal {
+        uint256 amount = 1e19;
         uint256 token0Amount;
         uint256 token1Amount;
         int24 tickLower;
         int24 tickUpper;
 
         if (strategy.token0IsUnderlying()) {
-            token0Amount = 1e18;
+            token0Amount = amount;
             tickUpper = 200;
         } else {
-            token1Amount = 1e18;
+            token1Amount = amount;
             tickLower = -200;
         }
 
-        underlying.approve(address(positionManager), 1e18);
-        underlying.mint(address(this), 1e18);
+        underlying.approve(address(positionManager), amount);
+        underlying.mint(address(this), amount);
 
-        INonfungiblePositionManager.MintParams memory mintParams =
-        INonfungiblePositionManager.MintParams(
+        INonfungiblePositionManager.MintParams memory mintParams = INonfungiblePositionManager.MintParams(
             strategy.pool().token0(),
             strategy.pool().token1(),
             feeTier,
@@ -103,25 +95,30 @@ contract BaseLendingStrategyTest is MainnetForking, UniswapForking {
             mintDebtOrProceedsTo: borrower,
             minOut: minOut,
             debt: debt,
-            sqrtPriceLimitX96: _viableSqrtPriceLimit(),
+            sqrtPriceLimitX96: _viableSqrtPriceLimit({sellingPAPR: true}),
             oracleInfo: oracleInfo,
             sig: sig
         });
     }
 
-    function _viableSqrtPriceLimit() internal returns (uint160) {
+    function _viableSqrtPriceLimit(bool sellingPAPR) internal returns (uint160) {
         (uint160 sqrtPrice,,,,,,) = strategy.pool().slot0();
         int24 tick = TickMath.getTickAtSqrtRatio(sqrtPrice);
 
-        // current strategy only swaps for underlying
-        // if token0 is underlying, we want above the current sqrtPrice
-        // if token1 is underlying, we want below the current sqrtPrice
-        if (strategy.token0IsUnderlying()) {
-            tick += 1;
+        if (sellingPAPR) {
+            strategy.token0IsUnderlying() ? tick += 1 : tick -= 1;
         } else {
-            tick -= 1;
+            strategy.token0IsUnderlying() ? tick -= 1 : tick += 1;
         }
 
         return TickMath.getSqrtRatioAtTick(tick);
+    }
+
+    function _maxSqrtPriceLimit(bool sellingPAPR) internal returns (uint160) {
+        if (sellingPAPR) {
+            return !strategy.token0IsUnderlying() ? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1;
+        } else {
+            return strategy.token0IsUnderlying() ? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1;
+        }
     }
 }

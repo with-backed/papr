@@ -37,7 +37,7 @@ interface ILendingStrategy {
         address mintVaultTo;
         address mintDebtOrProceedsTo;
         uint256 minOut;
-        int256 debt;
+        uint256 debt;
         uint160 sqrtPriceLimitX96;
         ILendingStrategy.OracleInfo oracleInfo;
         ILendingStrategy.Sig sig;
@@ -53,4 +53,8 @@ interface ILendingStrategy {
         address addr;
         bool allowed;
     }
+
+    /// @param minOut The minimum out amount the user wanted
+    /// @param actualOut The actual out amount the user received
+    error TooLittleOut(uint256 minOut, uint256 actualOut);
 }

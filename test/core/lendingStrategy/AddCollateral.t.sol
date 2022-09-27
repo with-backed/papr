@@ -10,12 +10,7 @@ contract AddCollateralTest is BaseLendingStrategyTest {
     function testAddCollateral() public {
         vm.startPrank(borrower);
         nft.approve(address(strategy), collateralId);
-        strategy.addCollateral(
-            vaultId,
-            ILendingStrategy.Collateral(nft, collateralId),
-            oracleInfo,
-            sig
-        );
+        strategy.addCollateral(vaultNonce, ILendingStrategy.Collateral(nft, collateralId), oracleInfo, sig);
     }
 
     function testAddCollateralFailsIfInvalidCollateral() public {
@@ -23,12 +18,7 @@ contract AddCollateralTest is BaseLendingStrategyTest {
         vm.startPrank(borrower);
         nft.approve(address(strategy), collateralId);
         vm.expectRevert(LendingStrategy.InvalidCollateral.selector);
-        strategy.addCollateral(
-            vaultId,
-            ILendingStrategy.Collateral(invalidNFT, collateralId),
-            oracleInfo,
-            sig
-        );
+        strategy.addCollateral(vaultNonce, ILendingStrategy.Collateral(invalidNFT, collateralId), oracleInfo, sig);
     }
 
     function testAddCollateralMulticall() public {
@@ -37,11 +27,7 @@ contract AddCollateralTest is BaseLendingStrategyTest {
         nft.setApprovalForAll(address(strategy), true);
         bytes[] memory data = new bytes[](2);
         data[0] = abi.encodeWithSelector(
-            strategy.addCollateral.selector,
-            vaultId,
-            ILendingStrategy.Collateral(nft, collateralId),
-            oracleInfo,
-            sig
+            strategy.addCollateral.selector, vaultId, ILendingStrategy.Collateral(nft, collateralId), oracleInfo, sig
         );
         data[1] = abi.encodeWithSelector(
             strategy.addCollateral.selector,

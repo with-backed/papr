@@ -3,9 +3,9 @@ pragma solidity ^0.8.13;
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {ERC721, ERC721TokenReceiver} from "solmate/tokens/ERC721.sol";
-import {IUniswapV3Factory} from
-    "v3-core/contracts/interfaces/IUniswapV3Factory.sol";
+import {IUniswapV3Factory} from "v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import {IUniswapV3Pool} from "v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import {SafeCast} from "v3-core/contracts/libraries/SafeCast.sol";
 import {TickMath} from "fullrange/libraries/TickMath.sol";
 
 import {StrategyFactory} from "./StrategyFactory.sol";
@@ -13,14 +13,15 @@ import {DebtToken} from "./DebtToken.sol";
 import {DebtVault} from "./DebtVault.sol";
 import {Multicall} from "src/core/base/Multicall.sol";
 import {FixedPointMathLib} from "src/libraries/FixedPointMathLib.sol";
-import {IPostCollateralCallback} from
-    "src/interfaces/IPostCollateralCallback.sol";
+import {IPostCollateralCallback} from "src/interfaces/IPostCollateralCallback.sol";
 import {ILendingStrategy} from "src/interfaces/IPostCollateralCallback.sol";
 import {OracleLibrary} from "src/squeeth/OracleLibrary.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {BoringOwnable} from "@boringsolidity/BoringOwnable.sol";
 
 contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
+    using SafeCast for uint256;
+
     address public immutable factory;
     bool public immutable token0IsUnderlying;
     uint256 public immutable start;
@@ -53,9 +54,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
     );
     event ReduceDebt(uint256 indexed vaultId, uint256 amount);
     event RemoveCollateral(
-        uint256 indexed vaultId,
-        ILendingStrategy.Collateral collateral,
-        uint256 vaultCollateralValue
+        uint256 indexed vaultId, ILendingStrategy.Collateral collateral, uint256 vaultCollateralValue
     );
     event UpdateNormalization(uint256 newNorm);
     event ChangeCollateralAllowed(ILendingStrategy.SetAllowedCollateralArg arg);
@@ -64,23 +63,13 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
         factory = msg.sender;
         string memory name;
         string memory symbol;
-        (
-            name,
-            symbol,
-            strategyURI,
-            targetAPR,
-            maxLTV,
-            underlying
-        ) = StrategyFactory(msg.sender).parameters();
+        (name, symbol, strategyURI, targetAPR, maxLTV, underlying) = StrategyFactory(msg.sender).parameters();
         targetGrowthPerPeriod = targetAPR / (365 days / PERIOD);
         debtToken = new DebtToken(name, symbol, underlying.symbol());
 
-        IUniswapV3Factory factory =
-            IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
+        IUniswapV3Factory factory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
 
-        pool = IUniswapV3Pool(
-            factory.createPool(address(underlying), address(debtToken), 10000)
-        );
+        pool = IUniswapV3Pool(factory.createPool(address(underlying), address(debtToken), 10000));
         pool.initialize(TickMath.getSqrtRatioAtTick(0));
         token0IsUnderlying = pool.token0() == address(underlying);
 
@@ -103,42 +92,25 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
         emit UpdateNormalization(FixedPointMathLib.WAD);
     }
 
-    function onERC721Received(
-        address from,
-        address,
-        uint256 _id,
-        bytes calldata data
-    )
+    function onERC721Received(address from, address, uint256 _id, bytes calldata data)
         external
         override
         returns (bytes4)
     {
-        ILendingStrategy.OnERC721ReceivedArgs memory request =
-            abi.decode(data, (ILendingStrategy.OnERC721ReceivedArgs));
+        ILendingStrategy.OnERC721ReceivedArgs memory request = abi.decode(data, (ILendingStrategy.OnERC721ReceivedArgs));
 
-        ILendingStrategy.Collateral memory collateral =
-            ILendingStrategy.Collateral(ERC721(msg.sender), _id);
+        ILendingStrategy.Collateral memory collateral = ILendingStrategy.Collateral(ERC721(msg.sender), _id);
 
         uint256 vaultId = vaultIdentifier(request.vaultNonce, from);
 
-        _addCollateralToVault(
-            vaultId, request.vaultNonce, collateral, request.oracleInfo, request.sig
-        );
+        _addCollateralToVault(vaultId, request.vaultNonce, collateral, request.oracleInfo, request.sig);
 
         if (request.minOut > 0) {
             _mintAndSellDebt(
-                vaultId,
-                request.debt,
-                request.minOut,
-                request.sqrtPriceLimitX96,
-                request.mintDebtOrProceedsTo
+                vaultId, request.debt, request.minOut, request.sqrtPriceLimitX96, request.mintDebtOrProceedsTo
             );
         } else if (request.debt > 0) {
-            _increaseDebt(
-                vaultId,
-                request.mintDebtOrProceedsTo,
-                uint256(request.debt)
-            );
+            _increaseDebt(vaultId, request.mintDebtOrProceedsTo, uint256(request.debt));
         }
 
         return ERC721TokenReceiver.onERC721Received.selector;
@@ -149,36 +121,56 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
     // can be done with the strategy, so I think it's nice
     function mintAndSellDebt(
         uint256 vaultNonce,
-        int256 debt,
+        uint256 debt,
         uint256 minOut,
         uint160 sqrtPriceLimitX96,
         address proceedsTo
-    )
-        public
-    {
-        _mintAndSellDebt(vaultIdentifier(vaultNonce, msg.sender), debt, minOut, sqrtPriceLimitX96, proceedsTo);
+    ) public returns (uint256) {
+        return _mintAndSellDebt(vaultIdentifier(vaultNonce, msg.sender), debt, minOut, sqrtPriceLimitX96, proceedsTo);
     }
 
-    function uniswapV3SwapCallback(
-        int256 amount0Delta,
-        int256 amount1Delta,
-        bytes calldata _data
-    )
-        external
-    {
+    function buyAndReduceDebt(
+        uint256 vaultId,
+        uint256 underlyingAmount,
+        uint256 minOut,
+        uint160 sqrtPriceLimitX96,
+        address proceedsTo
+    ) public returns (uint256 out) {
+        bool zeroForOne = token0IsUnderlying;
+        (int256 amount0, int256 amount1) = pool.swap(
+            proceedsTo,
+            zeroForOne,
+            underlyingAmount.toInt256(),
+            sqrtPriceLimitX96,
+            abi.encode(vaultId, address(msg.sender))
+        );
+
+        out = uint256(-(zeroForOne ? amount1 : amount0));
+
+        if (out < minOut) {
+            revert ILendingStrategy.TooLittleOut(out, minOut);
+        }
+
+        reduceDebt(vaultId, uint128(out));
+    }
+
+    function uniswapV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata _data) external {
         require(amount0Delta > 0 || amount1Delta > 0); // swaps entirely within 0-liquidity regions are not supported
 
         if (msg.sender != address(pool)) {
             revert("wrong caller");
         }
 
-        uint256 vaultId = abi.decode(_data, (uint256));
+        (uint256 vaultId, address payer) = abi.decode(_data, (uint256, address));
 
         //determine the amount that needs to be repaid as part of the flashswap
-        uint256 amountToPay =
-            amount0Delta > 0 ? uint256(amount0Delta) : uint256(amount1Delta);
+        uint256 amountToPay = amount0Delta > 0 ? uint256(amount0Delta) : uint256(amount1Delta);
 
-        _increaseDebt(vaultId, msg.sender, amountToPay);
+        if (payer == address(this)) {
+            _increaseDebt(vaultId, msg.sender, amountToPay);
+        } else {
+            underlying.transferFrom(payer, msg.sender, amountToPay);
+        }
     }
 
     function addCollateral(
@@ -186,9 +178,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
         ILendingStrategy.Collateral calldata collateral,
         ILendingStrategy.OracleInfo calldata oracleInfo,
         ILendingStrategy.Sig calldata sig
-    )
-        public
-    {
+    ) public {
         uint256 vaultId = vaultIdentifier(vaultNonce, msg.sender);
         _addCollateralToVault(vaultId, vaultNonce, collateral, oracleInfo, sig);
         collateral.addr.transferFrom(msg.sender, address(this), collateral.id);
@@ -197,7 +187,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
     /// Alternative to using safeTransferFrom,
     /// allows for loan to buy flows
     /// @dev anyone could use this method to add collateral to anyone else's vault
-    /// we think this is acceptable and it is useful so that a periphery contract 
+    /// we think this is acceptable and it is useful so that a periphery contract
     /// can modify the tx.origin's vault
     function addCollateralWithCallback(
         uint256 vaultNonce,
@@ -206,17 +196,11 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
         ILendingStrategy.OracleInfo calldata oracleInfo,
         ILendingStrategy.Sig calldata sig,
         bytes calldata data
-    )
-        public
-    {
+    ) public {
         uint256 vaultId = vaultIdentifier(vaultNonce, vaultOwner);
         _addCollateralToVault(vaultId, vaultNonce, collateral, oracleInfo, sig);
         IPostCollateralCallback(msg.sender).postCollateralCallback(
-            ILendingStrategy.StrategyDefinition(
-                targetAPR, maxLTV, underlying
-            ),
-            collateral,
-            data
+            ILendingStrategy.StrategyDefinition(targetAPR, maxLTV, underlying), collateral, data
         );
         if (collateral.addr.ownerOf(collateral.id) != address(this)) {
             revert();
@@ -231,11 +215,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
 
     error InvalidCollateral();
 
-    function removeCollateral(
-        address sendTo,
-        uint256 vaultNonce,
-        ILendingStrategy.Collateral calldata collateral
-    )
+    function removeCollateral(address sendTo, uint256 vaultNonce, ILendingStrategy.Collateral calldata collateral)
         external
     {
         uint256 vaultId = vaultIdentifier(vaultNonce, msg.sender);
@@ -247,8 +227,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
         }
 
         delete collateralFrozenOraclePrice[h];
-        uint256 newVaultCollateralValue =
-            vaultInfo[vaultId].collateralValue - price;
+        uint256 newVaultCollateralValue = vaultInfo[vaultId].collateralValue - price;
         vaultInfo[vaultId].collateralValue = uint128(newVaultCollateralValue);
 
         // allows for onReceive hook to sell and repay debt before the
@@ -265,13 +244,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
         emit RemoveCollateral(vaultId, collateral, newVaultCollateralValue);
     }
 
-    function increaseDebt(
-        uint256 vaultNonce,
-        address mintTo,
-        uint256 amount
-    )
-        public
-    {
+    function increaseDebt(uint256 vaultNonce, address mintTo, uint256 amount) public {
         _increaseDebt(vaultIdentifier(vaultNonce, msg.sender), mintTo, amount);
     }
 
@@ -315,9 +288,8 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
 
     // what each Debt Token is worth in underlying, according to target growth
     function index() public view returns (uint256) {
-        return FixedPointMathLib.divWadDown(block.timestamp - start, PERIOD)
-            * targetGrowthPerPeriod / FixedPointMathLib.WAD
-            + FixedPointMathLib.WAD;
+        return FixedPointMathLib.divWadDown(block.timestamp - start, PERIOD) * targetGrowthPerPeriod
+            / FixedPointMathLib.WAD + FixedPointMathLib.WAD;
     }
 
     function markTwapSinceLastUpdate() public view returns (uint256) {
@@ -334,8 +306,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
     // i.e. the debt token:underlying internal contract exchange rate (normalization)
     // at which this vault will be liquidated
     function liquidationPrice(uint256 vaultId) public view returns (uint256) {
-        uint256 maxLoanUnderlying =
-            FixedPointMathLib.mulWadDown(vaultInfo[vaultId].collateralValue, maxLTV);
+        uint256 maxLoanUnderlying = FixedPointMathLib.mulWadDown(vaultInfo[vaultId].collateralValue, maxLTV);
         return maxLoanUnderlying / vaultInfo[vaultId].debt;
     }
 
@@ -344,10 +315,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
         return maxLoanUnderlying / normalization;
     }
 
-    function collateralHash(
-        ILendingStrategy.Collateral memory collateral,
-        uint256 vaultId
-    )
+    function collateralHash(ILendingStrategy.Collateral memory collateral, uint256 vaultId)
         public
         pure
         returns (bytes32)
@@ -355,11 +323,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
         return keccak256(abi.encode(collateral, vaultId));
     }
 
-    function vaultIdentifier(uint256 nonce, address account)
-        public
-        view
-        returns (uint256)
-    {
+    function vaultIdentifier(uint256 nonce, address account) public view returns (uint256) {
         return uint256(keccak256(abi.encode(nonce, account)));
     }
 
@@ -375,27 +339,24 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
 
     function _mintAndSellDebt(
         uint256 vaultId,
-        int256 debt,
+        uint256 debt,
         uint256 minOut,
         uint160 sqrtPriceLimitX96,
         address proceedsTo
-    )
-        internal
-    {
+    ) internal returns (uint256 out) {
         // zeroForOne, true if debt token is token0
         bool zeroForOne = !token0IsUnderlying;
-        (int256 amount0, int256 amount1) = pool.swap(
-            proceedsTo, zeroForOne, debt, sqrtPriceLimitX96, abi.encode(vaultId)
-        );
+        (int256 amount0, int256 amount1) =
+            pool.swap(proceedsTo, zeroForOne, debt.toInt256(), sqrtPriceLimitX96, abi.encode(vaultId, address(this)));
 
-        if (uint256(-(zeroForOne ? amount1 : amount0)) < minOut) {
-            revert("too little out");
+        out = uint256(-(zeroForOne ? amount1 : amount0));
+
+        if (out < minOut) {
+            revert ILendingStrategy.TooLittleOut(out, minOut);
         }
     }
 
-    function _increaseDebt(uint256 vaultId, address mintTo, uint256 amount)
-        internal
-    {
+    function _increaseDebt(uint256 vaultId, address mintTo, uint256 amount) internal {
         updateNormalization();
 
         // TODO, safe to uint128 ?
@@ -417,9 +378,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
         ILendingStrategy.Collateral memory collateral,
         ILendingStrategy.OracleInfo memory oracleInfo,
         ILendingStrategy.Sig memory sig
-    )
-        internal
-    {
+    ) internal {
         bytes32 h = collateralHash(collateral, vaultId);
 
         if (collateralFrozenOraclePrice[h] != 0) {
@@ -443,49 +402,28 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
         emit AddCollateral(vaultId, vaultNonce, collateral, oracleInfo);
     }
 
-    function _newNorm(int56 latestCumulativeTick)
-        internal
-        view
-        returns (uint256)
-    {
+    function _newNorm(int56 latestCumulativeTick) internal view returns (uint256) {
         return FixedPointMathLib.mulWadDown(normalization, uint256(multiplier()));
     }
 
-    function _markTwapSinceLastUpdate(int56 latestCumulativeTick)
-        internal
-        view
-        returns (uint256)
-    {
+    function _markTwapSinceLastUpdate(int56 latestCumulativeTick) internal view returns (uint256) {
         uint256 delta = block.timestamp - lastUpdated;
         if (delta == 0) {
             return OracleLibrary.getQuoteAtTick(
-                int24(latestCumulativeTick),
-                1e18,
-                address(debtToken),
-                address(underlying)
+                int24(latestCumulativeTick), 1e18, address(debtToken), address(underlying)
             );
         } else {
-            int24 twapTick = _timeWeightedAverageTick(
-                lastCumulativeTick, latestCumulativeTick, int56(uint56(delta))
-            );
-            return OracleLibrary.getQuoteAtTick(
-                twapTick, 1e18, address(debtToken), address(underlying)
-            );
+            int24 twapTick = _timeWeightedAverageTick(lastCumulativeTick, latestCumulativeTick, int56(uint56(delta)));
+            return OracleLibrary.getQuoteAtTick(twapTick, 1e18, address(debtToken), address(underlying));
         }
     }
 
-    function _multiplier(int56 latestCumulativeTick)
-        internal
-        view
-        returns (int256)
-    {
+    function _multiplier(int56 latestCumulativeTick) internal view returns (int256) {
         uint256 m = _markTwapSinceLastUpdate(latestCumulativeTick);
         // TODO: do we need signed ints? when does powWAD return a negative?
         uint256 period = block.timestamp - lastUpdated;
         uint256 periodRatio = FixedPointMathLib.divWadDown(period, PERIOD);
-        uint256 targetGrowth = FixedPointMathLib.mulWadDown(
-            targetGrowthPerPeriod, periodRatio
-        ) + FixedPointMathLib.WAD;
+        uint256 targetGrowth = FixedPointMathLib.mulWadDown(targetGrowthPerPeriod, periodRatio) + FixedPointMathLib.WAD;
         uint256 indexMarkRatio;
         if (m == 0) {
             indexMarkRatio = 14e17;
@@ -500,18 +438,12 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
         }
 
         /// accelerate or deccelerate apprecation based in index/mark. If mark is too high, slow down. If mark is too low, speed up.
-        int256 deviationMultiplier =
-            FixedPointMathLib.powWad(int256(indexMarkRatio), int256(periodRatio));
+        int256 deviationMultiplier = FixedPointMathLib.powWad(int256(indexMarkRatio), int256(periodRatio));
 
-        return deviationMultiplier * int256(targetGrowth)
-            / int256(FixedPointMathLib.WAD);
+        return deviationMultiplier * int256(targetGrowth) / int256(FixedPointMathLib.WAD);
     }
 
-    function _timeWeightedAverageTick(
-        int56 startTick,
-        int56 endTick,
-        int56 twapDuration
-    )
+    function _timeWeightedAverageTick(int56 startTick, int56 endTick, int56 twapDuration)
         internal
         view
         returns (int24 timeWeightedAverageTick)
