@@ -26,11 +26,9 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
     bool public immutable token0IsUnderlying;
     uint256 public immutable start;
     uint256 public immutable maxLTV;
-    uint256 public immutable targetAPR;
     ERC20 public immutable underlying;
     IUniswapV3Pool public immutable pool;
     uint256 public PERIOD = 4 weeks;
-    uint256 public targetGrowthPerPeriod;
     DebtToken public debtToken;
     // DebtVault public debtVault;
     string public strategyURI;
@@ -63,8 +61,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
         factory = msg.sender;
         string memory name;
         string memory symbol;
-        (name, symbol, strategyURI, targetAPR, maxLTV, underlying) = StrategyFactory(msg.sender).parameters();
-        targetGrowthPerPeriod = targetAPR / (365 days / PERIOD);
+        (name, symbol, strategyURI, , maxLTV, underlying) = StrategyFactory(msg.sender).parameters();
         debtToken = new DebtToken(name, symbol, underlying.symbol());
 
         IUniswapV3Factory factory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
@@ -198,7 +195,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
         uint256 vaultId = vaultIdentifier(vaultNonce, vaultOwner);
         _addCollateralToVault(vaultId, vaultNonce, collateral, oracleInfo, sig);
         IPostCollateralCallback(msg.sender).postCollateralCallback(
-            ILendingStrategy.StrategyDefinition(targetAPR, maxLTV, underlying), collateral, data
+            ILendingStrategy.StrategyDefinition(0, maxLTV, underlying), collateral, data
         );
         if (collateral.addr.ownerOf(collateral.id) != address(this)) {
             revert();
@@ -263,7 +260,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
         }
         uint128 previousNormalization = normalization;
         int56 latestCumulativeTick = _latestCumulativeTick();
-        uint256 newNormalization = _newNorm(latestCumulativeTick);
+        uint256 newNormalization = _newNorm(latestCumulativeTick, previousNormalization);
 
         normalization = uint128(newNormalization);
         lastUpdated = uint72(block.timestamp);
@@ -273,13 +270,12 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
     }
 
     function newNorm() public view returns (uint256) {
-        return _newNorm(_latestCumulativeTick());
+        return _newNorm(_latestCumulativeTick(), normalization);
     }
 
     // what each Debt Token is worth in underlying, according to target growth
     function index() public view returns (uint256) {
-        return FixedPointMathLib.divWadDown(block.timestamp - start, PERIOD) * targetGrowthPerPeriod
-            / FixedPointMathLib.WAD + FixedPointMathLib.WAD;
+        return 1;
     }
 
     function markTwapSinceLastUpdate() public view returns (uint256) {
@@ -289,7 +285,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
     /// aka norm growth if updated right now,
     /// e.g. a result of 12e17 = 1.2 = 20% growth since lastUpdate
     function multiplier() public view returns (int256) {
-        return _multiplier(_latestCumulativeTick());
+        return _multiplier(_latestCumulativeTick(), normalization);
     }
 
     // normalization value at liquidation
@@ -398,8 +394,8 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
         emit AddCollateral(vaultId, vaultNonce, collateral, oracleInfo);
     }
 
-    function _newNorm(int56 latestCumulativeTick) internal view returns (uint256) {
-        return FixedPointMathLib.mulWadDown(normalization, uint256(multiplier()));
+    function _newNorm(int56 latestCumulativeTick, uint256 cachedNorm) internal view returns (uint256) {
+        return FixedPointMathLib.mulWadDown(normalization, uint256(_multiplier(latestCumulativeTick, cachedNorm)));
     }
 
     function _markTwapSinceLastUpdate(int56 latestCumulativeTick) internal view returns (uint256) {
@@ -414,17 +410,15 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
         }
     }
 
-    function _multiplier(int56 latestCumulativeTick) internal view returns (int256) {
+    function _multiplier(int56 latestCumulativeTick, uint256 cachedNorm) internal view returns (int256) {
         uint256 m = _markTwapSinceLastUpdate(latestCumulativeTick);
-        // TODO: do we need signed ints? when does powWAD return a negative?
         uint256 period = block.timestamp - lastUpdated;
         uint256 periodRatio = FixedPointMathLib.divWadDown(period, PERIOD);
-        uint256 targetGrowth = FixedPointMathLib.mulWadDown(targetGrowthPerPeriod, periodRatio) + FixedPointMathLib.WAD;
         uint256 indexMarkRatio;
         if (m == 0) {
             indexMarkRatio = 14e17;
         } else {
-            indexMarkRatio = FixedPointMathLib.divWadDown(index(), m);
+            indexMarkRatio = FixedPointMathLib.divWadDown(index(), FixedPointMathLib.divWadDown(m, cachedNorm));
             // cap at 140%, floor at 80%
             if (indexMarkRatio > 14e17) {
                 indexMarkRatio = 14e17;
@@ -433,10 +427,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
             }
         }
 
-        /// accelerate or deccelerate apprecation based in index/mark. If mark is too high, slow down. If mark is too low, speed up.
-        int256 deviationMultiplier = FixedPointMathLib.powWad(int256(indexMarkRatio), int256(periodRatio));
-
-        return deviationMultiplier * int256(targetGrowth) / int256(FixedPointMathLib.WAD);
+        return FixedPointMathLib.powWad(int256(indexMarkRatio), int256(periodRatio));
     }
 
     function _timeWeightedAverageTick(int56 startTick, int56 endTick, int56 twapDuration)
