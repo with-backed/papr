@@ -3,6 +3,7 @@ pragma solidity ^0.8.13;
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {ERC721, ERC721TokenReceiver} from "solmate/tokens/ERC721.sol";
+import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {IUniswapV3Factory} from "v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import {IUniswapV3Pool} from "v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {SafeCast} from "v3-core/contracts/libraries/SafeCast.sol";
@@ -10,9 +11,7 @@ import {TickMath} from "fullrange/libraries/TickMath.sol";
 
 import {StrategyFactory} from "./StrategyFactory.sol";
 import {DebtToken} from "./DebtToken.sol";
-import {DebtVault} from "./DebtVault.sol";
 import {Multicall} from "src/core/base/Multicall.sol";
-import {FixedPointMathLib} from "src/libraries/FixedPointMathLib.sol";
 import {IPostCollateralCallback} from "src/interfaces/IPostCollateralCallback.sol";
 import {ILendingStrategy} from "src/interfaces/IPostCollateralCallback.sol";
 import {OracleLibrary} from "src/libraries/OracleLibrary.sol";
@@ -387,7 +386,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
         }
 
         // TODO check signature
-        // TODO check collateral is allowed in this strategy
+        
         if (!isAllowed[address(collateral.addr)]) {
             revert ILendingStrategy.InvalidCollateral();
         }
@@ -399,7 +398,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
     }
 
     function _newNorm(int56 latestCumulativeTick) internal view returns (uint256) {
-        return FixedPointMathLib.mulWadDown(normalization, uint256(multiplier()));
+        return FixedPointMathLib.mulWadDown(normalization, uint256(_multiplier(latestCumulativeTick)));
     }
 
     function _markTwapSinceLastUpdate(int56 latestCumulativeTick) internal view returns (uint256) {

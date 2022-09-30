@@ -19,3 +19,5 @@
 [submodule "lib/BoringSolidity"]
 	path = lib/BoringSolidity
 	url = https://github.com/boringcrypto/BoringSolidity
+[submodule "/Users/wilsoncusack/github/nft-loans/v2-in-kind-exp/lib/solmate"]
+	branch = v7
