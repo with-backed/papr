@@ -15,7 +15,7 @@ import {Multicall} from "src/core/base/Multicall.sol";
 import {FixedPointMathLib} from "src/libraries/FixedPointMathLib.sol";
 import {IPostCollateralCallback} from "src/interfaces/IPostCollateralCallback.sol";
 import {ILendingStrategy} from "src/interfaces/IPostCollateralCallback.sol";
-import {OracleLibrary} from "src/squeeth/OracleLibrary.sol";
+import {OracleLibrary} from "src/libraries/OracleLibrary.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {BoringOwnable} from "@boringsolidity/BoringOwnable.sol";
 
