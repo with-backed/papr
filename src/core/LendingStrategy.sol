@@ -386,7 +386,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
         }
 
         // TODO check signature
-        
+
         if (!isAllowed[address(collateral.addr)]) {
             revert ILendingStrategy.InvalidCollateral();
         }

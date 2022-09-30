@@ -4,15 +4,13 @@ pragma solidity >=0.8.0;
 import {TickMath} from "fullrange/libraries/TickMath.sol";
 import {FullMath} from "fullrange/libraries/FullMath.sol";
 
-
 library OracleLibrary {
     /// from https://github.com/Uniswap/v3-periphery/blob/main/contracts/libraries/OracleLibrary.sol#L49
-    function getQuoteAtTick(
-        int24 tick,
-        uint128 baseAmount,
-        address baseToken,
-        address quoteToken
-    ) internal pure returns (uint256 quoteAmount) {
+    function getQuoteAtTick(int24 tick, uint128 baseAmount, address baseToken, address quoteToken)
+        internal
+        pure
+        returns (uint256 quoteAmount)
+    {
         unchecked {
             uint160 sqrtRatioX96 = TickMath.getSqrtRatioAtTick(tick);
 
