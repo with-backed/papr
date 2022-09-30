@@ -4,6 +4,7 @@
 [submodule "lib/solmate"]
 	path = lib/solmate
 	url = https://github.com/transmissions11/solmate
+	branch = v7
 [submodule "lib/v3-periphery"]
 	path = lib/v3-periphery
 	url = https://github.com/uniswap/v3-periphery
@@ -19,5 +20,3 @@
 [submodule "lib/BoringSolidity"]
 	path = lib/BoringSolidity
 	url = https://github.com/boringcrypto/BoringSolidity
-[submodule "/Users/wilsoncusack/github/nft-loans/v2-in-kind-exp/lib/solmate"]
-	branch = v7
