@@ -9,7 +9,6 @@ import {IUniswapV3Pool} from "v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {SafeCast} from "v3-core/contracts/libraries/SafeCast.sol";
 import {TickMath} from "fullrange/libraries/TickMath.sol";
 
-import {StrategyFactory} from "./StrategyFactory.sol";
 import {DebtToken} from "./DebtToken.sol";
 import {Multicall} from "src/core/base/Multicall.sol";
 import {IPostCollateralCallback} from "src/interfaces/IPostCollateralCallback.sol";
@@ -21,7 +20,6 @@ import {BoringOwnable} from "@boringsolidity/BoringOwnable.sol";
 contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
     using SafeCast for uint256;
 
-    address public immutable factory;
     bool public immutable token0IsUnderlying;
     uint256 public immutable start;
     uint256 public immutable maxLTV;
@@ -58,35 +56,26 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
     event UpdateNormalization(uint256 newNorm);
     event ChangeCollateralAllowed(ILendingStrategy.SetAllowedCollateralArg arg);
 
-    constructor() {
-        factory = msg.sender;
-        string memory name;
-        string memory symbol;
-        (name, symbol, strategyURI, targetAPR, maxLTV, underlying) = StrategyFactory(msg.sender).parameters();
+    constructor(string memory name, string memory symbol, uint256 _targetAPR, uint256 _maxLTV, ERC20 _underlying) {
+        underlying = _underlying;
+        targetAPR = _targetAPR;
+        maxLTV = _maxLTV;
         targetGrowthPerPeriod = targetAPR / (365 days / PERIOD);
         debtToken = new DebtToken(name, symbol, underlying.symbol());
 
         IUniswapV3Factory factory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
 
         pool = IUniswapV3Pool(factory.createPool(address(underlying), address(debtToken), 10000));
+        // TODO: get correct sqrtRatio for USDC vs. 18 decimals
         pool.initialize(TickMath.getSqrtRatioAtTick(0));
         token0IsUnderlying = pool.token0() == address(underlying);
 
         start = block.timestamp;
-    }
-
-    function initialize() external {
-        if (msg.sender != factory) {
-            revert();
-        }
-
-        if (normalization != 0) {
-            revert();
-        }
-
         lastUpdated = uint72(block.timestamp);
         normalization = uint128(FixedPointMathLib.WAD);
         lastCumulativeTick = _latestCumulativeTick();
+
+        transferOwnership(msg.sender, false, false);
 
         emit UpdateNormalization(FixedPointMathLib.WAD);
     }
