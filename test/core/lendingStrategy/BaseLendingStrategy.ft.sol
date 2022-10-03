@@ -8,7 +8,6 @@ import {TickMath} from "fullrange/libraries/TickMath.sol";
 
 import {LendingStrategy} from "src/core/LendingStrategy.sol";
 import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
-import {StrategyFactory} from "src/core/StrategyFactory.sol";
 import {TestERC721} from "test/mocks/TestERC721.sol";
 import {TestERC20} from "test/mocks/TestERC20.sol";
 import {MainnetForking} from "test/base/MainnetForking.sol";
@@ -38,8 +37,7 @@ contract BaseLendingStrategyTest is MainnetForking, UniswapForking {
 
     //
     function setUp() public {
-        StrategyFactory factory = new StrategyFactory();
-        strategy = factory.newStrategy("PUNKs Loans", "PL", "ipfs-link", 0.1e18, 0.5e18, underlying);
+        strategy = new LendingStrategy("PUNKs Loans", "PL", 0.1e18, 0.5e18, underlying);
         strategy.claimOwnership();
         ILendingStrategy.SetAllowedCollateralArg[] memory args = new ILendingStrategy.SetAllowedCollateralArg[](1);
         args[0] = ILendingStrategy.SetAllowedCollateralArg(address(nft), true);

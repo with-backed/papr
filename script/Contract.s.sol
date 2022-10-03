@@ -6,7 +6,6 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 import {ERC721} from "solmate/tokens/ERC721.sol";
 
 import {DebtToken} from "src/core/DebtToken.sol";
-import {StrategyFactory} from "src/core/StrategyFactory.sol";
 import {LendingStrategy} from "src/core/LendingStrategy.sol";
 
 contract TestERC20 is ERC20("USDC", "USDC", 18) {
@@ -36,8 +35,7 @@ contract ContractScript is Script {
         address collateral = 0xb7D7fe7995D1E347916fAae8e16CFd6dD21a9bAE;
         address underlying = 0x3089B47853df1b82877bEef6D904a0ce98a12553;
 
-        StrategyFactory s = new StrategyFactory();
-        LendingStrategy strategy = s.newStrategy("APE Loans", "AP", "uri", 2e17, 5e17, ERC20(underlying));
+        LendingStrategy strategy = new LendingStrategy("MEME", "MEME", 2e17, 5e17, ERC20(underlying));
 
         // uint256 tokenId = 17;
 

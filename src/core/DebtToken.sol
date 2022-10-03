@@ -9,7 +9,7 @@ contract DebtToken is ERC20 {
     address creator;
 
     constructor(string memory strategy, string memory symbol, string memory underlyingSymbol)
-        ERC20(string.concat(strategy, " debt token"), string.concat("dt", symbol, "_", underlyingSymbol), 18)
+        ERC20(string.concat("pAPR ", strategy), string.concat("pAPR", symbol, "_", underlyingSymbol), 18)
     {
         creator = msg.sender;
     }
