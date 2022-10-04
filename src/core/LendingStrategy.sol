@@ -10,6 +10,7 @@ import {SafeCast} from "v3-core/contracts/libraries/SafeCast.sol";
 import {TickMath} from "fullrange/libraries/TickMath.sol";
 
 import {DebtToken} from "./DebtToken.sol";
+import {LinearPerpetual} from "./LinearPerpetual.sol";
 import {Multicall} from "src/core/base/Multicall.sol";
 import {IPostCollateralCallback} from "src/interfaces/IPostCollateralCallback.sol";
 import {ILendingStrategy} from "src/interfaces/IPostCollateralCallback.sol";
@@ -17,25 +18,11 @@ import {OracleLibrary} from "src/libraries/OracleLibrary.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {BoringOwnable} from "@boringsolidity/BoringOwnable.sol";
 
-contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
+contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, BoringOwnable {
     using SafeCast for uint256;
 
     bool public immutable token0IsUnderlying;
-    uint256 public immutable start;
-    uint256 public immutable maxLTV;
-    uint256 public immutable targetAPR;
-    ERC20 public immutable underlying;
-    IUniswapV3Pool public immutable pool;
-    uint256 public PERIOD = 4 weeks;
-    uint256 public targetGrowthPerPeriod;
-    DebtToken public debtToken;
-    // DebtVault public debtVault;
-    string public strategyURI;
     uint256 _nonce;
-    // single slot, write together
-    uint128 public normalization;
-    uint72 public lastUpdated;
-    int56 lastCumulativeTick;
 
     // id => vault info
     mapping(uint256 => ILendingStrategy.VaultInfo) public vaultInfo;
@@ -53,31 +40,22 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
     event RemoveCollateral(
         uint256 indexed vaultId, ILendingStrategy.Collateral collateral, uint256 vaultCollateralValue
     );
-    event UpdateNormalization(uint256 newNorm);
+
     event ChangeCollateralAllowed(ILendingStrategy.SetAllowedCollateralArg arg);
 
-    constructor(string memory name, string memory symbol, uint256 _targetAPR, uint256 _maxLTV, ERC20 _underlying) {
-        underlying = _underlying;
-        targetAPR = _targetAPR;
-        maxLTV = _maxLTV;
-        targetGrowthPerPeriod = targetAPR / (365 days / PERIOD);
-        debtToken = new DebtToken(name, symbol, underlying.symbol());
-
+    constructor(string memory name, string memory symbol, uint256 targetAPR, uint256 maxLTV, ERC20 underlying)
+        LinearPerpetual(underlying, new DebtToken(name, symbol, underlying.symbol()), targetAPR, maxLTV)
+    {
         IUniswapV3Factory factory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
 
-        pool = IUniswapV3Pool(factory.createPool(address(underlying), address(debtToken), 10000));
+        pool = IUniswapV3Pool(factory.createPool(address(underlying), address(perpetual), 10000));
         // TODO: get correct sqrtRatio for USDC vs. 18 decimals
         pool.initialize(TickMath.getSqrtRatioAtTick(0));
         token0IsUnderlying = pool.token0() == address(underlying);
 
-        start = block.timestamp;
-        lastUpdated = uint72(block.timestamp);
-        normalization = uint128(FixedPointMathLib.WAD);
-        lastCumulativeTick = _latestCumulativeTick();
-
         transferOwnership(msg.sender, false, false);
 
-        emit UpdateNormalization(FixedPointMathLib.WAD);
+        _init();
     }
 
     function onERC721Received(address from, address, uint256 _id, bytes calldata data)
@@ -228,7 +206,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
 
     function reduceDebt(uint256 vaultId, uint128 amount) public {
         vaultInfo[vaultId].debt -= amount;
-        debtToken.burn(msg.sender, amount);
+        DebtToken(address(perpetual)).burn(msg.sender, amount);
         emit ReduceDebt(vaultId, amount);
     }
 
@@ -243,41 +221,6 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
         // show start an auction, maybe at like
         // vault.price * 3 => converted to debt vault
         // burn debt used to buy token
-    }
-
-    function updateNormalization() public {
-        if (lastUpdated == block.timestamp) {
-            return;
-        }
-        uint128 previousNormalization = normalization;
-        int56 latestCumulativeTick = _latestCumulativeTick();
-        uint256 newNormalization = _newNorm(latestCumulativeTick);
-
-        normalization = uint128(newNormalization);
-        lastUpdated = uint72(block.timestamp);
-        lastCumulativeTick = latestCumulativeTick;
-
-        emit UpdateNormalization(newNormalization);
-    }
-
-    function newNorm() public view returns (uint256) {
-        return _newNorm(_latestCumulativeTick());
-    }
-
-    // what each Debt Token is worth in underlying, according to target growth
-    function index() public view returns (uint256) {
-        return FixedPointMathLib.divWadDown(block.timestamp - start, PERIOD) * targetGrowthPerPeriod
-            / FixedPointMathLib.WAD + FixedPointMathLib.WAD;
-    }
-
-    function markTwapSinceLastUpdate() public view returns (uint256) {
-        return _markTwapSinceLastUpdate(_latestCumulativeTick());
-    }
-
-    /// aka norm growth if updated right now,
-    /// e.g. a result of 12e17 = 1.2 = 20% growth since lastUpdate
-    function multiplier() public view returns (int256) {
-        return _multiplier(_latestCumulativeTick());
     }
 
     // normalization value at liquidation
@@ -345,7 +288,7 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
 
         // TODO, safe to uint128 ?
         vaultInfo[vaultId].debt += uint128(amount);
-        debtToken.mint(mintTo, amount);
+        DebtToken(address(perpetual)).mint(mintTo, amount);
 
         uint256 debt = vaultInfo[vaultId].debt;
         uint256 max = maxDebt(vaultInfo[vaultId].collateralValue);
@@ -384,70 +327,5 @@ contract LendingStrategy is ERC721TokenReceiver, Multicall, BoringOwnable {
         vaultInfo[vaultId].collateralValue += oracleInfo.price;
 
         emit AddCollateral(vaultId, vaultNonce, collateral, oracleInfo);
-    }
-
-    function _newNorm(int56 latestCumulativeTick) internal view returns (uint256) {
-        return FixedPointMathLib.mulWadDown(normalization, uint256(_multiplier(latestCumulativeTick)));
-    }
-
-    function _markTwapSinceLastUpdate(int56 latestCumulativeTick) internal view returns (uint256) {
-        uint256 delta = block.timestamp - lastUpdated;
-        if (delta == 0) {
-            return OracleLibrary.getQuoteAtTick(
-                int24(latestCumulativeTick), 1e18, address(debtToken), address(underlying)
-            );
-        } else {
-            int24 twapTick = _timeWeightedAverageTick(lastCumulativeTick, latestCumulativeTick, int56(uint56(delta)));
-            return OracleLibrary.getQuoteAtTick(twapTick, 1e18, address(debtToken), address(underlying));
-        }
-    }
-
-    function _multiplier(int56 latestCumulativeTick) internal view returns (int256) {
-        uint256 m = _markTwapSinceLastUpdate(latestCumulativeTick);
-        // TODO: do we need signed ints? when does powWAD return a negative?
-        uint256 period = block.timestamp - lastUpdated;
-        uint256 periodRatio = FixedPointMathLib.divWadDown(period, PERIOD);
-        uint256 targetGrowth = FixedPointMathLib.mulWadDown(targetGrowthPerPeriod, periodRatio) + FixedPointMathLib.WAD;
-        uint256 indexMarkRatio;
-        if (m == 0) {
-            indexMarkRatio = 14e17;
-        } else {
-            indexMarkRatio = FixedPointMathLib.divWadDown(index(), m);
-            // cap at 140%, floor at 80%
-            if (indexMarkRatio > 14e17) {
-                indexMarkRatio = 14e17;
-            } else if (indexMarkRatio < 8e17) {
-                indexMarkRatio = 8e17;
-            }
-        }
-
-        /// accelerate or deccelerate apprecation based in index/mark. If mark is too high, slow down. If mark is too low, speed up.
-        int256 deviationMultiplier = FixedPointMathLib.powWad(int256(indexMarkRatio), int256(periodRatio));
-
-        return deviationMultiplier * int256(targetGrowth) / int256(FixedPointMathLib.WAD);
-    }
-
-    function _timeWeightedAverageTick(int56 startTick, int56 endTick, int56 twapDuration)
-        internal
-        view
-        returns (int24 timeWeightedAverageTick)
-    {
-        int56 delta = endTick - startTick;
-
-        timeWeightedAverageTick = int24(delta / twapDuration);
-
-        // Always round to negative infinity
-        if (delta < 0 && (delta % (twapDuration) != 0)) {
-            timeWeightedAverageTick--;
-        }
-
-        return timeWeightedAverageTick;
-    }
-
-    function _latestCumulativeTick() internal view returns (int56) {
-        uint32[] memory secondAgos = new uint32[](1);
-        secondAgos[0] = 0;
-        (int56[] memory tickCumulatives,) = pool.observe(secondAgos);
-        return tickCumulatives[0];
     }
 }

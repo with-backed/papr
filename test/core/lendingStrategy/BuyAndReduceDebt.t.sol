@@ -37,7 +37,7 @@ contract BuyAndReduceDebt is BaseLendingStrategyTest {
         uint160 priceLimit = _maxSqrtPriceLimit({sellingPAPR: false});
         uint256 out = quoter.quoteExactInputSingle({
             tokenIn: address(underlying),
-            tokenOut: address(strategy.debtToken()),
+            tokenOut: address(strategy.perpetual()),
             fee: 10000,
             amountIn: underlyingOut,
             sqrtPriceLimitX96: priceLimit
