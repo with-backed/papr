@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity >=0.8.0;
 
+import {IUniswapV3Pool} from "v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {TickMath} from "fullrange/libraries/TickMath.sol";
 import {FullMath} from "fullrange/libraries/FullMath.sol";
 
@@ -27,5 +28,29 @@ library OracleLibrary {
                     : FullMath.mulDiv(1 << 128, baseAmount, ratioX128);
             }
         }
+    }
+
+    function timeWeightedAverageTick(int56 startTick, int56 endTick, int56 twapDuration)
+        internal
+        view
+        returns (int24 timeWeightedAverageTick)
+    {
+        int56 delta = endTick - startTick;
+
+        timeWeightedAverageTick = int24(delta / twapDuration);
+
+        // Always round to negative infinity
+        if (delta < 0 && (delta % (twapDuration) != 0)) {
+            timeWeightedAverageTick--;
+        }
+
+        return timeWeightedAverageTick;
+    }
+
+    function latestCumulativeTick(IUniswapV3Pool pool) internal view returns (int56) {
+        uint32[] memory secondAgos = new uint32[](1);
+        secondAgos[0] = 0;
+        (int56[] memory tickCumulatives,) = pool.observe(secondAgos);
+        return tickCumulatives[0];
     }
 }
