@@ -15,6 +15,16 @@ contract AddCollateralTest is BaseLendingStrategyTest {
         nft.safeTransferFrom(borrower, address(strategy), collateralId, abi.encode(safeTransferReceivedArgs));
     }
 
+    function testOpenVaultAddDebtAndSwapLater() public {
+        vm.warp(block.timestamp + 1 weeks);
+        vm.startPrank(borrower);
+        uint256 nonce = 1;
+        safeTransferReceivedArgs.vaultNonce = nonce;
+        safeTransferReceivedArgs.minOut = 1;
+        safeTransferReceivedArgs.mintDebtOrProceedsTo = address(strategy.pool());
+        nft.safeTransferFrom(borrower, address(strategy), collateralId, abi.encode(safeTransferReceivedArgs));
+    }
+
     function testAddDebtToExistingVault() public {
         vm.startPrank(borrower);
         uint256 nonce = 1;

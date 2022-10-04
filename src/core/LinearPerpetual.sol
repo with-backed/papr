@@ -28,12 +28,17 @@ contract LinearPerpetual {
     uint256 public targetGrowthPerPeriod;
     // for oracle
     IUniswapV3Pool public pool;
+    // TODO having these in storage is expensive vs. constants
+    // + users might want some guarentees. We should probably lock the max/min or 
+    // lock the period. Really only need to pull one lever? 
+    uint256 indexMarkRatioMax;
+    uint256 indexMarkRatioMin;
     // single slot, write together
     uint128 public normalization;
     uint72 public lastUpdated;
     int56 lastCumulativeTick;
 
-    constructor(ERC20 _underlying, ERC20 _perpetual, uint256 _targetAPR, uint256 _maxLTV) {
+    constructor(ERC20 _underlying, ERC20 _perpetual, uint256 _targetAPR, uint256 _maxLTV, uint256 _indexMarkRatioMax, uint256 _indexMarkRatioMin) {
         underlying = _underlying;
         perpetual = _perpetual;
 
@@ -42,6 +47,9 @@ contract LinearPerpetual {
         targetGrowthPerPeriod = targetAPR / (365 days / PERIOD);
 
         start = block.timestamp;
+
+        indexMarkRatioMax = _indexMarkRatioMax;
+        indexMarkRatioMin = _indexMarkRatioMin;
     }
 
     function updateNormalization() public {
@@ -116,10 +124,10 @@ contract LinearPerpetual {
         } else {
             indexMarkRatio = FixedPointMathLib.divWadDown(index(), m);
             // cap at 140%, floor at 80%
-            if (indexMarkRatio > 14e17) {
-                indexMarkRatio = 14e17;
-            } else if (indexMarkRatio < 8e17) {
-                indexMarkRatio = 8e17;
+            if (indexMarkRatio > indexMarkRatioMax) {
+                indexMarkRatio = indexMarkRatioMax;
+            } else if (indexMarkRatio < indexMarkRatioMin) {
+                indexMarkRatio = indexMarkRatioMin;
             }
         }
 

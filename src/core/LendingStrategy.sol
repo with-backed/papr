@@ -43,8 +43,8 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
 
     event ChangeCollateralAllowed(ILendingStrategy.SetAllowedCollateralArg arg);
 
-    constructor(string memory name, string memory symbol, uint256 targetAPR, uint256 maxLTV, ERC20 underlying)
-        LinearPerpetual(underlying, new DebtToken(name, symbol, underlying.symbol()), targetAPR, maxLTV)
+    constructor(string memory name, string memory symbol, uint256 targetAPR, uint256 maxLTV, uint256 indexMarkRatioMax, uint256 indexMarkRatioMin, ERC20 underlying)
+        LinearPerpetual(underlying, new DebtToken(name, symbol, underlying.symbol()), targetAPR, maxLTV, indexMarkRatioMax, indexMarkRatioMin)
     {
         IUniswapV3Factory factory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
 

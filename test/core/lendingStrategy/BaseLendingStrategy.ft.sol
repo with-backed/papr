@@ -37,7 +37,7 @@ contract BaseLendingStrategyTest is MainnetForking, UniswapForking {
 
     //
     function setUp() public {
-        strategy = new LendingStrategy("PUNKs Loans", "PL", 0.1e18, 0.5e18, underlying);
+        strategy = new LendingStrategy("PUNKs Loans", "PL", 0.1e18, 0.5e18, 2e18, 0.8e18, underlying);
         strategy.claimOwnership();
         ILendingStrategy.SetAllowedCollateralArg[] memory args = new ILendingStrategy.SetAllowedCollateralArg[](1);
         args[0] = ILendingStrategy.SetAllowedCollateralArg(address(nft), true);
