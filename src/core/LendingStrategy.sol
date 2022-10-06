@@ -307,13 +307,14 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
         ILendingStrategy.Sig memory sig
     ) internal {
         bytes32 h = collateralHash(collateral, vaultId);
+        uint256 oraclePrice = uint256(bytes32(oracleInfo.payload));
 
         if (collateralFrozenOraclePrice[h] != 0) {
             // collateral is already here
             revert();
         }
 
-        if (oracleInfo.price == 0) {
+        if (oraclePrice == 0) {
             revert();
         }
 
@@ -323,8 +324,8 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
             revert ILendingStrategy.InvalidCollateral();
         }
 
-        collateralFrozenOraclePrice[h] = oracleInfo.price;
-        vaultInfo[vaultId].collateralValue += oracleInfo.price;
+        collateralFrozenOraclePrice[h] = oraclePrice;
+        vaultInfo[vaultId].collateralValue += uint128(oraclePrice);
 
         emit AddCollateral(vaultId, vaultNonce, collateral, oracleInfo);
     }

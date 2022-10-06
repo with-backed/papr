@@ -22,8 +22,12 @@ interface ILendingStrategy {
     }
 
     struct OracleInfo {
-        uint128 price;
-        OracleInfoPeriod period;
+        bytes32 id;
+        bytes payload;
+        // The UNIX timestamp when the message was signed by the oracle
+        uint256 timestamp;
+        // ECDSA signature or EIP-2098 compact signature
+        bytes signature;
     }
 
     struct Sig {

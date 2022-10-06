@@ -37,6 +37,7 @@ contract BaseLendingStrategyTest is MainnetForking, UniswapForking {
 
     //
     function setUp() public {
+        vm.warp(15685783);
         strategy = new LendingStrategy("PUNKs Loans", "PL", 0.1e18, 0.5e18, 2e18, 0.8e18, underlying);
         strategy.claimOwnership();
         ILendingStrategy.SetAllowedCollateralArg[] memory args = new ILendingStrategy.SetAllowedCollateralArg[](1);
@@ -86,7 +87,10 @@ contract BaseLendingStrategyTest is MainnetForking, UniswapForking {
     }
 
     function _populateOnReceivedArgs() internal {
-        oracleInfo.price = oraclePrice;
+        oracleInfo.id = constructOracleId(address(nft));
+        oracleInfo.timestamp = block.timestamp;
+        oracleInfo.payload = toBytes(oraclePrice);
+        oracleInfo.signature = constructOracleSignature();
         safeTransferReceivedArgs = ILendingStrategy.OnERC721ReceivedArgs({
             vaultNonce: vaultNonce,
             mintVaultTo: borrower,
@@ -119,4 +123,26 @@ contract BaseLendingStrategyTest is MainnetForking, UniswapForking {
             return strategy.token0IsUnderlying() ? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1;
         }
     }
+}
+
+function toBytes(uint256 x) returns (bytes memory b) {
+    b = new bytes(32);
+    assembly { mstore(add(b, 32), x) }
+}
+
+function constructOracleId(address collectionAddress) returns (bytes32 id) {
+    id = keccak256(
+            abi.encode(
+                keccak256(
+                    "ContractWideCollectionPrice(uint8 kind,uint256 twapHours,address contract)"
+                ),
+                1,
+                24,
+                collectionAddress
+            )
+        );
+}
+
+function constructOracleSignature() returns (bytes memory sig) {
+    sig = "0x14cbc7b39b1f3703aab98d034b5d337a8e6966baab0a2643ebc457831a33e9196a6140a0ab2be04a6f624360bfc8f6085ccee6dcb656e562020635277de6f2851b";
 }
