@@ -13,7 +13,7 @@ contract OracleTest is Test {
     OracleSigUtils internal sigUtils = new OracleSigUtils();
     address oracleAddress = vm.addr(oraclePrivateKey);
 
-    function getOracleInfoForCollateral(address collateral)
+    function getOracleInfoForCollateral(address collateral, address underlying)
         public
         returns (ILendingStrategy.OracleInfo memory oracleInfo)
     {
@@ -21,7 +21,7 @@ contract OracleTest is Test {
             .OracleMessage({
                 id: _constructOracleId(collateral),
                 payload: abi.encode(
-                    0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48,
+                    underlying,
                     oraclePrice
                 ),
                 timestamp: block.timestamp

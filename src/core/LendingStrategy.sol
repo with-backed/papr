@@ -18,7 +18,7 @@ import {OracleLibrary} from "src/libraries/OracleLibrary.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {BoringOwnable} from "@boringsolidity/BoringOwnable.sol";
 
-contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, BoringOwnable, Test {
+contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, BoringOwnable {
     using SafeCast for uint256;
 
     bool public immutable token0IsUnderlying;

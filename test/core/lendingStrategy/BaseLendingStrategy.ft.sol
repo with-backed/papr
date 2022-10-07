@@ -32,7 +32,7 @@ contract BaseLendingStrategyTest is MainnetForking, UniswapForking, OracleTest {
     uint256 minOut;
     uint256 debt = 1e18;
     uint160 sqrtPriceLimitX96;
-    ILendingStrategy.OracleInfo oracleInfo = getOracleInfoForCollateral(address(nft));
+    ILendingStrategy.OracleInfo oracleInfo = getOracleInfoForCollateral(address(nft), address(underlying));
 
     //
     function setUp() public {
@@ -93,7 +93,7 @@ contract BaseLendingStrategyTest is MainnetForking, UniswapForking, OracleTest {
             minOut: minOut,
             debt: debt,
             sqrtPriceLimitX96: _viableSqrtPriceLimit({sellingPAPR: true}),
-            oracleInfo: getOracleInfoForCollateral(address(nft))
+            oracleInfo: oracleInfo
         });
     }
 

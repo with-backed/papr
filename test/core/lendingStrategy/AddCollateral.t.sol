@@ -32,7 +32,7 @@ contract AddCollateralTest is BaseLendingStrategyTest {
     function testAddCollateralFailsIfOracleMessageForWrongCollateral() public {
         vm.startPrank(borrower);
         nft.approve(address(strategy), collateralId);
-        ILendingStrategy.OracleInfo memory wrongInfo = getOracleInfoForCollateral(address(0));
+        ILendingStrategy.OracleInfo memory wrongInfo = getOracleInfoForCollateral(address(0), address(underlying));
         vm.expectRevert(ILendingStrategy.InvalidOracleMessage.selector);
         strategy.addCollateral(vaultNonce, ILendingStrategy.Collateral(nft, collateralId), wrongInfo);
     }
