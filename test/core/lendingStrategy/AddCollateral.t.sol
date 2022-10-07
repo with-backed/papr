@@ -4,7 +4,7 @@ pragma solidity ^0.8.13;
 import {BaseLendingStrategyTest} from "test/core/lendingStrategy/BaseLendingStrategy.ft.sol";
 import {LendingStrategy} from "src/core/LendingStrategy.sol";
 import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
-import {IUnderwriter} from "src/interfaces/IUnderwriter.sol";
+import {ReservoirOracleUnderwriter} from "src/core/ReservoirOracleUnderwriter.sol";
 import {TestERC721} from "test/mocks/TestERC721.sol";
 
 contract AddCollateralTest is BaseLendingStrategyTest {
@@ -25,7 +25,7 @@ contract AddCollateralTest is BaseLendingStrategyTest {
     function testAddCollateralFailsIfInvalidOracleSigner() public {
         vm.startPrank(borrower);
         nft.approve(address(strategy), collateralId);
-        vm.expectRevert(IUnderwriter.IncorrectOracleSigner.selector);
+        vm.expectRevert(ReservoirOracleUnderwriter.IncorrectOracleSigner.selector);
         oracleInfo.sig.v = 0;
         strategy.addCollateral(vaultNonce, ILendingStrategy.Collateral(nft, collateralId), oracleInfo);
     }
@@ -33,8 +33,9 @@ contract AddCollateralTest is BaseLendingStrategyTest {
     function testAddCollateralFailsIfOracleMessageForWrongCollateral() public {
         vm.startPrank(borrower);
         nft.approve(address(strategy), collateralId);
-        IUnderwriter.OracleInfo memory wrongInfo = getOracleInfoForCollateral(address(0), address(underlying));
-        vm.expectRevert(IUnderwriter.InvalidOracleMessage.selector);
+        ReservoirOracleUnderwriter.OracleInfo memory wrongInfo =
+            getOracleInfoForCollateral(address(0), address(underlying));
+        vm.expectRevert(ReservoirOracleUnderwriter.InvalidOracleMessage.selector);
         strategy.addCollateral(vaultNonce, ILendingStrategy.Collateral(nft, collateralId), wrongInfo);
     }
 

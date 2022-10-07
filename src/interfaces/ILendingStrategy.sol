@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >=0.8.0;
 
-import {IUnderwriter} from "src/interfaces/IUnderwriter.sol";
+import {ReservoirOracleUnderwriter} from "src/core/ReservoirOracleUnderwriter.sol";
 import {ERC721} from "solmate/tokens/ERC721.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 
@@ -23,7 +23,7 @@ interface ILendingStrategy {
         uint256 minOut;
         uint256 debt;
         uint160 sqrtPriceLimitX96;
-        IUnderwriter.OracleInfo oracleInfo;
+        ReservoirOracleUnderwriter.OracleInfo oracleInfo;
     }
 
     struct StrategyDefinition {

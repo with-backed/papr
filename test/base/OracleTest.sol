@@ -4,6 +4,7 @@ pragma solidity ^0.8.13;
 import "forge-std/Test.sol";
 
 import {ReservoirOracle} from "@reservoir/ReservoirOracle.sol";
+import {ReservoirOracleUnderwriter} from "src/core/ReservoirOracleUnderwriter.sol";
 import {IUnderwriter} from "src/interfaces/IUnderwriter.sol";
 import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
 import {OracleSigUtils} from "test/OracleSigUtils.sol";
@@ -17,7 +18,7 @@ contract OracleTest is Test {
 
     function getOracleInfoForCollateral(address collateral, address underlying)
         public
-        returns (IUnderwriter.OracleInfo memory oracleInfo)
+        returns (ReservoirOracleUnderwriter.OracleInfo memory oracleInfo)
     {
         ReservoirOracle.Message memory message = ReservoirOracle.Message({
             id: _constructOracleId(collateral),
@@ -30,7 +31,7 @@ contract OracleTest is Test {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(oraclePrivateKey, digest);
 
         oracleInfo.message = message;
-        oracleInfo.sig = IUnderwriter.Sig({v: v, r: r, s: s});
+        oracleInfo.sig = ReservoirOracleUnderwriter.Sig({v: v, r: r, s: s});
     }
 
     function _constructOracleId(address collectionAddress) internal returns (bytes32 id) {

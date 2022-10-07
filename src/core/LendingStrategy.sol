@@ -12,6 +12,7 @@ import {TickMath} from "fullrange/libraries/TickMath.sol";
 import {DebtToken} from "./DebtToken.sol";
 import {LinearPerpetual} from "./LinearPerpetual.sol";
 import {Multicall} from "src/core/base/Multicall.sol";
+import {ReservoirOracleUnderwriter} from "src/core/ReservoirOracleUnderwriter.sol";
 import {IPostCollateralCallback} from "src/interfaces/IPostCollateralCallback.sol";
 import {ILendingStrategy} from "src/interfaces/IPostCollateralCallback.sol";
 import {IUnderwriter} from "src/interfaces/IUnderwriter.sol";
@@ -154,7 +155,7 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
     function addCollateral(
         uint256 vaultNonce,
         ILendingStrategy.Collateral calldata collateral,
-        IUnderwriter.OracleInfo calldata oracleInfo
+        ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
     ) public {
         uint256 vaultId = vaultIdentifier(vaultNonce, msg.sender);
         _addCollateralToVault(vaultId, vaultNonce, collateral, oracleInfo);
@@ -170,7 +171,7 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
         uint256 vaultNonce,
         address vaultOwner,
         ILendingStrategy.Collateral calldata collateral,
-        IUnderwriter.OracleInfo calldata oracleInfo,
+        ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo,
         bytes calldata data
     ) public {
         uint256 vaultId = vaultIdentifier(vaultNonce, vaultOwner);
@@ -319,7 +320,7 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
         uint256 vaultId,
         uint256 vaultNonce,
         ILendingStrategy.Collateral memory collateral,
-        IUnderwriter.OracleInfo memory oracleInfo
+        ReservoirOracleUnderwriter.OracleInfo memory oracleInfo
     ) internal {
         bytes32 h = collateralHash(collateral, vaultId);
         if (collateralFrozenOraclePrice[h] != 0) {

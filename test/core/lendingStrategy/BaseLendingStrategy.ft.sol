@@ -7,9 +7,10 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 import {TickMath} from "fullrange/libraries/TickMath.sol";
 
 import {LendingStrategy} from "src/core/LendingStrategy.sol";
-import {Underwriter} from "src/core/Underwriter.sol";
+import {ReservoirOracleUnderwriter} from "src/core/ReservoirOracleUnderwriter.sol";
 import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
 import {IUnderwriter} from "src/interfaces/IUnderwriter.sol";
+import {ReservoirOracleUnderwriter} from "src/core/ReservoirOracleUnderwriter.sol";
 import {TestERC721} from "test/mocks/TestERC721.sol";
 import {TestERC20} from "test/mocks/TestERC20.sol";
 import {MainnetForking} from "test/base/MainnetForking.sol";
@@ -35,12 +36,20 @@ contract BaseLendingStrategyTest is MainnetForking, UniswapForking, OracleTest {
     uint256 minOut;
     uint256 debt = 1e18;
     uint160 sqrtPriceLimitX96;
-    IUnderwriter.OracleInfo oracleInfo = getOracleInfoForCollateral(address(nft), address(underlying));
+    ReservoirOracleUnderwriter.OracleInfo oracleInfo = getOracleInfoForCollateral(address(nft), address(underlying));
 
     //
     function setUp() public {
-        strategy = new LendingStrategy("PUNKs Loans", "PL", 0.1e18, 0.5e18, 2e18, 0.8e18, underlying);
-        underwriter = new Underwriter(oracleAddress);
+        strategy = new LendingStrategy(
+            "PUNKs Loans",
+            "PL",
+            0.1e18,
+            0.5e18,
+            2e18,
+            0.8e18,
+            underlying
+        );
+        underwriter = new ReservoirOracleUnderwriter(oracleAddress);
 
         strategy.claimOwnership();
         strategy.setUnderwriter(underwriter);

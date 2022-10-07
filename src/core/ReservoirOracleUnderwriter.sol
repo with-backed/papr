@@ -1,10 +1,25 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
+import {ReservoirOracle} from "@reservoir/ReservoirOracle.sol";
 import {IUnderwriter} from "src/interfaces/IUnderwriter.sol";
 
-contract Underwriter is IUnderwriter {
+contract ReservoirOracleUnderwriter is IUnderwriter {
+    struct Sig {
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+    }
+
+    struct OracleInfo {
+        ReservoirOracle.Message message;
+        Sig sig;
+    }
+
     address public oracleSigner;
+
+    error IncorrectOracleSigner();
+    error InvalidOracleMessage();
 
     constructor(address _oracleSigner) {
         oracleSigner = _oracleSigner;
@@ -15,7 +30,7 @@ contract Underwriter is IUnderwriter {
         override
         returns (uint256)
     {
-        IUnderwriter.OracleInfo memory oracleInfo = abi.decode(data, (IUnderwriter.OracleInfo));
+        OracleInfo memory oracleInfo = abi.decode(data, (OracleInfo));
         address signerAddress = ecrecover(
             keccak256(
                 abi.encodePacked(
