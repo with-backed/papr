@@ -7,7 +7,9 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 import {TickMath} from "fullrange/libraries/TickMath.sol";
 
 import {LendingStrategy} from "src/core/LendingStrategy.sol";
+import {Underwriter} from "src/core/Underwriter.sol";
 import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
+import {IUnderwriter} from "src/interfaces/IUnderwriter.sol";
 import {TestERC721} from "test/mocks/TestERC721.sol";
 import {TestERC20} from "test/mocks/TestERC20.sol";
 import {MainnetForking} from "test/base/MainnetForking.sol";
@@ -19,6 +21,7 @@ contract BaseLendingStrategyTest is MainnetForking, UniswapForking, OracleTest {
     TestERC721 nft = new TestERC721();
     TestERC20 underlying = new TestERC20();
     LendingStrategy strategy;
+    IUnderwriter underwriter;
 
     uint256 collateralId = 1;
     address borrower = address(1);
@@ -32,13 +35,15 @@ contract BaseLendingStrategyTest is MainnetForking, UniswapForking, OracleTest {
     uint256 minOut;
     uint256 debt = 1e18;
     uint160 sqrtPriceLimitX96;
-    ILendingStrategy.OracleInfo oracleInfo = getOracleInfoForCollateral(address(nft), address(underlying));
+    IUnderwriter.OracleInfo oracleInfo = getOracleInfoForCollateral(address(nft), address(underlying));
 
     //
     function setUp() public {
         strategy = new LendingStrategy("PUNKs Loans", "PL", 0.1e18, 0.5e18, 2e18, 0.8e18, underlying);
+        underwriter = new Underwriter(oracleAddress);
+
         strategy.claimOwnership();
-        strategy.setOracleSigner(oracleAddress);
+        strategy.setUnderwriter(underwriter);
         ILendingStrategy.SetAllowedCollateralArg[] memory args = new ILendingStrategy.SetAllowedCollateralArg[](1);
         args[0] = ILendingStrategy.SetAllowedCollateralArg(address(nft), true);
         strategy.setAllowedCollateral(args);

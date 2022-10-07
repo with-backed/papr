@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
+import {ReservoirOracle} from "@reservoir/ReservoirOracle.sol";
 
 contract OracleSigUtils {
     bytes32 internal DOMAIN_SEPARATOR;
@@ -9,7 +9,7 @@ contract OracleSigUtils {
     bytes32 public constant MESSAGE_TYPEHASH =
         keccak256("Message(bytes32 id,bytes payload,uint256 timestamp)");
 
-    function getStructHash(ILendingStrategy.OracleMessage memory message)
+    function getStructHash(ReservoirOracle.Message memory message)
         internal
         pure
         returns (bytes32)
@@ -25,7 +25,7 @@ contract OracleSigUtils {
             );
     }
 
-    function getTypedDataHash(ILendingStrategy.OracleMessage memory message)
+    function getTypedDataHash(ReservoirOracle.Message memory message)
         public
         view
         returns (bytes32)

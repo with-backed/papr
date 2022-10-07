@@ -3,6 +3,8 @@ pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
 
+import {ReservoirOracle} from "@reservoir/ReservoirOracle.sol";
+import {IUnderwriter} from "src/interfaces/IUnderwriter.sol";
 import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
 import {OracleSigUtils} from "test/OracleSigUtils.sol";
 
@@ -15,23 +17,20 @@ contract OracleTest is Test {
 
     function getOracleInfoForCollateral(address collateral, address underlying)
         public
-        returns (ILendingStrategy.OracleInfo memory oracleInfo)
+        returns (IUnderwriter.OracleInfo memory oracleInfo)
     {
-        ILendingStrategy.OracleMessage memory oracleMessage = ILendingStrategy
-            .OracleMessage({
-                id: _constructOracleId(collateral),
-                payload: abi.encode(
-                    underlying,
-                    oraclePrice
-                ),
-                timestamp: block.timestamp
-            });
+        ReservoirOracle.Message memory message = ReservoirOracle.Message({
+            id: _constructOracleId(collateral),
+            payload: abi.encode(underlying, oraclePrice),
+            timestamp: block.timestamp,
+            signature: "" // populated ourselves on the OracleInfo.Sig struct
+        });
 
-        bytes32 digest = sigUtils.getTypedDataHash(oracleMessage);
+        bytes32 digest = sigUtils.getTypedDataHash(message);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(oraclePrivateKey, digest);
 
-        oracleInfo.message = oracleMessage;
-        oracleInfo.sig = ILendingStrategy.Sig({v: v, r: r, s: s});
+        oracleInfo.message = message;
+        oracleInfo.sig = IUnderwriter.Sig({v: v, r: r, s: s});
     }
 
     function _constructOracleId(address collectionAddress)

@@ -14,6 +14,7 @@ import {LinearPerpetual} from "./LinearPerpetual.sol";
 import {Multicall} from "src/core/base/Multicall.sol";
 import {IPostCollateralCallback} from "src/interfaces/IPostCollateralCallback.sol";
 import {ILendingStrategy} from "src/interfaces/IPostCollateralCallback.sol";
+import {IUnderwriter} from "src/interfaces/IUnderwriter.sol";
 import {OracleLibrary} from "src/libraries/OracleLibrary.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {BoringOwnable} from "@boringsolidity/BoringOwnable.sol";
@@ -23,7 +24,7 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
 
     bool public immutable token0IsUnderlying;
     uint256 _nonce;
-    address public oracleSigner;
+    IUnderwriter underwriter;
 
     // id => vault info
     mapping(uint256 => ILendingStrategy.VaultInfo) public vaultInfo;
@@ -35,7 +36,7 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
         uint256 indexed vaultId,
         uint256 vaultNonce,
         ILendingStrategy.Collateral collateral,
-        ILendingStrategy.OracleInfo oracleInfo
+        uint256 price
     );
     event ReduceDebt(uint256 indexed vaultId, uint256 amount);
     event RemoveCollateral(
@@ -141,7 +142,7 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
     function addCollateral(
         uint256 vaultNonce,
         ILendingStrategy.Collateral calldata collateral,
-        ILendingStrategy.OracleInfo calldata oracleInfo
+        IUnderwriter.OracleInfo calldata oracleInfo
     ) public {
         uint256 vaultId = vaultIdentifier(vaultNonce, msg.sender);
         _addCollateralToVault(vaultId, vaultNonce, collateral, oracleInfo);
@@ -157,7 +158,7 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
         uint256 vaultNonce,
         address vaultOwner,
         ILendingStrategy.Collateral calldata collateral,
-        ILendingStrategy.OracleInfo calldata oracleInfo,
+        IUnderwriter.OracleInfo calldata oracleInfo,
         bytes calldata data
     ) public {
         uint256 vaultId = vaultIdentifier(vaultNonce, vaultOwner);
@@ -257,8 +258,8 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
         }
     }
 
-    function setOracleSigner(address signer) public onlyOwner {
-        oracleSigner = signer;
+    function setUnderwriter(IUnderwriter newUnderwriter) public onlyOwner {
+        underwriter = newUnderwriter;
     }
 
     function _swap(
@@ -306,17 +307,11 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
         uint256 vaultId,
         uint256 vaultNonce,
         ILendingStrategy.Collateral memory collateral,
-        ILendingStrategy.OracleInfo memory oracleInfo
+        IUnderwriter.OracleInfo memory oracleInfo
     ) internal {
         bytes32 h = collateralHash(collateral, vaultId);
-        (, uint256 oraclePrice) = abi.decode(oracleInfo.message.payload, (address, uint256));
-
         if (collateralFrozenOraclePrice[h] != 0) {
             // collateral is already here
-            revert();
-        }
-
-        if (oraclePrice == 0) {
             revert();
         }
 
@@ -324,59 +319,15 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
             revert ILendingStrategy.InvalidCollateral();
         }
 
-        if (!_verifyOracleSignature(oracleInfo)) {
-            revert ILendingStrategy.IncorrectOracleSigner();
-        }
+        uint256 oraclePrice = underwriter.underwritePriceForCollateral(collateral.id, address(collateral.addr), abi.encode(oracleInfo));
 
-        if (!_verifyOracleMessageForCorrectNFT(oracleInfo.message, address(collateral.addr))) {
-            revert ILendingStrategy.InvalidOracleMessage();
+        if (oraclePrice == 0) {
+            revert();
         }
 
         collateralFrozenOraclePrice[h] = oraclePrice;
         vaultInfo[vaultId].collateralValue += uint128(oraclePrice);
 
-        emit AddCollateral(vaultId, vaultNonce, collateral, oracleInfo);
-    }
-
-    function _verifyOracleSignature(ILendingStrategy.OracleInfo memory oracleInfo) internal returns (bool) {
-        address signerAddress = ecrecover(
-            keccak256(
-                abi.encodePacked(
-                    "\x19Ethereum Signed Message:\n32",
-                    // EIP-712 structured-data hash
-                    keccak256(
-                        abi.encode(
-                            keccak256(
-                                "Message(bytes32 id,bytes payload,uint256 timestamp)"
-                            ),
-                            oracleInfo.message.id,
-                            oracleInfo.message.payload,
-                            oracleInfo.message.timestamp
-                        )
-                    )
-                )
-            ),
-            oracleInfo.sig.v,
-            oracleInfo.sig.r,
-            oracleInfo.sig.s
-        );
-
-        // Ensure the signer matches the designated oracle address
-        return signerAddress == oracleSigner;
-    }
-
-    function _verifyOracleMessageForCorrectNFT(ILendingStrategy.OracleMessage memory message, address collateral) internal returns (bool) {
-        bytes32 expectedId = keccak256(
-            abi.encode(
-                keccak256(
-                    "ContractWideCollectionPrice(uint8 kind,uint256 twapMinutes,address contract)"
-                ),
-                1,
-                30 days / 60, // minutes in a month
-                collateral
-            )
-        );
-
-        return message.id == expectedId;
+        emit AddCollateral(vaultId, vaultNonce, collateral, oraclePrice);
     }
 }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >=0.8.0;
 
+import {IUnderwriter} from "src/interfaces/IUnderwriter.sol";
 import {ERC721} from "solmate/tokens/ERC721.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 
@@ -15,31 +16,6 @@ interface ILendingStrategy {
         uint128 collateralValue;
     }
 
-    enum OracleInfoPeriod {
-        SevenDays,
-        ThirtyDays,
-        NinetyDays
-    }
-
-    struct OracleMessage {
-        bytes32 id;
-        bytes payload;
-        // The UNIX timestamp when the message was signed by the oracle
-        uint256 timestamp;
-        // ECDSA signature or EIP-2098 compact signature
-    }
-
-    struct Sig {
-        uint8 v;
-        bytes32 r;
-        bytes32 s;
-    }
-
-    struct OracleInfo {
-        OracleMessage message;
-        Sig sig;
-    }
-
     struct OnERC721ReceivedArgs {
         uint256 vaultNonce;
         address mintVaultTo;
@@ -47,7 +23,7 @@ interface ILendingStrategy {
         uint256 minOut;
         uint256 debt;
         uint160 sqrtPriceLimitX96;
-        ILendingStrategy.OracleInfo oracleInfo;
+        IUnderwriter.OracleInfo oracleInfo;
     }
 
     struct StrategyDefinition {
@@ -72,7 +48,4 @@ interface ILendingStrategy {
     error ExceedsMaxDebt(uint256 vaultDebt, uint256 maxDebt);
 
     error InvalidCollateral();
-
-    error IncorrectOracleSigner();
-    error InvalidOracleMessage();
 }
