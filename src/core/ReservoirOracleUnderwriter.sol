@@ -19,7 +19,7 @@ contract ReservoirOracleUnderwriter is IUnderwriter {
     address public oracleSigner;
 
     error IncorrectOracleSigner();
-    error InvalidOracleMessage();
+    error WrongCollateralFromOracleMessage();
 
     constructor(address _oracleSigner) {
         oracleSigner = _oracleSigner;
@@ -66,7 +66,7 @@ contract ReservoirOracleUnderwriter is IUnderwriter {
         );
 
         if (oracleInfo.message.id != expectedId) {
-            revert InvalidOracleMessage();
+            revert WrongCollateralFromOracleMessage();
         }
 
         (, uint256 oraclePrice) = abi.decode(oracleInfo.message.payload, (address, uint256));

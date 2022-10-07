@@ -35,7 +35,7 @@ contract AddCollateralTest is BaseLendingStrategyTest {
         nft.approve(address(strategy), collateralId);
         ReservoirOracleUnderwriter.OracleInfo memory wrongInfo =
             getOracleInfoForCollateral(address(0), address(underlying));
-        vm.expectRevert(ReservoirOracleUnderwriter.InvalidOracleMessage.selector);
+        vm.expectRevert(ReservoirOracleUnderwriter.WrongCollateralFromOracleMessage.selector);
         strategy.addCollateral(vaultNonce, ILendingStrategy.Collateral(nft, collateralId), wrongInfo);
     }
 
