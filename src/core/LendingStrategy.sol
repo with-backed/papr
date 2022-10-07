@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
+import "forge-std/Test.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {ERC721, ERC721TokenReceiver} from "solmate/tokens/ERC721.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
@@ -18,11 +19,12 @@ import {OracleLibrary} from "src/libraries/OracleLibrary.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {BoringOwnable} from "@boringsolidity/BoringOwnable.sol";
 
-contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, BoringOwnable {
+contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, BoringOwnable, Test {
     using SafeCast for uint256;
 
     bool public immutable token0IsUnderlying;
     uint256 _nonce;
+    address public oracleSigner;
 
     // id => vault info
     mapping(uint256 => ILendingStrategy.VaultInfo) public vaultInfo;
@@ -69,7 +71,7 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
 
         uint256 vaultId = vaultIdentifier(request.vaultNonce, from);
 
-        _addCollateralToVault(vaultId, request.vaultNonce, collateral, request.oracleInfo, request.sig);
+        _addCollateralToVault(vaultId, request.vaultNonce, collateral, request.oracleInfo);
 
         if (request.minOut > 0) {
             _swap(
@@ -140,11 +142,10 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
     function addCollateral(
         uint256 vaultNonce,
         ILendingStrategy.Collateral calldata collateral,
-        ILendingStrategy.OracleInfo calldata oracleInfo,
-        ILendingStrategy.Sig calldata sig
+        ILendingStrategy.OracleInfo calldata oracleInfo
     ) public {
         uint256 vaultId = vaultIdentifier(vaultNonce, msg.sender);
-        _addCollateralToVault(vaultId, vaultNonce, collateral, oracleInfo, sig);
+        _addCollateralToVault(vaultId, vaultNonce, collateral, oracleInfo);
         collateral.addr.transferFrom(msg.sender, address(this), collateral.id);
     }
 
@@ -158,11 +159,10 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
         address vaultOwner,
         ILendingStrategy.Collateral calldata collateral,
         ILendingStrategy.OracleInfo calldata oracleInfo,
-        ILendingStrategy.Sig calldata sig,
         bytes calldata data
     ) public {
         uint256 vaultId = vaultIdentifier(vaultNonce, vaultOwner);
-        _addCollateralToVault(vaultId, vaultNonce, collateral, oracleInfo, sig);
+        _addCollateralToVault(vaultId, vaultNonce, collateral, oracleInfo);
         IPostCollateralCallback(msg.sender).postCollateralCallback(
             ILendingStrategy.StrategyDefinition(targetAPR, maxLTV, underlying), collateral, data
         );
@@ -258,6 +258,10 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
         }
     }
 
+    function setOracleSigner(address signer) public onlyOwner {
+        oracleSigner = signer;
+    }
+
     function _swap(
         address recipient,
         bool zeroForOne,
@@ -303,11 +307,10 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
         uint256 vaultId,
         uint256 vaultNonce,
         ILendingStrategy.Collateral memory collateral,
-        ILendingStrategy.OracleInfo memory oracleInfo,
-        ILendingStrategy.Sig memory sig
+        ILendingStrategy.OracleInfo memory oracleInfo
     ) internal {
         bytes32 h = collateralHash(collateral, vaultId);
-        uint256 oraclePrice = uint256(bytes32(oracleInfo.payload));
+        (, uint256 oraclePrice) = abi.decode(oracleInfo.message.payload, (address, uint256));
 
         if (collateralFrozenOraclePrice[h] != 0) {
             // collateral is already here
@@ -318,15 +321,63 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
             revert();
         }
 
-        // TODO check signature
-
         if (!isAllowed[address(collateral.addr)]) {
             revert ILendingStrategy.InvalidCollateral();
+        }
+
+        if (!_verifyOracleSignature(oracleInfo)) {
+            revert ILendingStrategy.IncorrectOracleSigner();
+        }
+
+        if (!_verifyOracleMessageForCorrectNFT(oracleInfo.message, address(collateral.addr))) {
+            revert ILendingStrategy.InvalidOracleMessage();
         }
 
         collateralFrozenOraclePrice[h] = oraclePrice;
         vaultInfo[vaultId].collateralValue += uint128(oraclePrice);
 
         emit AddCollateral(vaultId, vaultNonce, collateral, oracleInfo);
+    }
+
+    function _verifyOracleSignature(ILendingStrategy.OracleInfo memory oracleInfo) internal returns (bool) {
+        address signerAddress = ecrecover(
+            keccak256(
+                abi.encodePacked(
+                    "\x19Ethereum Signed Message:\n32",
+                    // EIP-712 structured-data hash
+                    keccak256(
+                        abi.encode(
+                            keccak256(
+                                "Message(bytes32 id,bytes payload,uint256 timestamp)"
+                            ),
+                            oracleInfo.message.id,
+                            oracleInfo.message.payload,
+                            oracleInfo.message.timestamp
+                        )
+                    )
+                )
+            ),
+            oracleInfo.sig.v,
+            oracleInfo.sig.r,
+            oracleInfo.sig.s
+        );
+
+        // Ensure the signer matches the designated oracle address
+        return signerAddress == oracleSigner;
+    }
+
+    function _verifyOracleMessageForCorrectNFT(ILendingStrategy.OracleMessage memory message, address collateral) internal returns (bool) {
+        bytes32 expectedId = keccak256(
+            abi.encode(
+                keccak256(
+                    "ContractWideCollectionPrice(uint8 kind,uint256 twapMinutes,address contract)"
+                ),
+                1,
+                43800, // minutes in a month
+                collateral
+            )
+        );
+
+        return message.id == expectedId;
     }
 }

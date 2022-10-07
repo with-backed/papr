@@ -54,6 +54,6 @@ contract RemoveCollateralTest is BaseLendingStrategyTest {
         collateral = ILendingStrategy.Collateral(nft, collateralId);
         vm.startPrank(borrower);
         nft.approve(address(strategy), collateralId);
-        strategy.addCollateral(vaultNonce, collateral, oracleInfo, sig);
+        strategy.addCollateral(vaultNonce, collateral, oracleInfo);
     }
 }
