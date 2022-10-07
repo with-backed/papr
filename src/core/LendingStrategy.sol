@@ -372,7 +372,7 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
                     "ContractWideCollectionPrice(uint8 kind,uint256 twapMinutes,address contract)"
                 ),
                 1,
-                43800, // minutes in a month
+                30 days / 60, // minutes in a month
                 collateral
             )
         );

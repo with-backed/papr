@@ -44,7 +44,7 @@ contract OracleTest is Test {
                     "ContractWideCollectionPrice(uint8 kind,uint256 twapMinutes,address contract)"
                 ),
                 1,
-                43800,
+                30 days / 60,
                 collectionAddress
             )
         );
