@@ -10,15 +10,12 @@ contract Underwriter is IUnderwriter {
         oracleSigner = _oracleSigner;
     }
 
-    function underwritePriceForCollateral(
-        uint256 tokenId,
-        address contractAddress,
-        bytes memory data
-    ) external override returns (uint256) {
-        IUnderwriter.OracleInfo memory oracleInfo = abi.decode(
-            data,
-            (IUnderwriter.OracleInfo)
-        );
+    function underwritePriceForCollateral(uint256 tokenId, address contractAddress, bytes memory data)
+        external
+        override
+        returns (uint256)
+    {
+        IUnderwriter.OracleInfo memory oracleInfo = abi.decode(data, (IUnderwriter.OracleInfo));
         address signerAddress = ecrecover(
             keccak256(
                 abi.encodePacked(
@@ -26,9 +23,7 @@ contract Underwriter is IUnderwriter {
                     // EIP-712 structured-data hash
                     keccak256(
                         abi.encode(
-                            keccak256(
-                                "Message(bytes32 id,bytes payload,uint256 timestamp)"
-                            ),
+                            keccak256("Message(bytes32 id,bytes payload,uint256 timestamp)"),
                             oracleInfo.message.id,
                             oracleInfo.message.payload,
                             oracleInfo.message.timestamp
@@ -48,9 +43,7 @@ contract Underwriter is IUnderwriter {
 
         bytes32 expectedId = keccak256(
             abi.encode(
-                keccak256(
-                    "ContractWideCollectionPrice(uint8 kind,uint256 twapMinutes,address contract)"
-                ),
+                keccak256("ContractWideCollectionPrice(uint8 kind,uint256 twapMinutes,address contract)"),
                 1,
                 30 days / 60, // minutes in a month
                 contractAddress
@@ -61,10 +54,7 @@ contract Underwriter is IUnderwriter {
             revert InvalidOracleMessage();
         }
 
-        (, uint256 oraclePrice) = abi.decode(
-            oracleInfo.message.payload,
-            (address, uint256)
-        );
+        (, uint256 oraclePrice) = abi.decode(oracleInfo.message.payload, (address, uint256));
         return oraclePrice;
     }
 }

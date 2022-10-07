@@ -15,11 +15,9 @@ interface IUnderwriter {
         Sig sig;
     }
 
-    function underwritePriceForCollateral(
-        uint256 tokenId,
-        address contractAddress,
-        bytes memory data
-    ) external returns (uint256);
+    function underwritePriceForCollateral(uint256 tokenId, address contractAddress, bytes memory data)
+        external
+        returns (uint256);
 
     error IncorrectOracleSigner();
     error InvalidOracleMessage();

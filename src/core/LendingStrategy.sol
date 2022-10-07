@@ -33,10 +33,7 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
 
     event IncreaseDebt(uint256 indexed vaultId, uint256 amount);
     event AddCollateral(
-        uint256 indexed vaultId,
-        uint256 vaultNonce,
-        ILendingStrategy.Collateral collateral,
-        uint256 price
+        uint256 indexed vaultId, uint256 vaultNonce, ILendingStrategy.Collateral collateral, uint256 price
     );
     event ReduceDebt(uint256 indexed vaultId, uint256 amount);
     event RemoveCollateral(
@@ -45,8 +42,23 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
 
     event ChangeCollateralAllowed(ILendingStrategy.SetAllowedCollateralArg arg);
 
-    constructor(string memory name, string memory symbol, uint256 targetAPR, uint256 maxLTV, uint256 indexMarkRatioMax, uint256 indexMarkRatioMin, ERC20 underlying)
-        LinearPerpetual(underlying, new DebtToken(name, symbol, underlying.symbol()), targetAPR, maxLTV, indexMarkRatioMax, indexMarkRatioMin)
+    constructor(
+        string memory name,
+        string memory symbol,
+        uint256 targetAPR,
+        uint256 maxLTV,
+        uint256 indexMarkRatioMax,
+        uint256 indexMarkRatioMin,
+        ERC20 underlying
+    )
+        LinearPerpetual(
+            underlying,
+            new DebtToken(name, symbol, underlying.symbol()),
+            targetAPR,
+            maxLTV,
+            indexMarkRatioMax,
+            indexMarkRatioMin
+        )
     {
         IUniswapV3Factory factory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
 
@@ -319,7 +331,8 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
             revert ILendingStrategy.InvalidCollateral();
         }
 
-        uint256 oraclePrice = underwriter.underwritePriceForCollateral(collateral.id, address(collateral.addr), abi.encode(oracleInfo));
+        uint256 oraclePrice =
+            underwriter.underwritePriceForCollateral(collateral.id, address(collateral.addr), abi.encode(oracleInfo));
 
         if (oraclePrice == 0) {
             revert();

@@ -47,10 +47,7 @@ contract AddCollateralTest is BaseLendingStrategyTest {
             strategy.addCollateral.selector, vaultId, ILendingStrategy.Collateral(nft, collateralId), oracleInfo
         );
         data[1] = abi.encodeWithSelector(
-            strategy.addCollateral.selector,
-            vaultId,
-            ILendingStrategy.Collateral(nft, collateralId + 1),
-            oracleInfo
+            strategy.addCollateral.selector, vaultId, ILendingStrategy.Collateral(nft, collateralId + 1), oracleInfo
         );
         strategy.multicall(data);
     }

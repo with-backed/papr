@@ -29,8 +29,8 @@ contract LinearPerpetual {
     // for oracle
     IUniswapV3Pool public pool;
     // TODO having these in storage is expensive vs. constants
-    // + users might want some guarentees. We should probably lock the max/min or 
-    // lock the period. Really only need to pull one lever? 
+    // + users might want some guarentees. We should probably lock the max/min or
+    // lock the period. Really only need to pull one lever?
     uint256 indexMarkRatioMax;
     uint256 indexMarkRatioMin;
     // single slot, write together
@@ -38,7 +38,14 @@ contract LinearPerpetual {
     uint72 public lastUpdated;
     int56 lastCumulativeTick;
 
-    constructor(ERC20 _underlying, ERC20 _perpetual, uint256 _targetAPR, uint256 _maxLTV, uint256 _indexMarkRatioMax, uint256 _indexMarkRatioMin) {
+    constructor(
+        ERC20 _underlying,
+        ERC20 _perpetual,
+        uint256 _targetAPR,
+        uint256 _maxLTV,
+        uint256 _indexMarkRatioMax,
+        uint256 _indexMarkRatioMin
+    ) {
         underlying = _underlying;
         perpetual = _perpetual;
 

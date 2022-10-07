@@ -23,16 +23,12 @@ contract TestERC721 is ERC721("Fake Bored Apes", "fAPE") {
         _mint(to, ++_nonce);
     }
 
-    function tokenURI(uint256 id)
-        public
-        view
-        override
-        returns (string memory)
-    {}
+    function tokenURI(uint256 id) public view override returns (string memory) {}
 }
 
 contract Mfers is ERC721("mfer", "MFER") {
     using Strings for uint256;
+
     uint256 _nonce;
 
     function mint(address to) external {
@@ -40,16 +36,13 @@ contract Mfers is ERC721("mfer", "MFER") {
     }
 
     function tokenURI(uint256 id) public view override returns (string memory) {
-        return
-            string.concat(
-                "ipfs://QmWiQE65tmpYzcokCheQmng2DCM33DEhjXcPB6PanwpAZo/",
-                id.toString()
-            );
+        return string.concat("ipfs://QmWiQE65tmpYzcokCheQmng2DCM33DEhjXcPB6PanwpAZo/", id.toString());
     }
 }
 
 contract TubbyCats is ERC721("Tubby Cats", "TUBBY") {
     using Strings for uint256;
+
     uint256 _nonce;
 
     function mint(address to) external {
@@ -57,16 +50,13 @@ contract TubbyCats is ERC721("Tubby Cats", "TUBBY") {
     }
 
     function tokenURI(uint256 id) public view override returns (string memory) {
-        return
-            string.concat(
-                "ipfs://QmeN7ZdrTGpbGoo8URqzvyiDtcgJxwoxULbQowaTGhTeZc/",
-                (5489 + id).toString()
-            );
+        return string.concat("ipfs://QmeN7ZdrTGpbGoo8URqzvyiDtcgJxwoxULbQowaTGhTeZc/", (5489 + id).toString());
     }
 }
 
 contract AllStarz is ERC721("Allstarz", "ALLSTAR") {
     using Strings for uint256;
+
     uint256 _nonce;
 
     function mint(address to) external {
@@ -74,16 +64,13 @@ contract AllStarz is ERC721("Allstarz", "ALLSTAR") {
     }
 
     function tokenURI(uint256 id) public view override returns (string memory) {
-        return
-            string.concat(
-                "ipfs://bafybeifsek6gt7c5ua7kkf6thxbpmj2adlsptsiwbfiohzdkjyxxcv2aje/",
-                id.toString()
-            );
+        return string.concat("ipfs://bafybeifsek6gt7c5ua7kkf6thxbpmj2adlsptsiwbfiohzdkjyxxcv2aje/", id.toString());
     }
 }
 
 contract CoolCats is ERC721("Cool Cats", "COOL") {
     using Strings for uint256;
+
     uint256 _nonce;
 
     function mint(address to) external {
@@ -97,6 +84,7 @@ contract CoolCats is ERC721("Cool Cats", "COOL") {
 
 contract Phunks is ERC721("CryptoPhunksV2", "PHUNK") {
     using Strings for uint256;
+
     uint256 _nonce;
 
     function mint(address to) external {
@@ -104,11 +92,9 @@ contract Phunks is ERC721("CryptoPhunksV2", "PHUNK") {
     }
 
     function tokenURI(uint256 id) public view override returns (string memory) {
-        return
-            string.concat(
-                "https://gateway.pinata.cloud/ipfs/QmcfS3bYBErM2zo3dSRLbFzr2bvitAVJCMh5vmDf3N3B9X",
-                id.toString()
-            );
+        return string.concat(
+            "https://gateway.pinata.cloud/ipfs/QmcfS3bYBErM2zo3dSRLbFzr2bvitAVJCMh5vmDf3N3B9X", id.toString()
+        );
     }
 }
 
@@ -122,7 +108,8 @@ contract ContractScript is Script {
 
         address underlying = 0x3089B47853df1b82877bEef6D904a0ce98a12553;
 
-        LendingStrategy strategy = new LendingStrategy("PUNKs Loans", "PL", 0.1e18, 0.5e18, 2e18, 0.8e18, ERC20(underlying));
+        LendingStrategy strategy =
+            new LendingStrategy("PUNKs Loans", "PL", 0.1e18, 0.5e18, 2e18, 0.8e18, ERC20(underlying));
 
         // uint256 tokenId = 17;
 
