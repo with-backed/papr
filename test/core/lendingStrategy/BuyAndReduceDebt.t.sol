@@ -12,7 +12,7 @@ contract BuyAndReduceDebt is BaseLendingStrategyTest {
         vm.startPrank(borrower);
         vaultId = strategy.vaultIdentifier(vaultNonce, borrower);
         nft.approve(address(strategy), collateralId);
-        strategy.addCollateral(vaultNonce, ILendingStrategy.Collateral(nft, collateralId), oracleInfo, sig);
+        strategy.addCollateral(vaultNonce, ILendingStrategy.Collateral(nft, collateralId), oracleInfo);
         uint256 underlyingOut =
             strategy.mintAndSellDebt(vaultNonce, debt, 1e16, _maxSqrtPriceLimit({sellingPAPR: true}), borrower);
         (uint256 vaultDebt,) = strategy.vaultInfo(vaultId);
@@ -30,7 +30,7 @@ contract BuyAndReduceDebt is BaseLendingStrategyTest {
         vm.startPrank(borrower);
         vaultId = strategy.vaultIdentifier(vaultNonce, borrower);
         nft.approve(address(strategy), collateralId);
-        strategy.addCollateral(vaultNonce, ILendingStrategy.Collateral(nft, collateralId), oracleInfo, sig);
+        strategy.addCollateral(vaultNonce, ILendingStrategy.Collateral(nft, collateralId), oracleInfo);
         uint256 underlyingOut =
             strategy.mintAndSellDebt(vaultNonce, debt, 1e16, _maxSqrtPriceLimit({sellingPAPR: true}), borrower);
         underlying.approve(address(strategy), underlyingOut);

@@ -12,8 +12,8 @@ contract LinearPerpetualTest is Test {
     LinearPerpetual lp;
 
     ERC20 underlying;
-    ERC20 perpetual; 
-    uint256 targetAPR; 
+    ERC20 perpetual;
+    uint256 targetAPR;
     uint256 maxLTV;
     uint256 indexMarkRatioMax;
     uint256 indexMarkRatioMin;
@@ -26,5 +26,4 @@ contract LinearPerpetualTest is Test {
         vm.warp(block.timestamp + 1);
         /// TODO need to mock a uniswap pool/oracle
     }
-
 }
