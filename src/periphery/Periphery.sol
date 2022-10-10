@@ -6,13 +6,7 @@ import {LendingStrategy} from "src/core/LendingStrategy.sol";
 import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
 
 contract Periphery is IPostCollateralCallback {
-    function postCollateralCallback(
-        ILendingStrategy.StrategyDefinition calldata strategyDefinition,
-        ILendingStrategy.Collateral calldata collateral,
-        bytes calldata data
-    ) external {
-        // TODO use strategyDefinition to check that this is a legit strategy
-        // see uniswap periphery PoolAddress
+    function postCollateralCallback(ILendingStrategy.Collateral calldata collateral, bytes calldata data) external {
         address caller = abi.decode(data, (address));
         collateral.addr.transferFrom(caller, msg.sender, collateral.id);
     }

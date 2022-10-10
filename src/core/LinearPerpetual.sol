@@ -23,9 +23,7 @@ contract LinearPerpetual {
     ERC20 public immutable underlying;
     ERC20 public immutable perpetual;
     uint256 public maxLTV;
-    uint256 public targetAPR;
     uint256 public PERIOD = 4 weeks;
-    uint256 public targetGrowthPerPeriod;
     // for oracle
     IUniswapV3Pool public pool;
     // TODO having these in storage is expensive vs. constants
@@ -41,7 +39,6 @@ contract LinearPerpetual {
     constructor(
         ERC20 _underlying,
         ERC20 _perpetual,
-        uint256 _targetAPR,
         uint256 _maxLTV,
         uint256 _indexMarkRatioMax,
         uint256 _indexMarkRatioMin
@@ -49,9 +46,7 @@ contract LinearPerpetual {
         underlying = _underlying;
         perpetual = _perpetual;
 
-        targetAPR = _targetAPR;
         maxLTV = _maxLTV;
-        targetGrowthPerPeriod = targetAPR / (365 days / PERIOD);
 
         start = block.timestamp;
 
@@ -65,7 +60,7 @@ contract LinearPerpetual {
         }
         uint128 previousNormalization = normalization;
         int56 latestCumulativeTick = OracleLibrary.latestCumulativeTick(pool);
-        uint256 newNormalization = _newNorm(latestCumulativeTick);
+        uint256 newNormalization = _newNorm(latestCumulativeTick, previousNormalization);
 
         normalization = uint128(newNormalization);
         lastUpdated = uint72(block.timestamp);
@@ -75,13 +70,7 @@ contract LinearPerpetual {
     }
 
     function newNorm() public view returns (uint256) {
-        return _newNorm(OracleLibrary.latestCumulativeTick(pool));
-    }
-
-    // what each Debt Token is worth in underlying, according to target growth
-    function index() public view returns (uint256) {
-        return FixedPointMathLib.divWadDown(block.timestamp - start, PERIOD) * targetGrowthPerPeriod
-            / FixedPointMathLib.WAD + FixedPointMathLib.WAD;
+        return _newNorm(OracleLibrary.latestCumulativeTick(pool), normalization);
     }
 
     function markTwapSinceLastUpdate() public view returns (uint256) {
@@ -91,7 +80,7 @@ contract LinearPerpetual {
     /// aka norm growth if updated right now,
     /// e.g. a result of 12e17 = 1.2 = 20% growth since lastUpdate
     function multiplier() public view returns (int256) {
-        return _multiplier(OracleLibrary.latestCumulativeTick(pool));
+        return _multiplier(OracleLibrary.latestCumulativeTick(pool), normalization);
     }
 
     function _init() internal {
@@ -102,8 +91,8 @@ contract LinearPerpetual {
         emit UpdateNormalization(FixedPointMathLib.WAD);
     }
 
-    function _newNorm(int56 latestCumulativeTick) internal view returns (uint256) {
-        return FixedPointMathLib.mulWadDown(normalization, uint256(_multiplier(latestCumulativeTick)));
+    function _newNorm(int56 latestCumulativeTick, uint256 cachedNorm) internal view returns (uint256) {
+        return FixedPointMathLib.mulWadDown(normalization, uint256(_multiplier(latestCumulativeTick, cachedNorm)));
     }
 
     function _markTwapSinceLastUpdate(int56 latestCumulativeTick) internal view returns (uint256) {
@@ -119,17 +108,18 @@ contract LinearPerpetual {
         }
     }
 
-    function _multiplier(int56 latestCumulativeTick) internal view returns (int256) {
+    // computing funding rate for the past period
+    function _multiplier(int56 latestCumulativeTick, uint256 cachedNorm) internal view returns (int256) {
         uint256 m = _markTwapSinceLastUpdate(latestCumulativeTick);
         // TODO: do we need signed ints? when does powWAD return a negative?
         uint256 period = block.timestamp - lastUpdated;
         uint256 periodRatio = FixedPointMathLib.divWadDown(period, PERIOD);
-        uint256 targetGrowth = FixedPointMathLib.mulWadDown(targetGrowthPerPeriod, periodRatio) + FixedPointMathLib.WAD;
         uint256 indexMarkRatio;
         if (m == 0) {
-            indexMarkRatio = 14e17;
+            indexMarkRatio = indexMarkRatioMax;
         } else {
-            indexMarkRatio = FixedPointMathLib.divWadDown(index(), m);
+            // index always = 1, denormalize mark
+            indexMarkRatio = FixedPointMathLib.divWadDown(1, FixedPointMathLib.divWadDown(m, cachedNorm));
             // cap at 140%, floor at 80%
             if (indexMarkRatio > indexMarkRatioMax) {
                 indexMarkRatio = indexMarkRatioMax;
@@ -138,9 +128,6 @@ contract LinearPerpetual {
             }
         }
 
-        /// accelerate or deccelerate apprecation based in index/mark. If mark is too high, slow down. If mark is too low, speed up.
-        int256 deviationMultiplier = FixedPointMathLib.powWad(int256(indexMarkRatio), int256(periodRatio));
-
-        return deviationMultiplier * int256(targetGrowth) / int256(FixedPointMathLib.WAD);
+        return FixedPointMathLib.powWad(int256(indexMarkRatio), int256(periodRatio));
     }
 }
