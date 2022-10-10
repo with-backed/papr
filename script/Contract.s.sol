@@ -108,8 +108,7 @@ contract ContractScript is Script {
 
         address underlying = 0x3089B47853df1b82877bEef6D904a0ce98a12553;
 
-        LendingStrategy strategy =
-            new LendingStrategy("PUNKs Loans", "PL", 0.1e18, 0.5e18, 2e18, 0.8e18, ERC20(underlying));
+        LendingStrategy strategy = new LendingStrategy("PUNKs Loans", "PL", 0.1e18, 2e18, 0.8e18, ERC20(underlying));
 
         // uint256 tokenId = 17;
 

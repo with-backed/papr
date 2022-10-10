@@ -44,7 +44,6 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
     constructor(
         string memory name,
         string memory symbol,
-        uint256 targetAPR,
         uint256 maxLTV,
         uint256 indexMarkRatioMax,
         uint256 indexMarkRatioMin,
@@ -53,7 +52,6 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
         LinearPerpetual(
             underlying,
             new DebtToken(name, symbol, underlying.symbol()),
-            targetAPR,
             maxLTV,
             indexMarkRatioMax,
             indexMarkRatioMin
@@ -159,9 +157,7 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
         bytes calldata data
     ) public {
         _addCollateralToVault(msg.sender, collateral, oracleInfo);
-        IPostCollateralCallback(msg.sender).postCollateralCallback(
-            ILendingStrategy.StrategyDefinition(targetAPR, maxLTV, underlying), collateral, data
-        );
+        IPostCollateralCallback(msg.sender).postCollateralCallback(collateral, data);
         if (collateral.addr.ownerOf(collateral.id) != address(this)) {
             revert();
         }

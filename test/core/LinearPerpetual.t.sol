@@ -13,13 +13,12 @@ contract LinearPerpetualTest is Test {
 
     ERC20 underlying;
     ERC20 perpetual;
-    uint256 targetAPR;
     uint256 maxLTV;
     uint256 indexMarkRatioMax;
     uint256 indexMarkRatioMin;
 
     function setUp() public {
-        lp = new LinearPerpetual(underlying, perpetual, targetAPR, maxLTV, indexMarkRatioMax, indexMarkRatioMin);
+        lp = new LinearPerpetual(underlying, perpetual, maxLTV, indexMarkRatioMax, indexMarkRatioMin);
     }
 
     function updateNormalizationEmitsCorrectly() public {
