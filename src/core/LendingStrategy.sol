@@ -28,17 +28,15 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
     IUnderwriter underwriter;
 
     // id => vault info
-    mapping(uint256 => ILendingStrategy.VaultInfo) public vaultInfo;
+    mapping(address => ILendingStrategy.VaultInfo) private _vaultInfo;
     mapping(bytes32 => uint256) public collateralFrozenOraclePrice;
     mapping(address => bool) public isAllowed;
 
-    event IncreaseDebt(uint256 indexed vaultId, uint256 amount);
-    event AddCollateral(
-        uint256 indexed vaultId, uint256 vaultNonce, ILendingStrategy.Collateral collateral, uint256 price
-    );
-    event ReduceDebt(uint256 indexed vaultId, uint256 amount);
+    event IncreaseDebt(address indexed account, uint256 amount);
+    event AddCollateral(address indexed account, ILendingStrategy.Collateral collateral, uint256 price);
+    event ReduceDebt(address indexed account, uint256 amount);
     event RemoveCollateral(
-        uint256 indexed vaultId, ILendingStrategy.Collateral collateral, uint256 vaultCollateralValue
+        address indexed account, ILendingStrategy.Collateral collateral, uint256 vaultCollateralValue
     );
 
     event ChangeCollateralAllowed(ILendingStrategy.SetAllowedCollateralArg arg);
@@ -82,9 +80,7 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
 
         ILendingStrategy.Collateral memory collateral = ILendingStrategy.Collateral(ERC721(msg.sender), _id);
 
-        uint256 vaultId = vaultIdentifier(request.vaultNonce, from);
-
-        _addCollateralToVault(vaultId, request.vaultNonce, collateral, request.oracleInfo);
+        _addCollateralToVault(from, collateral, request.oracleInfo);
 
         if (request.minOut > 0) {
             _swap(
@@ -93,44 +89,36 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
                 request.debt,
                 request.minOut,
                 request.sqrtPriceLimitX96,
-                abi.encode(vaultId, address(this))
+                abi.encode(from, address(this))
             );
         } else if (request.debt > 0) {
-            _increaseDebt(vaultId, request.mintDebtOrProceedsTo, uint256(request.debt));
+            _increaseDebt(from, request.mintDebtOrProceedsTo, uint256(request.debt));
         }
 
         return ERC721TokenReceiver.onERC721Received.selector;
     }
 
     /// TODO consider passing token0IsUnderlying to save an SLOAD
-    function mintAndSellDebt(
-        uint256 vaultNonce,
-        uint256 debt,
-        uint256 minOut,
-        uint160 sqrtPriceLimitX96,
-        address proceedsTo
-    ) public returns (uint256) {
+    function mintAndSellDebt(uint256 debt, uint256 minOut, uint160 sqrtPriceLimitX96, address proceedsTo)
+        public
+        returns (uint256)
+    {
         return _swap(
-            proceedsTo,
-            !token0IsUnderlying,
-            debt,
-            minOut,
-            sqrtPriceLimitX96,
-            abi.encode(vaultIdentifier(vaultNonce, msg.sender), address(this))
+            proceedsTo, !token0IsUnderlying, debt, minOut, sqrtPriceLimitX96, abi.encode(msg.sender, address(this))
         );
     }
 
     function buyAndReduceDebt(
-        uint256 vaultId,
+        address account,
         uint256 underlyingAmount,
         uint256 minOut,
         uint160 sqrtPriceLimitX96,
         address proceedsTo
     ) public returns (uint256 out) {
         out = _swap(
-            proceedsTo, token0IsUnderlying, underlyingAmount, minOut, sqrtPriceLimitX96, abi.encode(vaultId, msg.sender)
+            proceedsTo, token0IsUnderlying, underlyingAmount, minOut, sqrtPriceLimitX96, abi.encode(account, msg.sender)
         );
-        reduceDebt(vaultId, uint128(out));
+        reduceDebt(account, uint128(out));
     }
 
     function uniswapV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata _data) external {
@@ -140,25 +128,23 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
             revert("wrong caller");
         }
 
-        (uint256 vaultId, address payer) = abi.decode(_data, (uint256, address));
+        (address account, address payer) = abi.decode(_data, (address, address));
 
         //determine the amount that needs to be repaid as part of the flashswap
         uint256 amountToPay = amount0Delta > 0 ? uint256(amount0Delta) : uint256(amount1Delta);
 
         if (payer == address(this)) {
-            _increaseDebt(vaultId, msg.sender, amountToPay);
+            _increaseDebt(account, msg.sender, amountToPay);
         } else {
             underlying.transferFrom(payer, msg.sender, amountToPay);
         }
     }
 
     function addCollateral(
-        uint256 vaultNonce,
         ILendingStrategy.Collateral calldata collateral,
         ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
     ) public {
-        uint256 vaultId = vaultIdentifier(vaultNonce, msg.sender);
-        _addCollateralToVault(vaultId, vaultNonce, collateral, oracleInfo);
+        _addCollateralToVault(msg.sender, collateral, oracleInfo);
         collateral.addr.transferFrom(msg.sender, address(this), collateral.id);
     }
 
@@ -168,14 +154,11 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
     /// we think this is acceptable and it is useful so that a periphery contract
     /// can modify the tx.origin's vault
     function addCollateralWithCallback(
-        uint256 vaultNonce,
-        address vaultOwner,
         ILendingStrategy.Collateral calldata collateral,
         ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo,
         bytes calldata data
     ) public {
-        uint256 vaultId = vaultIdentifier(vaultNonce, vaultOwner);
-        _addCollateralToVault(vaultId, vaultNonce, collateral, oracleInfo);
+        _addCollateralToVault(msg.sender, collateral, oracleInfo);
         IPostCollateralCallback(msg.sender).postCollateralCallback(
             ILendingStrategy.StrategyDefinition(targetAPR, maxLTV, underlying), collateral, data
         );
@@ -184,11 +167,8 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
         }
     }
 
-    function removeCollateral(address sendTo, uint256 vaultNonce, ILendingStrategy.Collateral calldata collateral)
-        external
-    {
-        uint256 vaultId = vaultIdentifier(vaultNonce, msg.sender);
-        bytes32 h = collateralHash(collateral, vaultId);
+    function removeCollateral(address sendTo, ILendingStrategy.Collateral calldata collateral) external {
+        bytes32 h = collateralHash(collateral, msg.sender);
         uint256 price = collateralFrozenOraclePrice[h];
 
         if (price == 0) {
@@ -196,37 +176,37 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
         }
 
         delete collateralFrozenOraclePrice[h];
-        uint256 newVaultCollateralValue = vaultInfo[vaultId].collateralValue - price;
-        vaultInfo[vaultId].collateralValue = uint128(newVaultCollateralValue);
+        uint256 newVaultCollateralValue = _vaultInfo[msg.sender].collateralValue - price;
+        _vaultInfo[msg.sender].collateralValue = uint128(newVaultCollateralValue);
 
         // allows for onReceive hook to sell and repay debt before the
         // debt check below
         collateral.addr.safeTransferFrom(address(this), sendTo, collateral.id);
 
-        uint256 debt = vaultInfo[vaultId].debt;
+        uint256 debt = _vaultInfo[msg.sender].debt;
         uint256 max = maxDebt(newVaultCollateralValue);
 
         if (debt > max) {
             revert ILendingStrategy.ExceedsMaxDebt(debt, max);
         }
 
-        emit RemoveCollateral(vaultId, collateral, newVaultCollateralValue);
+        emit RemoveCollateral(msg.sender, collateral, newVaultCollateralValue);
     }
 
-    function increaseDebt(uint256 vaultNonce, address mintTo, uint256 amount) public {
-        _increaseDebt(vaultIdentifier(vaultNonce, msg.sender), mintTo, amount);
+    function increaseDebt(address mintTo, uint256 amount) public {
+        _increaseDebt(msg.sender, mintTo, amount);
     }
 
-    function reduceDebt(uint256 vaultId, uint128 amount) public {
-        vaultInfo[vaultId].debt -= amount;
+    function reduceDebt(address account, uint128 amount) public {
+        _vaultInfo[account].debt -= amount;
         DebtToken(address(perpetual)).burn(msg.sender, amount);
-        emit ReduceDebt(vaultId, amount);
+        emit ReduceDebt(account, amount);
     }
 
-    function liquidate(uint256 vaultId) public {
+    function liquidate(address account) public {
         updateNormalization();
 
-        if (normalization < liquidationPrice(vaultId) * FixedPointMathLib.WAD) {
+        if (normalization < liquidationPrice(account) * FixedPointMathLib.WAD) {
             revert("not liquidatable");
         }
 
@@ -239,9 +219,9 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
     // normalization value at liquidation
     // i.e. the debt token:underlying internal contract exchange rate (normalization)
     // at which this vault will be liquidated
-    function liquidationPrice(uint256 vaultId) public view returns (uint256) {
-        uint256 maxLoanUnderlying = FixedPointMathLib.mulWadDown(vaultInfo[vaultId].collateralValue, maxLTV);
-        return maxLoanUnderlying / vaultInfo[vaultId].debt;
+    function liquidationPrice(address account) public view returns (uint256) {
+        uint256 maxLoanUnderlying = FixedPointMathLib.mulWadDown(_vaultInfo[account].collateralValue, maxLTV);
+        return maxLoanUnderlying / _vaultInfo[account].debt;
     }
 
     function maxDebt(uint256 collateralValue) public view returns (uint256) {
@@ -249,16 +229,20 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
         return maxLoanUnderlying / normalization;
     }
 
-    function collateralHash(ILendingStrategy.Collateral memory collateral, uint256 vaultId)
+    function collateralHash(ILendingStrategy.Collateral memory collateral, address account)
         public
         pure
         returns (bytes32)
     {
-        return keccak256(abi.encode(collateral, vaultId));
+        return keccak256(abi.encode(collateral, account));
     }
 
     function vaultIdentifier(uint256 nonce, address account) public view returns (uint256) {
         return uint256(keccak256(abi.encode(nonce, account)));
+    }
+
+    function vaultInfo(address account) public view returns (ILendingStrategy.VaultInfo memory) {
+        return _vaultInfo[account];
     }
 
     function setAllowedCollateral(ILendingStrategy.SetAllowedCollateralArg[] calldata args) public onlyOwner {
@@ -300,29 +284,28 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
         }
     }
 
-    function _increaseDebt(uint256 vaultId, address mintTo, uint256 amount) internal {
+    function _increaseDebt(address account, address mintTo, uint256 amount) internal {
         updateNormalization();
 
         // TODO, safe to uint128 ?
-        vaultInfo[vaultId].debt += uint128(amount);
+        _vaultInfo[account].debt += uint128(amount);
         DebtToken(address(perpetual)).mint(mintTo, amount);
 
-        uint256 debt = vaultInfo[vaultId].debt;
-        uint256 max = maxDebt(vaultInfo[vaultId].collateralValue);
+        uint256 debt = _vaultInfo[account].debt;
+        uint256 max = maxDebt(_vaultInfo[account].collateralValue);
         if (debt > max) {
             revert ILendingStrategy.ExceedsMaxDebt(debt, max);
         }
 
-        emit IncreaseDebt(vaultId, amount);
+        emit IncreaseDebt(account, amount);
     }
 
     function _addCollateralToVault(
-        uint256 vaultId,
-        uint256 vaultNonce,
+        address account,
         ILendingStrategy.Collateral memory collateral,
         ReservoirOracleUnderwriter.OracleInfo memory oracleInfo
     ) internal {
-        bytes32 h = collateralHash(collateral, vaultId);
+        bytes32 h = collateralHash(collateral, account);
         if (collateralFrozenOraclePrice[h] != 0) {
             // collateral is already here
             revert();
@@ -340,8 +323,8 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
         }
 
         collateralFrozenOraclePrice[h] = oraclePrice;
-        vaultInfo[vaultId].collateralValue += uint128(oraclePrice);
+        _vaultInfo[account].collateralValue += uint128(oraclePrice);
 
-        emit AddCollateral(vaultId, vaultNonce, collateral, oraclePrice);
+        emit AddCollateral(account, collateral, oraclePrice);
     }
 }

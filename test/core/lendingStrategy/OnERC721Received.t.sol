@@ -5,30 +5,44 @@ import {BaseLendingStrategyTest} from "test/core/lendingStrategy/BaseLendingStra
 import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
 import {LendingStrategy} from "src/core/LendingStrategy.sol";
 
-contract AddCollateralTest is BaseLendingStrategyTest {
-    function testOpenVaultAddDebtAndSwap() public {
+contract OnERC721ReceivedTest is BaseLendingStrategyTest {
+    function testAddDebtAndSwap() public {
         vm.startPrank(borrower);
-        uint256 nonce = 1;
-        safeTransferReceivedArgs.vaultNonce = nonce;
         safeTransferReceivedArgs.minOut = 1;
-        safeTransferReceivedArgs.mintDebtOrProceedsTo = address(strategy.pool());
+        uint160 priceLimit = _maxSqrtPriceLimit(true);
+        safeTransferReceivedArgs.sqrtPriceLimitX96 = priceLimit;
+        uint256 expectedOut = quoter.quoteExactInputSingle({
+            tokenIn: address(strategy.perpetual()),
+            tokenOut: address(underlying),
+            fee: 10000,
+            amountIn: debt,
+            sqrtPriceLimitX96: priceLimit
+        });
         nft.safeTransferFrom(borrower, address(strategy), collateralId, abi.encode(safeTransferReceivedArgs));
+        ILendingStrategy.VaultInfo memory vaultInfo = strategy.vaultInfo(borrower);
+        assertEq(vaultInfo.collateralValue, oraclePrice);
+        assertEq(vaultInfo.debt, debt);
+        assertEq(expectedOut, underlying.balanceOf(borrower));
     }
 
-    function testOpenVaultAddDebtAndSwapLater() public {
+    /// mainly a gas bench mark test
+    function testAddDebtAndWhenNormStale() public {
         vm.warp(block.timestamp + 1 weeks);
         vm.startPrank(borrower);
-        uint256 nonce = 1;
-        safeTransferReceivedArgs.vaultNonce = nonce;
         safeTransferReceivedArgs.minOut = 1;
-        safeTransferReceivedArgs.mintDebtOrProceedsTo = address(strategy.pool());
+        uint160 priceLimit = _maxSqrtPriceLimit(true);
+        safeTransferReceivedArgs.sqrtPriceLimitX96 = priceLimit;
+        uint256 expectedOut = quoter.quoteExactInputSingle({
+            tokenIn: address(strategy.perpetual()),
+            tokenOut: address(underlying),
+            fee: 10000,
+            amountIn: debt,
+            sqrtPriceLimitX96: priceLimit
+        });
         nft.safeTransferFrom(borrower, address(strategy), collateralId, abi.encode(safeTransferReceivedArgs));
-    }
-
-    function testAddDebtToExistingVault() public {
-        vm.startPrank(borrower);
-        uint256 nonce = 1;
-        safeTransferReceivedArgs.vaultNonce = nonce;
-        nft.safeTransferFrom(borrower, address(strategy), collateralId, abi.encode(safeTransferReceivedArgs));
+        ILendingStrategy.VaultInfo memory vaultInfo = strategy.vaultInfo(borrower);
+        assertEq(vaultInfo.collateralValue, oraclePrice);
+        assertEq(vaultInfo.debt, debt);
+        assertEq(expectedOut, underlying.balanceOf(borrower));
     }
 }

@@ -16,8 +16,8 @@ contract OracleTest is Test {
     OracleSigUtils internal sigUtils = new OracleSigUtils();
     address oracleAddress = vm.addr(oraclePrivateKey);
 
-    function getOracleInfoForCollateral(address collateral, address underlying)
-        public
+    function _getOracleInfoForCollateral(address collateral, address underlying)
+        internal
         returns (ReservoirOracleUnderwriter.OracleInfo memory oracleInfo)
     {
         ReservoirOracle.Message memory message = ReservoirOracle.Message({

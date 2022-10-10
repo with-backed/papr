@@ -31,12 +31,10 @@ contract BaseLendingStrategyTest is MainnetForking, UniswapForking, OracleTest {
     ILendingStrategy.OnERC721ReceivedArgs safeTransferReceivedArgs;
 
     // global args for safe transfer receive data
-    uint256 vaultId;
-    uint256 vaultNonce;
     uint256 minOut;
     uint256 debt = 1e18;
     uint160 sqrtPriceLimitX96;
-    ReservoirOracleUnderwriter.OracleInfo oracleInfo = getOracleInfoForCollateral(address(nft), address(underlying));
+    ReservoirOracleUnderwriter.OracleInfo oracleInfo = _getOracleInfoForCollateral(address(nft), address(underlying));
 
     //
     function setUp() public {
@@ -101,8 +99,6 @@ contract BaseLendingStrategyTest is MainnetForking, UniswapForking, OracleTest {
 
     function _populateOnReceivedArgs() internal {
         safeTransferReceivedArgs = ILendingStrategy.OnERC721ReceivedArgs({
-            vaultNonce: vaultNonce,
-            mintVaultTo: borrower,
             mintDebtOrProceedsTo: borrower,
             minOut: minOut,
             debt: debt,
