@@ -211,6 +211,18 @@ contract LendingStrategy is
     function purchaseLiquidationAuctionNFT(Auction calldata auction, uint256 maxPrice, address sendTo) public {
         uint256 breakEven = auction.startPrice / 3;
         uint256 excess = maxPrice > breakEven ? maxPrice - breakEven : 0;
+        if (_vaultInfo[auction.nftOwner].collateralValue == 0) {
+            // clear debt, even if there is shortfall
+            // TODO consider whethe check-effect pattern here is right
+            // caller can re-enter after receiving the NFT
+            _vaultInfo[auction.nftOwner].debt = 0;    
+        }
+
+        if (excess != 0) {
+            // take liquidation penalty
+            // give to users 
+        }
+        _purchaseNFT(auction, maxPrice, sendTo);
     }
 
     error TooSoon();
