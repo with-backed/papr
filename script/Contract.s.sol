@@ -9,7 +9,7 @@ import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
 import {ReservoirOracleUnderwriter} from "src/core/ReservoirOracleUnderwriter.sol";
 import {DebtToken} from "src/core/DebtToken.sol";
 import {LendingStrategy} from "src/core/LendingStrategy.sol";
-import "openzeppelin-contracts/contracts/utils/Strings.sol";
+import "openzeppelin-contracts/utils/Strings.sol";
 
 contract TestERC20 is ERC20("USDC", "USDC", 18) {
     function mint(address to, uint256 amount) external {

@@ -210,23 +210,24 @@ contract LendingStrategy is
 
     function purchaseLiquidationAuctionNFT(Auction calldata auction, uint256 maxPrice, address sendTo) public {
         uint256 breakEven = auction.startPrice / 3;
-        uint256 excess = maxPrice > breakEven ? maxPrice - breakEven : 0;
+        uint256 price = _purchaseNFT(auction, maxPrice, sendTo);
+        uint256 excess = price > breakEven ? price - breakEven : 0;
         if (_vaultInfo[auction.nftOwner].collateralValue == 0) {
-            // clear debt, even if there is shortfall
-            // TODO consider whethe check-effect pattern here is right
-            // caller can re-enter after receiving the NFT
-            _vaultInfo[auction.nftOwner].debt = 0;    
+            /// TODO not check-effect, state changes after external calls in _purchaseNFT
+            _vaultInfo[auction.nftOwner].debt = 0;
         }
 
         if (excess != 0) {
-            // take liquidation penalty
-            // give to users 
+            /// TODO method to transfer out these fees
+            uint256 fee = excess * 10 / 100;
+            perpetual.transfer(auction.nftOwner, price - fee);
         }
-        _purchaseNFT(auction, maxPrice, sendTo);
     }
 
     error TooSoon();
     error NotLiquidatable();
+    error InvalidCollateralAccountPair();
+
     uint256 perPeriodAuctionDecayWAD = 0.9e18;
     uint256 auctionDecayPeriod = 1 days;
 
@@ -238,7 +239,7 @@ contract LendingStrategy is
         if (block.timestamp - info.latestAuctionStartTime < liquidationAuctionMinSpacing) {
             revert TooSoon();
         }
-        
+
         info.latestAuctionStartTime = uint40(block.timestamp);
 
         if (norm < liquidationPrice(account) * FixedPointMathLib.WAD) {
@@ -249,22 +250,24 @@ contract LendingStrategy is
         bytes32 h = collateralHash(collateral, account);
         uint256 price = collateralFrozenOraclePrice[h];
         if (price == 0) {
-            revert('invalid');
+            revert InvalidCollateralAccountPair();
         }
 
         delete collateralFrozenOraclePrice[h];
         info.collateralValue -= uint96(price);
 
-        _startAuction(Auction({
-            nftOwner: account, 
-            auctionAssetID: collateral.id,
-            auctionAssetContract: collateral.addr,
-            perPeriodDecayPercentWad: perPeriodAuctionDecayWAD,
-            secondsInPeriod: auctionDecayPeriod,
-            // start price is frozen price * 3, converted to perpetual value at the current contract price
-            startPrice: (price * 3) / norm,
-            paymentAsset: perpetual
-        }));
+        _startAuction(
+            Auction({
+                nftOwner: account,
+                auctionAssetID: collateral.id,
+                auctionAssetContract: collateral.addr,
+                perPeriodDecayPercentWad: perPeriodAuctionDecayWAD,
+                secondsInPeriod: auctionDecayPeriod,
+                // start price is frozen price * 3, converted to perpetual value at the current contract price
+                startPrice: (price * 3) / norm,
+                paymentAsset: perpetual
+            })
+        );
     }
 
     // normalization value at liquidation
