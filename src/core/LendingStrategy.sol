@@ -8,6 +8,7 @@ import {IUniswapV3Factory} from "v3-core/contracts/interfaces/IUniswapV3Factory.
 import {IUniswapV3Pool} from "v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {SafeCast} from "v3-core/contracts/libraries/SafeCast.sol";
 import {TickMath} from "fullrange/libraries/TickMath.sol";
+import {NFTEDAStarterIncentive} from "NFTEDA/extensions/NFTEDAStarterIncentive.sol";
 
 import {DebtToken} from "./DebtToken.sol";
 import {LinearPerpetual} from "./LinearPerpetual.sol";
@@ -24,7 +25,8 @@ contract LendingStrategy is
     ERC721TokenReceiver,
     Multicall,
     BoringOwnable,
-    ReservoirOracleUnderwriter
+    ReservoirOracleUnderwriter,
+    NFTEDAStarterIncentive
 {
     using SafeCast for uint256;
 
@@ -54,6 +56,7 @@ contract LendingStrategy is
         ERC20 underlying,
         address oracleSigner
     )
+        NFTEDAStarterIncentive(1e18)
         LinearPerpetual(
             underlying,
             new DebtToken(name, symbol, underlying.symbol()),
@@ -205,18 +208,15 @@ contract LendingStrategy is
         emit ReduceDebt(account, amount);
     }
 
-    // function purchaseNFT
-    // does the normal
-    // burns as much papr as possible 
-    // if excess pAPR, takes a fee to ... 
-    // otherwise sends all to borrower? 
-
-    function purchaseLiquidationAuctionNFT() public {
-     // we need to clear debt. We need to know whose NFT is being auctioned    
+    function purchaseLiquidationAuctionNFT(Auction calldata auction, uint256 maxPrice, address sendTo) public {
+        uint256 breakEven = auction.startPrice / 3;
+        uint256 excess = maxPrice > breakEven ? maxPrice - breakEven : 0;
     }
 
     error TooSoon();
     error NotLiquidatable();
+    uint256 perPeriodAuctionDecayWAD = 0.9e18;
+    uint256 auctionDecayPeriod = 1 days;
 
     function startLiquidationAuction(address account, ILendingStrategy.Collateral calldata collateral) public {
         uint256 norm = updateNormalization();
@@ -243,7 +243,16 @@ contract LendingStrategy is
         delete collateralFrozenOraclePrice[h];
         info.collateralValue -= uint96(price);
 
-        // start auction
+        _startAuction(Auction({
+            nftOwner: account, 
+            auctionAssetID: collateral.id,
+            auctionAssetContract: collateral.addr,
+            perPeriodDecayPercentWad: perPeriodAuctionDecayWAD,
+            secondsInPeriod: auctionDecayPeriod,
+            // start price is frozen price * 3, converted to perpetual value at the current contract price
+            startPrice: (price * 3) / norm,
+            paymentAsset: perpetual
+        }));
     }
 
     // normalization value at liquidation
