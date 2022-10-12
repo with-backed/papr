@@ -39,6 +39,14 @@ contract AddCollateralTest is BaseLendingStrategyTest {
         strategy.addCollateral(ILendingStrategy.Collateral(nft, collateralId), wrongInfo);
     }
 
+    function testAddCollateralFailsIfOracleMessageHasWrongCurrency() public {
+        vm.startPrank(borrower);
+        nft.approve(address(strategy), collateralId);
+        ReservoirOracleUnderwriter.OracleInfo memory wrongInfo = _getOracleInfoForCollateral(address(nft), address(0));
+        vm.expectRevert(ReservoirOracleUnderwriter.WrongCurrencyFromOracleMessage.selector);
+        strategy.addCollateral(ILendingStrategy.Collateral(nft, collateralId), wrongInfo);
+    }
+
     function testAddCollateralMulticall() public {
         nft.mint(borrower, collateralId + 1);
         vm.startPrank(borrower);
