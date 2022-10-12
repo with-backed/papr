@@ -20,16 +20,18 @@ contract ReservoirOracleUnderwriter is IUnderwriter {
 
     error IncorrectOracleSigner();
     error WrongCollateralFromOracleMessage();
+    error WrongCurrencyFromOracleMessage();
 
     constructor(address _oracleSigner) {
         oracleSigner = _oracleSigner;
     }
 
-    function underwritePriceForCollateral(uint256 tokenId, address contractAddress, bytes memory data)
-        external
-        override
-        returns (uint256)
-    {
+    function underwritePriceForCollateral(
+        uint256 tokenId,
+        address contractAddress,
+        address currencyForPriceAddress,
+        bytes memory data
+    ) external override returns (uint256) {
         OracleInfo memory oracleInfo = abi.decode(data, (OracleInfo));
         address signerAddress = ecrecover(
             keccak256(
@@ -40,7 +42,7 @@ contract ReservoirOracleUnderwriter is IUnderwriter {
                         abi.encode(
                             keccak256("Message(bytes32 id,bytes payload,uint256 timestamp)"),
                             oracleInfo.message.id,
-                            oracleInfo.message.payload,
+                            keccak256(oracleInfo.message.payload),
                             oracleInfo.message.timestamp
                         )
                     )
@@ -69,7 +71,12 @@ contract ReservoirOracleUnderwriter is IUnderwriter {
             revert WrongCollateralFromOracleMessage();
         }
 
-        (, uint256 oraclePrice) = abi.decode(oracleInfo.message.payload, (address, uint256));
+        (address oracleCurrencyAddress, uint256 oraclePrice) =
+            abi.decode(oracleInfo.message.payload, (address, uint256));
+        if (oracleCurrencyAddress != currencyForPriceAddress) {
+            revert WrongCurrencyFromOracleMessage();
+        }
+
         return oraclePrice;
     }
 }

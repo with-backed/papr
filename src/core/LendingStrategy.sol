@@ -311,8 +311,9 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
             revert ILendingStrategy.InvalidCollateral();
         }
 
-        uint256 oraclePrice =
-            underwriter.underwritePriceForCollateral(collateral.id, address(collateral.addr), abi.encode(oracleInfo));
+        uint256 oraclePrice = underwriter.underwritePriceForCollateral(
+            collateral.id, address(collateral.addr), address(underlying), abi.encode(oracleInfo)
+        );
 
         if (oraclePrice == 0) {
             revert();

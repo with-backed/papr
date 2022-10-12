@@ -6,6 +6,8 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 import {ERC721} from "solmate/tokens/ERC721.sol";
 
 import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
+import {IUnderwriter} from "src/interfaces/IUnderwriter.sol";
+import {ReservoirOracleUnderwriter} from "src/core/ReservoirOracleUnderwriter.sol";
 import {DebtToken} from "src/core/DebtToken.sol";
 import {LendingStrategy} from "src/core/LendingStrategy.sol";
 import "openzeppelin-contracts/contracts/utils/Strings.sol";
@@ -108,7 +110,28 @@ contract ContractScript is Script {
 
         address underlying = 0x3089B47853df1b82877bEef6D904a0ce98a12553;
 
-        LendingStrategy strategy = new LendingStrategy("PUNKs Loans", "PL", 0.1e18, 2e18, 0.8e18, ERC20(underlying));
+        LendingStrategy strategy = new LendingStrategy(
+            "PUNKs Loans",
+            "PL",
+            0.1e18,
+            2e18,
+            0.8e18,
+            ERC20(underlying)
+        );
+        strategy.claimOwnership();
+
+        IUnderwriter underwriter = new ReservoirOracleUnderwriter(deployer);
+        strategy.setUnderwriter(underwriter);
+
+        ILendingStrategy.SetAllowedCollateralArg[] memory args = new ILendingStrategy.SetAllowedCollateralArg[](3);
+        args[0] =
+            ILendingStrategy.SetAllowedCollateralArg({addr: 0xb7D7fe7995D1E347916fAae8e16CFd6dD21a9bAE, allowed: true});
+        args[1] =
+            ILendingStrategy.SetAllowedCollateralArg({addr: 0x6EF2C9CB23F03014d18d7E4CeEAeC497dB00247C, allowed: true});
+        args[2] =
+            ILendingStrategy.SetAllowedCollateralArg({addr: 0x8232c5Fd480C2a74d2f25d3362f262fF3511CE49, allowed: true});
+
+        strategy.setAllowedCollateral(args);
 
         // uint256 tokenId = 17;
 

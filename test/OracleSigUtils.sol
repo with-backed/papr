@@ -9,7 +9,7 @@ contract OracleSigUtils {
     bytes32 public constant MESSAGE_TYPEHASH = keccak256("Message(bytes32 id,bytes payload,uint256 timestamp)");
 
     function getStructHash(ReservoirOracle.Message memory message) internal pure returns (bytes32) {
-        return keccak256(abi.encode(MESSAGE_TYPEHASH, message.id, message.payload, message.timestamp));
+        return keccak256(abi.encode(MESSAGE_TYPEHASH, message.id, keccak256(message.payload), message.timestamp));
     }
 
     function getTypedDataHash(ReservoirOracle.Message memory message) public view returns (bytes32) {
