@@ -29,7 +29,7 @@ contract LendingStrategy is
     using SafeCast for uint256;
 
     bool public immutable token0IsUnderlying;
-    uint256 _nonce;
+    uint256 liquidationAuctionMinSpacing = 2 days;
 
     // id => vault info
     mapping(address => ILendingStrategy.VaultInfo) private _vaultInfo;
@@ -122,7 +122,7 @@ contract LendingStrategy is
         out = _swap(
             proceedsTo, token0IsUnderlying, underlyingAmount, minOut, sqrtPriceLimitX96, abi.encode(account, msg.sender)
         );
-        reduceDebt(account, uint128(out));
+        reduceDebt(account, uint96(out));
     }
 
     function uniswapV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata _data) external {
@@ -179,7 +179,7 @@ contract LendingStrategy is
 
         delete collateralFrozenOraclePrice[h];
         uint256 newVaultCollateralValue = _vaultInfo[msg.sender].collateralValue - price;
-        _vaultInfo[msg.sender].collateralValue = uint128(newVaultCollateralValue);
+        _vaultInfo[msg.sender].collateralValue = uint96(newVaultCollateralValue);
 
         // allows for onReceive hook to sell and repay debt before the
         // debt check below
@@ -199,23 +199,51 @@ contract LendingStrategy is
         _increaseDebt(msg.sender, mintTo, amount);
     }
 
-    function reduceDebt(address account, uint128 amount) public {
+    function reduceDebt(address account, uint96 amount) public {
         _vaultInfo[account].debt -= amount;
         DebtToken(address(perpetual)).burn(msg.sender, amount);
         emit ReduceDebt(account, amount);
     }
 
-    function liquidate(address account) public {
-        updateNormalization();
+    // function purchaseNFT
+    // does the normal
+    // burns as much papr as possible 
+    // if excess pAPR, takes a fee to ... 
+    // otherwise sends all to borrower? 
 
-        if (normalization < liquidationPrice(account) * FixedPointMathLib.WAD) {
-            revert("not liquidatable");
+    function purchaseLiquidationAuctionNFT() public {
+     // we need to clear debt. We need to know whose NFT is being auctioned    
+    }
+
+    error TooSoon();
+    error NotLiquidatable();
+
+    function startLiquidationAuction(address account, ILendingStrategy.Collateral calldata collateral) public {
+        uint256 norm = updateNormalization();
+
+        ILendingStrategy.VaultInfo storage info = _vaultInfo[account];
+
+        if (block.timestamp - info.latestAuctionStartTime < liquidationAuctionMinSpacing) {
+            revert TooSoon();
+        }
+        
+        info.latestAuctionStartTime = uint40(block.timestamp);
+
+        if (norm < liquidationPrice(account) * FixedPointMathLib.WAD) {
+            revert NotLiquidatable();
         }
 
-        // TODO
-        // show start an auction, maybe at like
-        // vault.price * 3 => converted to debt vault
-        // burn debt used to buy token
+        // check collateral belongs to account
+        bytes32 h = collateralHash(collateral, account);
+        uint256 price = collateralFrozenOraclePrice[h];
+        if (price == 0) {
+            revert('invalid');
+        }
+
+        delete collateralFrozenOraclePrice[h];
+        info.collateralValue -= uint96(price);
+
+        // start auction
     }
 
     // normalization value at liquidation
@@ -285,8 +313,8 @@ contract LendingStrategy is
     function _increaseDebt(address account, address mintTo, uint256 amount) internal {
         updateNormalization();
 
-        // TODO, safe to uint128 ?
-        _vaultInfo[account].debt += uint128(amount);
+        // TODO, safe to uint96 ?
+        _vaultInfo[account].debt += uint96(amount);
         DebtToken(address(perpetual)).mint(mintTo, amount);
 
         uint256 debt = _vaultInfo[account].debt;
@@ -320,7 +348,7 @@ contract LendingStrategy is
         }
 
         collateralFrozenOraclePrice[h] = oraclePrice;
-        _vaultInfo[account].collateralValue += uint128(oraclePrice);
+        _vaultInfo[account].collateralValue += uint96(oraclePrice);
 
         emit AddCollateral(account, collateral, oraclePrice);
     }
