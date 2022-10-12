@@ -40,7 +40,7 @@ contract ReservoirOracleUnderwriter is IUnderwriter {
                         abi.encode(
                             keccak256("Message(bytes32 id,bytes payload,uint256 timestamp)"),
                             oracleInfo.message.id,
-                            oracleInfo.message.payload,
+                            keccak256(oracleInfo.message.payload),
                             oracleInfo.message.timestamp
                         )
                     )
