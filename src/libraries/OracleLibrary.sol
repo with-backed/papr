@@ -35,16 +35,20 @@ library OracleLibrary {
         view
         returns (int24 timeWeightedAverageTick)
     {
-        int56 delta = endTick - startTick;
+        require(twapDuration != 0, 'BP');
 
-        timeWeightedAverageTick = int24(delta / twapDuration);
+        unchecked{
+            int56 delta = endTick - startTick;
 
-        // Always round to negative infinity
-        if (delta < 0 && (delta % (twapDuration) != 0)) {
-            timeWeightedAverageTick--;
+            timeWeightedAverageTick = int24(delta / twapDuration);
+
+            // Always round to negative infinity
+            if (delta < 0 && (delta % (twapDuration) != 0)) {
+                timeWeightedAverageTick--;
+            }
+
+            return timeWeightedAverageTick;
         }
-
-        return timeWeightedAverageTick;
     }
 
     function latestCumulativeTick(IUniswapV3Pool pool) internal view returns (int56) {

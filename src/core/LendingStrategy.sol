@@ -31,7 +31,7 @@ contract LendingStrategy is
     using SafeCast for uint256;
 
     bool public immutable token0IsUnderlying;
-    uint256 liquidationAuctionMinSpacing = 2 days;
+    uint256 public liquidationAuctionMinSpacing = 2 days;
     uint256 perPeriodAuctionDecayWAD = 0.9e18;
     uint256 auctionDecayPeriod = 1 days;
     uint256 auctionStartPriceMultiplier = 3;
@@ -248,22 +248,22 @@ contract LendingStrategy is
 
         ILendingStrategy.VaultInfo storage info = _vaultInfo[account];
 
-        if (block.timestamp - info.latestAuctionStartTime < liquidationAuctionMinSpacing) {
-            revert ILendingStrategy.MinAuctionSpacing();
-        }
-
-        info.latestAuctionStartTime = uint40(block.timestamp);
-
-        if (norm < liquidationPrice(account) * FixedPointMathLib.WAD) {
-            revert ILendingStrategy.NotLiquidatable();
-        }
-
         // check collateral belongs to account
         bytes32 h = collateralHash(collateral, account);
         uint256 price = collateralFrozenOraclePrice[h];
         if (price == 0) {
             revert ILendingStrategy.InvalidCollateralAccountPair();
         }
+
+        if (norm < liquidationPrice(account)) {
+            revert ILendingStrategy.NotLiquidatable();
+        }
+
+        if (block.timestamp - info.latestAuctionStartTime < liquidationAuctionMinSpacing) {
+            revert ILendingStrategy.MinAuctionSpacing();
+        }
+
+        info.latestAuctionStartTime = uint40(block.timestamp);
 
         delete collateralFrozenOraclePrice[h];
         info.collateralValue -= uint96(price);
@@ -287,7 +287,7 @@ contract LendingStrategy is
     // i.e. the debt token:underlying internal contract exchange rate (normalization)
     // at which this vault will be liquidated
     function liquidationPrice(address account) public view returns (uint256) {
-        uint256 maxLoanUnderlying = FixedPointMathLib.mulWadDown(_vaultInfo[account].collateralValue, maxLTV);
+        uint256 maxLoanUnderlying = _vaultInfo[account].collateralValue * maxLTV;
         return maxLoanUnderlying / _vaultInfo[account].debt;
     }
 

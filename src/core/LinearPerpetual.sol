@@ -120,7 +120,7 @@ contract LinearPerpetual {
             indexMarkRatio = indexMarkRatioMax;
         } else {
             // index always = 1, denormalize mark
-            indexMarkRatio = FixedPointMathLib.divWadDown(1, FixedPointMathLib.divWadDown(m, cachedNorm));
+            indexMarkRatio = FixedPointMathLib.divWadDown(FixedPointMathLib.WAD, FixedPointMathLib.divWadDown(m, cachedNorm));
             // cap at 140%, floor at 80%
             if (indexMarkRatio > indexMarkRatioMax) {
                 indexMarkRatio = indexMarkRatioMax;
