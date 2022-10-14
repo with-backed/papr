@@ -5,6 +5,13 @@ import {ReservoirOracle} from "@reservoir/ReservoirOracle.sol";
 import {IUnderwriter} from "src/interfaces/IUnderwriter.sol";
 
 contract ReservoirOracleUnderwriter is IUnderwriter {
+    enum PriceKind {
+        SPOT,
+        TWAP,
+        LOWER,
+        UPPER
+    }
+    
     struct Sig {
         uint8 v;
         bytes32 r;
@@ -16,20 +23,22 @@ contract ReservoirOracleUnderwriter is IUnderwriter {
         Sig sig;
     }
 
-    address public oracleSigner;
+    uint256 constant TWAP_MINUTES = 30 days / 60;
+    address public immutable oracleSigner;
+    address public immutable quoteCurrency;
 
     error IncorrectOracleSigner();
     error WrongCollateralFromOracleMessage();
     error WrongCurrencyFromOracleMessage();
 
-    constructor(address _oracleSigner) {
+    constructor(address _oracleSigner, address _quoteCurrency) {
         oracleSigner = _oracleSigner;
+        quoteCurrency = _quoteCurrency;
     }
 
     function underwritePriceForCollateral(
         uint256 tokenId,
         address contractAddress,
-        address currencyForPriceAddress,
         bytes memory data
     ) public override returns (uint256) {
         OracleInfo memory oracleInfo = abi.decode(data, (OracleInfo));
@@ -61,8 +70,8 @@ contract ReservoirOracleUnderwriter is IUnderwriter {
         bytes32 expectedId = keccak256(
             abi.encode(
                 keccak256("ContractWideCollectionPrice(uint8 kind,uint256 twapMinutes,address contract)"),
-                1,
-                30 days / 60, // minutes in a month
+                PriceKind.LOWER,
+                TWAP_MINUTES,
                 contractAddress
             )
         );
@@ -71,9 +80,9 @@ contract ReservoirOracleUnderwriter is IUnderwriter {
             revert WrongCollateralFromOracleMessage();
         }
 
-        (address oracleCurrencyAddress, uint256 oraclePrice) =
+        (address oracleQuoteCurrency, uint256 oraclePrice) =
             abi.decode(oracleInfo.message.payload, (address, uint256));
-        if (oracleCurrencyAddress != currencyForPriceAddress) {
+        if (oracleQuoteCurrency != quoteCurrency) {
             revert WrongCurrencyFromOracleMessage();
         }
 

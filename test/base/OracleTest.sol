@@ -38,7 +38,7 @@ contract OracleTest is Test {
         id = keccak256(
             abi.encode(
                 keccak256("ContractWideCollectionPrice(uint8 kind,uint256 twapMinutes,address contract)"),
-                1,
+                ReservoirOracleUnderwriter.PriceKind.LOWER,
                 30 days / 60,
                 collectionAddress
             )

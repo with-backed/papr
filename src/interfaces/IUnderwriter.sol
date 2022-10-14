@@ -5,7 +5,6 @@ interface IUnderwriter {
     function underwritePriceForCollateral(
         uint256 tokenId,
         address contractAddress,
-        address currencyForPriceAddress,
         bytes memory data
     ) external returns (uint256);
 }
