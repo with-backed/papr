@@ -32,6 +32,9 @@ contract LendingStrategy is
 
     bool public immutable token0IsUnderlying;
     uint256 liquidationAuctionMinSpacing = 2 days;
+    uint256 perPeriodAuctionDecayWAD = 0.9e18;
+    uint256 auctionDecayPeriod = 1 days;
+    uint256 auctionStartPriceMultiplier = 3;
 
     // id => vault info
     mapping(address => ILendingStrategy.VaultInfo) private _vaultInfo;
@@ -165,6 +168,9 @@ contract LendingStrategy is
         ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo,
         bytes calldata data
     ) public {
+        if (collateral.addr.ownerOf(collateral.id) == address(this)) {
+            revert();
+        }
         _addCollateralToVault(msg.sender, collateral, oracleInfo);
         IPostCollateralCallback(msg.sender).postCollateralCallback(collateral, data);
         if (collateral.addr.ownerOf(collateral.id) != address(this)) {
@@ -209,27 +215,32 @@ contract LendingStrategy is
     }
 
     function purchaseLiquidationAuctionNFT(Auction calldata auction, uint256 maxPrice, address sendTo) public {
-        uint256 breakEven = auction.startPrice / 3;
+        uint256 breakEven = auction.startPrice / auctionStartPriceMultiplier;
         uint256 price = _purchaseNFT(auction, maxPrice, sendTo);
         uint256 excess = price > breakEven ? price - breakEven : 0;
-        if (_vaultInfo[auction.nftOwner].collateralValue == 0) {
-            /// TODO not check-effect, state changes after external calls in _purchaseNFT
-            _vaultInfo[auction.nftOwner].debt = 0;
-        }
+        bool creditExceedsDebt;
 
         if (excess != 0) {
-            /// TODO method to transfer out these fees
             uint256 fee = excess * 10 / 100;
-            perpetual.transfer(auction.nftOwner, price - fee);
+            uint256 credit = price - fee;
+            uint256 currentDebt = _vaultInfo[auction.nftOwner].debt;
+            if (credit > currentDebt) {
+                creditExceedsDebt = true;
+                _vaultInfo[auction.nftOwner].debt = 0;
+                perpetual.transfer(auction.nftOwner, credit);
+            } else {
+                _vaultInfo[auction.nftOwner].debt -= uint96(credit);
+            }
+        }
+
+        // if this is the last collateral in the vault, and the credit will not clear the debt
+        // then clear the debt
+        if (_vaultInfo[auction.nftOwner].collateralValue == 0 && !creditExceedsDebt) {
+            /// TODO not check-effect, state changes after external calls in _purchaseNFT
+            /// TODO might already have been set to 0 above?
+            _vaultInfo[auction.nftOwner].debt = 0;
         }
     }
-
-    error TooSoon();
-    error NotLiquidatable();
-    error InvalidCollateralAccountPair();
-
-    uint256 perPeriodAuctionDecayWAD = 0.9e18;
-    uint256 auctionDecayPeriod = 1 days;
 
     function startLiquidationAuction(address account, ILendingStrategy.Collateral calldata collateral) public {
         uint256 norm = updateNormalization();
@@ -237,20 +248,20 @@ contract LendingStrategy is
         ILendingStrategy.VaultInfo storage info = _vaultInfo[account];
 
         if (block.timestamp - info.latestAuctionStartTime < liquidationAuctionMinSpacing) {
-            revert TooSoon();
+            revert ILendingStrategy.MinAuctionSpacing();
         }
 
         info.latestAuctionStartTime = uint40(block.timestamp);
 
         if (norm < liquidationPrice(account) * FixedPointMathLib.WAD) {
-            revert NotLiquidatable();
+            revert ILendingStrategy.NotLiquidatable();
         }
 
         // check collateral belongs to account
         bytes32 h = collateralHash(collateral, account);
         uint256 price = collateralFrozenOraclePrice[h];
         if (price == 0) {
-            revert InvalidCollateralAccountPair();
+            revert ILendingStrategy.InvalidCollateralAccountPair();
         }
 
         delete collateralFrozenOraclePrice[h];
@@ -263,8 +274,9 @@ contract LendingStrategy is
                 auctionAssetContract: collateral.addr,
                 perPeriodDecayPercentWad: perPeriodAuctionDecayWAD,
                 secondsInPeriod: auctionDecayPeriod,
-                // start price is frozen price * 3, converted to perpetual value at the current contract price
-                startPrice: (price * 3) / norm,
+                // start price is frozen price * auctionStartPriceMultiplier,
+                // converted to perpetual value at the current contract price
+                startPrice: (price * auctionStartPriceMultiplier) / norm,
                 paymentAsset: perpetual
             })
         );
@@ -356,6 +368,9 @@ contract LendingStrategy is
         ReservoirOracleUnderwriter.OracleInfo memory oracleInfo
     ) internal {
         bytes32 h = collateralHash(collateral, account);
+        /// TODO: do we need this check? I think was just for the callback
+        /// case but I added a check there that the collateral is not
+        /// already in the vault
         if (collateralFrozenOraclePrice[h] != 0) {
             // collateral is already here
             revert();

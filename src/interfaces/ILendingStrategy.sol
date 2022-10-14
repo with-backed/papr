@@ -47,4 +47,10 @@ interface ILendingStrategy {
     error ExceedsMaxDebt(uint256 vaultDebt, uint256 maxDebt);
 
     error InvalidCollateral();
+
+    error MinAuctionSpacing();
+
+    error NotLiquidatable();
+
+    error InvalidCollateralAccountPair();
 }
