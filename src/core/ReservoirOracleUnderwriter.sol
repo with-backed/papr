@@ -31,7 +31,7 @@ contract ReservoirOracleUnderwriter is IUnderwriter {
         address contractAddress,
         address currencyForPriceAddress,
         bytes memory data
-    ) external override returns (uint256) {
+    ) public override returns (uint256) {
         OracleInfo memory oracleInfo = abi.decode(data, (OracleInfo));
         address signerAddress = ecrecover(
             keccak256(

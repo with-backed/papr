@@ -13,7 +13,7 @@ contract OwnerTest is MainnetForking, UniswapForking {
     LendingStrategy strategy;
 
     function setUp() public {
-        strategy = new LendingStrategy("PUNKs Loans", "PL", 0.1e18, 2e18, 0.8e18, underlying);
+        strategy = new LendingStrategy("PUNKs Loans", "PL", 0.1e18, 2e18, 0.8e18, underlying, address(1));
     }
 
     function testSetAllowedCollateralFailsIfNotOwner() public {

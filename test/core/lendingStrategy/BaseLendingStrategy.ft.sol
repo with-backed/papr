@@ -44,12 +44,11 @@ contract BaseLendingStrategyTest is MainnetForking, UniswapForking, OracleTest {
             0.5e18,
             2e18,
             0.8e18,
-            underlying
+            underlying,
+            oracleAddress
         );
-        underwriter = new ReservoirOracleUnderwriter(oracleAddress);
 
         strategy.claimOwnership();
-        strategy.setUnderwriter(underwriter);
         ILendingStrategy.SetAllowedCollateralArg[] memory args = new ILendingStrategy.SetAllowedCollateralArg[](1);
         args[0] = ILendingStrategy.SetAllowedCollateralArg(address(nft), true);
         strategy.setAllowedCollateral(args);
