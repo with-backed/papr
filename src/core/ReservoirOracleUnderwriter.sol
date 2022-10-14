@@ -2,16 +2,15 @@
 pragma solidity ^0.8.13;
 
 import {ReservoirOracle} from "@reservoir/ReservoirOracle.sol";
-import {IUnderwriter} from "src/interfaces/IUnderwriter.sol";
 
-contract ReservoirOracleUnderwriter is IUnderwriter {
+contract ReservoirOracleUnderwriter {
     enum PriceKind {
         SPOT,
         TWAP,
         LOWER,
         UPPER
     }
-    
+
     struct Sig {
         uint8 v;
         bytes32 r;
@@ -36,12 +35,10 @@ contract ReservoirOracleUnderwriter is IUnderwriter {
         quoteCurrency = _quoteCurrency;
     }
 
-    function underwritePriceForCollateral(
-        uint256 tokenId,
-        address contractAddress,
-        bytes memory data
-    ) public override returns (uint256) {
-        OracleInfo memory oracleInfo = abi.decode(data, (OracleInfo));
+    function underwritePriceForCollateral(uint256 tokenId, address contractAddress, OracleInfo memory oracleInfo)
+        public
+        returns (uint256)
+    {
         address signerAddress = ecrecover(
             keccak256(
                 abi.encodePacked(
@@ -80,8 +77,7 @@ contract ReservoirOracleUnderwriter is IUnderwriter {
             revert WrongCollateralFromOracleMessage();
         }
 
-        (address oracleQuoteCurrency, uint256 oraclePrice) =
-            abi.decode(oracleInfo.message.payload, (address, uint256));
+        (address oracleQuoteCurrency, uint256 oraclePrice) = abi.decode(oracleInfo.message.payload, (address, uint256));
         if (oracleQuoteCurrency != quoteCurrency) {
             revert WrongCurrencyFromOracleMessage();
         }

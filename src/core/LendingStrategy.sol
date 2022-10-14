@@ -15,12 +15,17 @@ import {Multicall} from "src/core/base/Multicall.sol";
 import {ReservoirOracleUnderwriter} from "src/core/ReservoirOracleUnderwriter.sol";
 import {IPostCollateralCallback} from "src/interfaces/IPostCollateralCallback.sol";
 import {ILendingStrategy} from "src/interfaces/IPostCollateralCallback.sol";
-import {IUnderwriter} from "src/interfaces/IUnderwriter.sol";
 import {OracleLibrary} from "src/libraries/OracleLibrary.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {BoringOwnable} from "@boringsolidity/BoringOwnable.sol";
 
-contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, BoringOwnable, ReservoirOracleUnderwriter {
+contract LendingStrategy is
+    LinearPerpetual,
+    ERC721TokenReceiver,
+    Multicall,
+    BoringOwnable,
+    ReservoirOracleUnderwriter
+{
     using SafeCast for uint256;
 
     bool public immutable token0IsUnderlying;
@@ -308,9 +313,7 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
             revert ILendingStrategy.InvalidCollateral();
         }
 
-        uint256 oraclePrice = underwritePriceForCollateral(
-            collateral.id, address(collateral.addr), abi.encode(oracleInfo)
-        );
+        uint256 oraclePrice = underwritePriceForCollateral(collateral.id, address(collateral.addr), oracleInfo);
 
         if (oraclePrice == 0) {
             revert();
