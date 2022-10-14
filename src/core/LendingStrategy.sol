@@ -15,17 +15,21 @@ import {Multicall} from "src/core/base/Multicall.sol";
 import {ReservoirOracleUnderwriter} from "src/core/ReservoirOracleUnderwriter.sol";
 import {IPostCollateralCallback} from "src/interfaces/IPostCollateralCallback.sol";
 import {ILendingStrategy} from "src/interfaces/IPostCollateralCallback.sol";
-import {IUnderwriter} from "src/interfaces/IUnderwriter.sol";
 import {OracleLibrary} from "src/libraries/OracleLibrary.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {BoringOwnable} from "@boringsolidity/BoringOwnable.sol";
 
-contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, BoringOwnable {
+contract LendingStrategy is
+    LinearPerpetual,
+    ERC721TokenReceiver,
+    Multicall,
+    BoringOwnable,
+    ReservoirOracleUnderwriter
+{
     using SafeCast for uint256;
 
     bool public immutable token0IsUnderlying;
     uint256 _nonce;
-    IUnderwriter underwriter;
 
     // id => vault info
     mapping(address => ILendingStrategy.VaultInfo) private _vaultInfo;
@@ -47,7 +51,8 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
         uint256 maxLTV,
         uint256 indexMarkRatioMax,
         uint256 indexMarkRatioMin,
-        ERC20 underlying
+        ERC20 underlying,
+        address oracleSigner
     )
         LinearPerpetual(
             underlying,
@@ -56,6 +61,7 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
             indexMarkRatioMax,
             indexMarkRatioMin
         )
+        ReservoirOracleUnderwriter(oracleSigner, address(underlying))
     {
         IUniswapV3Factory factory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
 
@@ -251,10 +257,6 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
         }
     }
 
-    function setUnderwriter(IUnderwriter newUnderwriter) public onlyOwner {
-        underwriter = newUnderwriter;
-    }
-
     function _swap(
         address recipient,
         bool zeroForOne,
@@ -311,9 +313,7 @@ contract LendingStrategy is LinearPerpetual, ERC721TokenReceiver, Multicall, Bor
             revert ILendingStrategy.InvalidCollateral();
         }
 
-        uint256 oraclePrice = underwriter.underwritePriceForCollateral(
-            collateral.id, address(collateral.addr), address(underlying), abi.encode(oracleInfo)
-        );
+        uint256 oraclePrice = underwritePriceForCollateral(collateral.id, address(collateral.addr), oracleInfo);
 
         if (oraclePrice == 0) {
             revert();

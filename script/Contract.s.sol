@@ -6,7 +6,6 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 import {ERC721} from "solmate/tokens/ERC721.sol";
 
 import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
-import {IUnderwriter} from "src/interfaces/IUnderwriter.sol";
 import {ReservoirOracleUnderwriter} from "src/core/ReservoirOracleUnderwriter.sol";
 import {DebtToken} from "src/core/DebtToken.sol";
 import {LendingStrategy} from "src/core/LendingStrategy.sol";
@@ -116,12 +115,10 @@ contract ContractScript is Script {
             0.1e18,
             2e18,
             0.8e18,
-            ERC20(underlying)
+            ERC20(underlying),
+            deployer
         );
         strategy.claimOwnership();
-
-        IUnderwriter underwriter = new ReservoirOracleUnderwriter(deployer);
-        strategy.setUnderwriter(underwriter);
 
         ILendingStrategy.SetAllowedCollateralArg[] memory args = new ILendingStrategy.SetAllowedCollateralArg[](3);
         args[0] =

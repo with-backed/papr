@@ -9,7 +9,6 @@ import {TickMath} from "fullrange/libraries/TickMath.sol";
 import {LendingStrategy} from "src/core/LendingStrategy.sol";
 import {ReservoirOracleUnderwriter} from "src/core/ReservoirOracleUnderwriter.sol";
 import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
-import {IUnderwriter} from "src/interfaces/IUnderwriter.sol";
 import {ReservoirOracleUnderwriter} from "src/core/ReservoirOracleUnderwriter.sol";
 import {TestERC721} from "test/mocks/TestERC721.sol";
 import {TestERC20} from "test/mocks/TestERC20.sol";
@@ -22,7 +21,6 @@ contract BaseLendingStrategyTest is MainnetForking, UniswapForking, OracleTest {
     TestERC721 nft = new TestERC721();
     TestERC20 underlying = new TestERC20();
     LendingStrategy strategy;
-    IUnderwriter underwriter;
 
     uint256 collateralId = 1;
     address borrower = address(1);
@@ -44,12 +42,11 @@ contract BaseLendingStrategyTest is MainnetForking, UniswapForking, OracleTest {
             0.5e18,
             2e18,
             0.8e18,
-            underlying
+            underlying,
+            oracleAddress
         );
-        underwriter = new ReservoirOracleUnderwriter(oracleAddress);
 
         strategy.claimOwnership();
-        strategy.setUnderwriter(underwriter);
         ILendingStrategy.SetAllowedCollateralArg[] memory args = new ILendingStrategy.SetAllowedCollateralArg[](1);
         args[0] = ILendingStrategy.SetAllowedCollateralArg(address(nft), true);
         strategy.setAllowedCollateral(args);

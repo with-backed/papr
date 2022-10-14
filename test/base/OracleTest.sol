@@ -5,7 +5,6 @@ import "forge-std/Test.sol";
 
 import {ReservoirOracle} from "@reservoir/ReservoirOracle.sol";
 import {ReservoirOracleUnderwriter} from "src/core/ReservoirOracleUnderwriter.sol";
-import {IUnderwriter} from "src/interfaces/IUnderwriter.sol";
 import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
 import {OracleSigUtils} from "test/OracleSigUtils.sol";
 
@@ -38,7 +37,7 @@ contract OracleTest is Test {
         id = keccak256(
             abi.encode(
                 keccak256("ContractWideCollectionPrice(uint8 kind,uint256 twapMinutes,address contract)"),
-                1,
+                ReservoirOracleUnderwriter.PriceKind.LOWER,
                 30 days / 60,
                 collectionAddress
             )
