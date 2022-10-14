@@ -36,7 +36,6 @@ contract LendingStrategy is
     uint256 auctionDecayPeriod = 1 days;
     uint256 auctionStartPriceMultiplier = 3;
 
-    // id => vault info
     mapping(address => ILendingStrategy.VaultInfo) private _vaultInfo;
     mapping(bytes32 => uint256) public collateralFrozenOraclePrice;
     mapping(address => bool) public isAllowed;
@@ -227,6 +226,8 @@ contract LendingStrategy is
             if (credit > currentDebt) {
                 creditExceedsDebt = true;
                 _vaultInfo[auction.nftOwner].debt = 0;
+                // transferring out to avoid having to do accounting for what 
+                // we owe this user
                 perpetual.transfer(auction.nftOwner, credit);
             } else {
                 _vaultInfo[auction.nftOwner].debt -= uint96(credit);
@@ -237,7 +238,7 @@ contract LendingStrategy is
         // then clear the debt
         if (_vaultInfo[auction.nftOwner].collateralValue == 0 && !creditExceedsDebt) {
             /// TODO not check-effect, state changes after external calls in _purchaseNFT
-            /// TODO might already have been set to 0 above?
+            /// should be safe because collateral value already removed when auction started
             _vaultInfo[auction.nftOwner].debt = 0;
         }
     }
