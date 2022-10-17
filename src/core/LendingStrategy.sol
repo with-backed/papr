@@ -8,7 +8,8 @@ import {IUniswapV3Factory} from "v3-core/contracts/interfaces/IUniswapV3Factory.
 import {IUniswapV3Pool} from "v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {SafeCast} from "v3-core/contracts/libraries/SafeCast.sol";
 import {TickMath} from "fullrange/libraries/TickMath.sol";
-import {NFTEDAStarterIncentive} from "NFTEDA/extensions/NFTEDAStarterIncentive.sol";
+import {INFTEDA, NFTEDAStarterIncentive} from "NFTEDA/extensions/NFTEDAStarterIncentive.sol";
+// import {INFTEDA} from "NFTEDA/interfaces/INFTEDA.sol";
 
 import {DebtToken} from "./DebtToken.sol";
 import {LinearPerpetual} from "./LinearPerpetual.sol";
@@ -208,8 +209,12 @@ contract LendingStrategy is
     }
 
     function reduceDebt(address account, uint96 amount) public {
-        _vaultInfo[account].debt -= amount;
         DebtToken(address(perpetual)).burn(msg.sender, amount);
+        _reduceDebt(account, amount);
+    }
+
+    function _reduceDebt(address account, uint96 amount) internal {
+        _vaultInfo[account].debt -= amount;
         emit ReduceDebt(account, amount);
     }
 
@@ -217,33 +222,37 @@ contract LendingStrategy is
         uint256 breakEven = auction.startPrice / auctionStartPriceMultiplier;
         uint256 price = _purchaseNFT(auction, maxPrice, sendTo);
         uint256 excess = price > breakEven ? price - breakEven : 0;
+        uint256 currentDebt;
         bool creditExceedsDebt;
+
+        /// TODO clear latestAuctionStartTime if this auction was the most recent started?
 
         if (excess != 0) {
             uint256 fee = excess * 10 / 100;
             uint256 credit = price - fee;
-            uint256 currentDebt = _vaultInfo[auction.nftOwner].debt;
+            currentDebt = _vaultInfo[auction.nftOwner].debt;
             if (credit > currentDebt) {
                 creditExceedsDebt = true;
-                _vaultInfo[auction.nftOwner].debt = 0;
+                // set debt to 0
+                _reduceDebt(auction.nftOwner, uint96(currentDebt));
                 // transferring out to avoid having to do accounting for what 
                 // we owe this user
                 perpetual.transfer(auction.nftOwner, credit);
             } else {
-                _vaultInfo[auction.nftOwner].debt -= uint96(credit);
+                _reduceDebt(auction.nftOwner, uint96(credit));
             }
         }
 
         // if this is the last collateral in the vault, and the credit will not clear the debt
         // then clear the debt
-        if (_vaultInfo[auction.nftOwner].collateralValue == 0 && !creditExceedsDebt) {
+        if (!creditExceedsDebt && _vaultInfo[auction.nftOwner].collateralValue == 0) {
             /// TODO not check-effect, state changes after external calls in _purchaseNFT
             /// should be safe because collateral value already removed when auction started
-            _vaultInfo[auction.nftOwner].debt = 0;
+            _reduceDebt(auction.nftOwner, uint96(currentDebt == 0 ? _vaultInfo[auction.nftOwner].debt : currentDebt));
         }
     }
 
-    function startLiquidationAuction(address account, ILendingStrategy.Collateral calldata collateral) public {
+    function startLiquidationAuction(address account, ILendingStrategy.Collateral calldata collateral) public returns (INFTEDA.Auction memory auction) {
         uint256 norm = updateNormalization();
 
         ILendingStrategy.VaultInfo storage info = _vaultInfo[account];
@@ -264,12 +273,12 @@ contract LendingStrategy is
         }
 
         info.latestAuctionStartTime = uint40(block.timestamp);
-
-        delete collateralFrozenOraclePrice[h];
         info.collateralValue -= uint96(price);
 
+        delete collateralFrozenOraclePrice[h];
+
         _startAuction(
-            Auction({
+            auction = Auction({
                 nftOwner: account,
                 auctionAssetID: collateral.id,
                 auctionAssetContract: collateral.addr,
