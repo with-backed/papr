@@ -1,0 +1,12 @@
+{
+  "addressAmountPairs": [
+    {
+      "addr": "0xE89CB2053A04Daf86ABaa1f4bC6D50744e57d39E",
+      "amount": 100
+    },
+    {
+      "addr": "0x6b2770A75A928989C1D7356366d4665a6487e1b4",
+      "amount": 200
+    }
+  ]
+}
