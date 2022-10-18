@@ -32,7 +32,7 @@ contract Moonbird is ERC721("Moonbird", "PVPMOON"), BoringOwnable {
     uint256 _nonce;
 
     function mint(address to) external onlyOwner {
-        _mint(to, ++_nonce);
+        _mint(to, _nonce++);
     }
 
     function tokenURI(uint256 id) public view override returns (string memory) {
