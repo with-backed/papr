@@ -1,0 +1,20 @@
+{
+  "blitmap": [
+    {
+      "addr": "0xE89CB2053A04Daf86ABaa1f4bC6D50744e57d39E",
+      "amount": 1
+    }
+  ],
+  "moonbird": [
+    {
+      "addr": "0xE89CB2053A04Daf86ABaa1f4bC6D50744e57d39E",
+      "amount": 1
+    }
+  ],
+  "toadz": [
+    {
+      "addr": "0xE89CB2053A04Daf86ABaa1f4bC6D50744e57d39E",
+      "amount": 1
+    }
+  ]
+}
