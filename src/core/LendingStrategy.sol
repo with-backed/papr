@@ -9,7 +9,6 @@ import {IUniswapV3Pool} from "v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {SafeCast} from "v3-core/contracts/libraries/SafeCast.sol";
 import {TickMath} from "fullrange/libraries/TickMath.sol";
 import {INFTEDA, NFTEDAStarterIncentive} from "NFTEDA/extensions/NFTEDAStarterIncentive.sol";
-// import {INFTEDA} from "NFTEDA/interfaces/INFTEDA.sol";
 
 import {DebtToken} from "./DebtToken.sol";
 import {LinearPerpetual} from "./LinearPerpetual.sol";
@@ -33,9 +32,10 @@ contract LendingStrategy is
 
     bool public immutable token0IsUnderlying;
     uint256 public liquidationAuctionMinSpacing = 2 days;
-    uint256 perPeriodAuctionDecayWAD = 0.9e18;
+    uint256 perPeriodAuctionDecayWAD = 0.7e18;
     uint256 auctionDecayPeriod = 1 days;
     uint256 auctionStartPriceMultiplier = 3;
+    uint256 public liquidationPenaltyBips = 1000;
 
     mapping(address => ILendingStrategy.VaultInfo) private _vaultInfo;
     mapping(bytes32 => uint256) public collateralFrozenOraclePrice;
@@ -209,16 +209,24 @@ contract LendingStrategy is
     }
 
     function reduceDebt(address account, uint96 amount) public {
-        DebtToken(address(perpetual)).burn(msg.sender, amount);
-        _reduceDebt(account, amount);
+        _reduceDebt(account, msg.sender, amount);
     }
 
-    function _reduceDebt(address account, uint96 amount) internal {
+    function _reduceDebt(address account, address burnFrom, uint96 amount) internal {
         _vaultInfo[account].debt -= amount;
+        DebtToken(address(perpetual)).burn(msg.sender, amount);
         emit ReduceDebt(account, amount);
     }
 
+    /// cases
+    /// is price > current debt
+    /// if yes, 
     function purchaseLiquidationAuctionNFT(Auction calldata auction, uint256 maxPrice, address sendTo) public {
+        /// @dev Because we use norm to compute the auction start price
+        /// this assumes an efficient market where auctions are started soon after they can be.
+        /// If norm is significatly larger than the first norm that would have caused liquidations
+        /// this is not *really* a break even price
+        /// TODO what if auctionStartPrice has changed? Maybe make immutable
         uint256 breakEven = auction.startPrice / auctionStartPriceMultiplier;
         uint256 price = _purchaseNFT(auction, maxPrice, sendTo);
         uint256 excess = price > breakEven ? price - breakEven : 0;
@@ -226,21 +234,24 @@ contract LendingStrategy is
         bool creditExceedsDebt;
 
         /// TODO clear latestAuctionStartTime if this auction was the most recent started?
+        /// what if the break even was greater than current debt? 
 
         if (excess != 0) {
-            uint256 fee = excess * 10 / 100;
-            uint256 credit = price - fee;
+            uint256 fee = excess * liquidationPenaltyBips / 1e4;
+            uint256 credit = excess - fee;
             currentDebt = _vaultInfo[auction.nftOwner].debt;
-            if (credit > currentDebt) {
+            if (breakEven + credit > currentDebt) {
                 creditExceedsDebt = true;
                 // set debt to 0
-                _reduceDebt(auction.nftOwner, uint96(currentDebt));
+                _reduceDebt(auction.nftOwner, address(this), uint96(currentDebt));
                 // transferring out to avoid having to do accounting for what 
                 // we owe this user
                 perpetual.transfer(auction.nftOwner, credit);
             } else {
-                _reduceDebt(auction.nftOwner, uint96(credit));
+                _reduceDebt(auction.nftOwner, address(this), uint96(credit + breakEven));
             }
+        } else {
+            _reduceDebt(auction.nftOwner, address(this), uint96(price));
         }
 
         // if this is the last collateral in the vault, and the credit will not clear the debt
@@ -248,7 +259,7 @@ contract LendingStrategy is
         if (!creditExceedsDebt && _vaultInfo[auction.nftOwner].collateralValue == 0) {
             /// TODO not check-effect, state changes after external calls in _purchaseNFT
             /// should be safe because collateral value already removed when auction started
-            _reduceDebt(auction.nftOwner, uint96(currentDebt == 0 ? _vaultInfo[auction.nftOwner].debt : currentDebt));
+            _reduceDebt(auction.nftOwner, address(this), uint96(currentDebt == 0 ? _vaultInfo[auction.nftOwner].debt : currentDebt));
         }
     }
 
@@ -286,7 +297,7 @@ contract LendingStrategy is
                 secondsInPeriod: auctionDecayPeriod,
                 // start price is frozen price * auctionStartPriceMultiplier,
                 // converted to perpetual value at the current contract price
-                startPrice: (price * auctionStartPriceMultiplier) / norm,
+                startPrice: (price * auctionStartPriceMultiplier) * FixedPointMathLib.WAD / norm,
                 paymentAsset: perpetual
             })
         );
