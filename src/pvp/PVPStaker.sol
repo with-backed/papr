@@ -1,7 +1,6 @@
 pragma solidity ^0.8.13;
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
-import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 
 contract PVPStaker {
     ERC20 token;
@@ -55,6 +54,9 @@ contract PVPStaker {
                 rewards
             )
         );
+        if (!success) {
+            revert();
+        }
 
         token.transferFrom(address(this), msg.sender, total);
         return total;

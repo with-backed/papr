@@ -35,7 +35,7 @@ contract PVPUSDCTest is Test {
 
         vm.warp(block.timestamp + 365 days);
         uint256 total = staker.unstake();
-        assertEq(total, 10999905);
+        assertEq(total, 10999905); // ~110 when scaled down, i.e. (10% of 100 + 100)
         assertEq(pvpUSDC.balanceOf(address(1)), total);
         assertEq(pvpUSDC.balanceOf(address(staker)), 0);
 
