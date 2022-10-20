@@ -17,7 +17,7 @@ contract PVPUSDC is ERC20("Backed PVP USDC", "PVPUSDC", 6), BoringOwnable {
         transferOwnership(msg.sender, false, false);
     }
 
-    function setStaker(address _staker) public onlyOwner {
+    function setStaker(address _staker) external onlyOwner {
         staker = _staker;
     }
 

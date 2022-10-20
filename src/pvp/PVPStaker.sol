@@ -38,7 +38,7 @@ contract PVPStaker {
 
     function unstake() public returns (uint256) {
         Stake memory stake = balance[msg.sender];
-        balance[msg.sender] = Stake({amount: 0, depositedAt: 0});
+        delete balance[msg.sender];
         uint256 numberOfDays = (block.timestamp - stake.depositedAt) / 1 days;
         if (numberOfDays < 1) {
             revert StakeTooShort();
