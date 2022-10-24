@@ -1,16 +1,11 @@
 pragma solidity ^0.8.13;
 
-import "forge-std/Test.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {BoringOwnable} from "@boringsolidity/BoringOwnable.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {SafeCast} from "v3-core/contracts/libraries/SafeCast.sol";
 
-contract PVPUSDC is
-    ERC20("Backed PVP USDC", "PVPUSDC", 6),
-    BoringOwnable,
-    Test
-{
+contract PVPUSDC is ERC20("Backed PVP USDC", "PVPUSDC", 6), BoringOwnable {
     using SafeCast for uint256;
 
     struct Stake {
@@ -33,19 +28,21 @@ contract PVPUSDC is
         _mint(to, amount);
     }
 
-    function stake(uint256 amount) public {
-        if (balance[msg.sender].amount != 0) {
-            revert AlreadyStaking();
+    function stake(uint256 amountToStake) public {
+        Stake memory currentStake = balance[msg.sender];
+        uint256 newAmount = amountToStake;
+        if (currentStake.amount != 0) {
+            newAmount = _calculateNewBalanceFromStake(currentStake);
         }
-        Stake memory stake = Stake({
-            amount: amount,
+        Stake memory newStake = Stake({
+            amount: newAmount,
             depositedAt: block.timestamp
         });
-        balance[msg.sender] = stake;
-        _burn(msg.sender, amount);
+        balance[msg.sender] = newStake;
+        _burn(msg.sender, amountToStake);
     }
 
-    function unstake() public returns (uint256) {
+    function unstake() public returns (uint256 total) {
         Stake memory stake = balance[msg.sender];
         delete balance[msg.sender];
 
@@ -55,12 +52,25 @@ contract PVPUSDC is
             SECONDS_PER_YEAR
         );
 
-        uint256 total = (stake.amount *
-            uint256(
-                FixedPointMathLib.powWad(APR.toInt256(), ratio.toInt256())
-            )) / FixedPointMathLib.WAD;
+        total = _calculateNewBalanceFromStake(stake);
         _mint(msg.sender, total);
+    }
 
-        return total;
+    function _calculateNewBalanceFromStake(Stake memory stake)
+        public
+        returns (uint256 newBalance)
+    {
+        uint256 secondsElapsed = block.timestamp - stake.depositedAt;
+        uint256 ratio = FixedPointMathLib.divWadDown(
+            secondsElapsed,
+            SECONDS_PER_YEAR
+        );
+
+        newBalance =
+            (stake.amount *
+                uint256(
+                    FixedPointMathLib.powWad(APR.toInt256(), ratio.toInt256())
+                )) /
+            FixedPointMathLib.WAD;
     }
 }
