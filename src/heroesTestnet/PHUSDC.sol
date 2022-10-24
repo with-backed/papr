@@ -10,6 +10,9 @@ contract PHUSDC is ERC20("PAPR Heroes USDC", "phUSDC"), BoringOwnable {
 
     error StakingTooMuch();
 
+    event Staking(address indexed account, uint256 amount);
+    event Unstaking(address indexed account, uint256 amount);
+
     struct Stake {
         uint256 amount;
         uint256 depositedAt;
@@ -52,17 +55,17 @@ contract PHUSDC is ERC20("PAPR Heroes USDC", "phUSDC"), BoringOwnable {
         }
         currentStake.amount = newAmount;
         currentStake.depositedAt = block.timestamp;
+
+        emit Staking(msg.sender, amountToStake);
     }
 
     function unstake() public returns (uint256 total) {
         Stake memory stake = stakeInfo[msg.sender];
         delete stakeInfo[msg.sender];
 
-        uint256 secondsElapsed = block.timestamp - stake.depositedAt;
-        uint256 ratio = FixedPointMathLib.divWadDown(secondsElapsed, SECONDS_PER_YEAR);
-
         total = stakedBalance(stake);
         _mint(msg.sender, total - stake.amount);
+        emit Unstaking(msg.sender, total);
     }
 
     function stakedBalance(Stake memory stake) public view returns (uint256 newBalance) {
