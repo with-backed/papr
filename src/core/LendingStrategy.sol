@@ -208,58 +208,54 @@ contract LendingStrategy is
         _increaseDebt(msg.sender, mintTo, amount);
     }
 
-    function reduceDebt(address account, uint96 amount) public {
+    function reduceDebt(address account, uint256 amount) public {
         _reduceDebt(account, msg.sender, amount);
     }
 
-    function _reduceDebt(address account, address burnFrom, uint96 amount) internal {
-        _vaultInfo[account].debt -= amount;
-        DebtToken(address(perpetual)).burn(msg.sender, amount);
+    function _reduceDebt(address account, address burnFrom, uint256 amount) internal {
+        _reduceDebtWithoutBurn(account, amount);
+        DebtToken(address(perpetual)).burn(burnFrom, amount);
+        
+    }
+
+    function _reduceDebtWithoutBurn(address account, uint256 amount) internal {
+        _vaultInfo[account].debt -= uint96(amount);
         emit ReduceDebt(account, amount);
     }
 
-    /// cases
-    /// is price > current debt
-    /// if yes, 
     function purchaseLiquidationAuctionNFT(Auction calldata auction, uint256 maxPrice, address sendTo) public {
-        /// @dev Because we use norm to compute the auction start price
-        /// this assumes an efficient market where auctions are started soon after they can be.
-        /// If norm is significatly larger than the first norm that would have caused liquidations
-        /// this is not *really* a break even price
-        /// TODO what if auctionStartPrice has changed? Maybe make immutable
-        uint256 breakEven = auction.startPrice / auctionStartPriceMultiplier;
+        uint256 collateralValueCached = _vaultInfo[auction.nftOwner].collateralValue;
+        bool isLastCollateral = collateralValueCached == 0;
+        
+        uint256 debtCached = _vaultInfo[auction.nftOwner].debt;
+        uint256 maxDebtCached = maxDebt(_vaultInfo[auction.nftOwner].collateralValue);
+        /// If this is the last NFT, then excess is anything above the debt's value
+        /// if this is not the last NFT, excess is anything beyond what needs to be paid to 
+        /// go back under maxDebt
+        uint256 breakEven = isLastCollateral ? debtCached : (maxDebtCached > debtCached ? 0 : debtCached - maxDebtCached);
         uint256 price = _purchaseNFT(auction, maxPrice, sendTo);
         uint256 excess = price > breakEven ? price - breakEven : 0;
-        uint256 currentDebt;
-        bool creditExceedsDebt;
-
-        /// TODO clear latestAuctionStartTime if this auction was the most recent started?
-        /// what if the break even was greater than current debt? 
 
         if (excess != 0) {
             uint256 fee = excess * liquidationPenaltyBips / 1e4;
             uint256 credit = excess - fee;
-            currentDebt = _vaultInfo[auction.nftOwner].debt;
-            if (breakEven + credit > currentDebt) {
-                creditExceedsDebt = true;
-                // set debt to 0
-                _reduceDebt(auction.nftOwner, address(this), uint96(currentDebt));
-                // transferring out to avoid having to do accounting for what 
-                // we owe this user
-                perpetual.transfer(auction.nftOwner, credit);
-            } else {
-                _reduceDebt(auction.nftOwner, address(this), uint96(credit + breakEven));
+            uint256 totalOwed = credit + breakEven;
+            if (totalOwed > debtCached) {
+                // we owe them more papr than they have in debt
+                // so we pay down debt and send them the rest
+                _reduceDebt(auction.nftOwner, address(this),  breakEven);
+                perpetual.transfer(auction.nftOwner, totalOwed - breakEven);
+            } else { 
+                // reduce vault debt
+                _reduceDebt(auction.nftOwner, address(this), totalOwed);
             }
         } else {
-            _reduceDebt(auction.nftOwner, address(this), uint96(price));
+            _reduceDebt(auction.nftOwner, address(this),  price);
         }
-
-        // if this is the last collateral in the vault, and the credit will not clear the debt
-        // then clear the debt
-        if (!creditExceedsDebt && _vaultInfo[auction.nftOwner].collateralValue == 0) {
-            /// TODO not check-effect, state changes after external calls in _purchaseNFT
-            /// should be safe because collateral value already removed when auction started
-            _reduceDebt(auction.nftOwner, address(this), uint96(currentDebt == 0 ? _vaultInfo[auction.nftOwner].debt : currentDebt));
+        
+        if (isLastCollateral && price < breakEven) {
+            /// there will be debt left with no NFTs, set it to 0
+            _reduceDebtWithoutBurn(auction.nftOwner, price - breakEven);
         }
     }
 
