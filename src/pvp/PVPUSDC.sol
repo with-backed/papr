@@ -15,8 +15,6 @@ contract PVPUSDC is ERC20("Backed PVP USDC", "PVPUSDC", 6), BoringOwnable {
 
     mapping(address => Stake) public balance;
 
-    error AlreadyStaking();
-
     uint256 public constant SECONDS_PER_YEAR = 365 days;
     uint256 public APR = 1.1e18;
 
