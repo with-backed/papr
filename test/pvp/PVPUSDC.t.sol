@@ -86,9 +86,7 @@ contract PVPUSDCTest is Test {
 
         pvpUSDC.stake(amount / 2);
 
-        (uint256 amount, uint256 depositedAt) = pvpUSDC.stakedBalance(
-            address(1)
-        );
+        (uint256 amount, uint256 depositedAt) = pvpUSDC.stakedBalance(address(1));
         assertEq(amount, 104);
         assertEq(depositedAt, newTimestamp);
 

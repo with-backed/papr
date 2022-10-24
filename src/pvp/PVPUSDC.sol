@@ -48,14 +48,9 @@ contract PVPUSDC is ERC20("Backed PVP USDC", "pUSDC"), BoringOwnable {
         Stake memory currentStake = stakedBalance[msg.sender];
         uint256 newAmount = amountToStake;
         if (currentStake.amount != 0) {
-            newAmount =
-                _calculateNewBalanceFromStake(currentStake) +
-                amountToStake;
+            newAmount = _calculateNewBalanceFromStake(currentStake) + amountToStake;
         }
-        Stake memory newStake = Stake({
-            amount: newAmount,
-            depositedAt: block.timestamp
-        });
+        Stake memory newStake = Stake({amount: newAmount, depositedAt: block.timestamp});
         stakedBalance[msg.sender] = newStake;
     }
 
@@ -64,41 +59,23 @@ contract PVPUSDC is ERC20("Backed PVP USDC", "pUSDC"), BoringOwnable {
         delete stakedBalance[msg.sender];
 
         uint256 secondsElapsed = block.timestamp - stake.depositedAt;
-        uint256 ratio = FixedPointMathLib.divWadDown(
-            secondsElapsed,
-            SECONDS_PER_YEAR
-        );
+        uint256 ratio = FixedPointMathLib.divWadDown(secondsElapsed, SECONDS_PER_YEAR);
 
         total = _calculateNewBalanceFromStake(stake);
         _mint(msg.sender, total - stake.amount);
     }
 
-    function _beforeTokenTransfer(
-        address from,
-        address to,
-        uint256 amount
-    ) internal override {
+    function _beforeTokenTransfer(address from, address to, uint256 amount) internal override {
         if (amount > balanceOf(from) && from != address(0)) {
             revert("ERC20: transfer amount exceeds balance");
         }
     }
 
-    function _calculateNewBalanceFromStake(Stake memory stake)
-        public
-        view
-        returns (uint256 newBalance)
-    {
+    function _calculateNewBalanceFromStake(Stake memory stake) public view returns (uint256 newBalance) {
         uint256 secondsElapsed = block.timestamp - stake.depositedAt;
-        uint256 ratio = FixedPointMathLib.divWadDown(
-            secondsElapsed,
-            SECONDS_PER_YEAR
-        );
+        uint256 ratio = FixedPointMathLib.divWadDown(secondsElapsed, SECONDS_PER_YEAR);
 
         newBalance =
-            (stake.amount *
-                uint256(
-                    FixedPointMathLib.powWad(APR.toInt256(), ratio.toInt256())
-                )) /
-            FixedPointMathLib.WAD;
+            (stake.amount * uint256(FixedPointMathLib.powWad(APR.toInt256(), ratio.toInt256()))) / FixedPointMathLib.WAD;
     }
 }
