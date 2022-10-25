@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 import "forge-std/StdJson.sol";
 import "forge-std/Test.sol";
 import "forge-std/Script.sol";
-import {PHUSDC} from "src/heroesTestnet/PHUSDC.sol";
+import {phUSDC} from "src/heroesTestnet/phUSDC.sol";
 
 /*
 run with: forge script script/DeployUnderlying.s.sol:DeployUnderlying --private-key $PK --rpc-url $RPC
@@ -20,8 +20,8 @@ contract DeployUnderlying is Script, Test {
     function run() public {
         vm.startBroadcast();
 
-        PHUSDC phUSDC = new PHUSDC();
-        phUSDC.claimOwnership();
+        phUSDC underlying = new phUSDC();
+        underlying.claimOwnership();
 
         string memory root = vm.projectRoot();
         string memory path = string.concat(root, "/script/mintUnderlying.json");
@@ -31,8 +31,8 @@ contract DeployUnderlying is Script, Test {
         for (uint256 i = 0; i < pairs.length; i++) {
             address addr = pairs[i].addr;
             uint256 amount = pairs[i].amount;
-            phUSDC.mint(addr, amount);
-            assertEq(amount, phUSDC.balanceOf(addr));
+            underlying.mint(addr, amount);
+            assertEq(amount, underlying.balanceOf(addr));
         }
 
         vm.stopBroadcast();

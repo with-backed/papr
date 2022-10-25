@@ -5,7 +5,7 @@ import {BoringOwnable} from "@boringsolidity/BoringOwnable.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {SafeCast} from "v3-core/contracts/libraries/SafeCast.sol";
 
-contract PHUSDC is ERC20("PAPR Heroes USDC", "phUSDC"), BoringOwnable {
+contract phUSDC is ERC20("papr Heroes USDC", "phUSDC"), BoringOwnable {
     using SafeCast for uint256;
 
     error StakingTooMuch();
