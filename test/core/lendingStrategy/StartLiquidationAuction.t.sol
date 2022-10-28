@@ -5,13 +5,12 @@ import {BaseLendingStrategyTest} from "test/core/lendingStrategy/BaseLendingStra
 import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
 
 contract StartLiquidationAuctionTest is BaseLendingStrategyTest {
-
     function setUp() public override {
         super.setUp();
         _openMaxLoanAndSwap();
     }
 
-    /// TODO sets start price correctly 
+    /// TODO sets start price correctly
 
     function testDecrementsVaultsCollateralValue() public {
         ILendingStrategy.VaultInfo memory info = strategy.vaultInfo(borrower);

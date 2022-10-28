@@ -212,54 +212,49 @@ contract LendingStrategy is
         _reduceDebt(account, msg.sender, amount);
     }
 
-    function _reduceDebt(address account, address burnFrom, uint256 amount) internal {
-        _reduceDebtWithoutBurn(account, amount);
-        DebtToken(address(perpetual)).burn(burnFrom, amount);
-        
-    }
-
-    function _reduceDebtWithoutBurn(address account, uint256 amount) internal {
-        _vaultInfo[account].debt -= uint96(amount);
-        emit ReduceDebt(account, amount);
-    }
-
     function purchaseLiquidationAuctionNFT(Auction calldata auction, uint256 maxPrice, address sendTo) public {
         uint256 collateralValueCached = _vaultInfo[auction.nftOwner].collateralValue;
         bool isLastCollateral = collateralValueCached == 0;
-        
-        uint256 debtCached = _vaultInfo[auction.nftOwner].debt;
-        uint256 maxDebtCached = maxDebt(_vaultInfo[auction.nftOwner].collateralValue);
-        /// If this is the last NFT, then excess is anything above the debt's value
-        /// if this is not the last NFT, excess is anything beyond what needs to be paid to 
-        /// go back under maxDebt
-        uint256 breakEven = isLastCollateral ? debtCached : (maxDebtCached > debtCached ? 0 : debtCached - maxDebtCached);
-        uint256 price = _purchaseNFT(auction, maxPrice, sendTo);
-        uint256 excess = price > breakEven ? price - breakEven : 0;
 
-        if (excess != 0) {
+        uint256 debtCached = _vaultInfo[auction.nftOwner].debt;
+        uint256 maxDebtCached = isLastCollateral ? debtCached : maxDebt(collateralValueCached);
+        /// If this is the last NFT, then excess is anything above the debt's value
+        /// if this is not the last NFT, excess is anything beyond what needs to be paid to
+        /// go back under maxDebt
+        uint256 neededToSaveVault = maxDebtCached > debtCached ? 0 : debtCached - maxDebtCached;
+        uint256 price = _purchaseNFT(auction, maxPrice, sendTo);
+        uint256 excess = price > neededToSaveVault ? price - neededToSaveVault : 0;
+        uint256 remaining;
+
+        if (excess > 0) {
             uint256 fee = excess * liquidationPenaltyBips / 1e4;
             uint256 credit = excess - fee;
-            uint256 totalOwed = credit + breakEven;
+            uint256 totalOwed = credit + neededToSaveVault;
             if (totalOwed > debtCached) {
                 // we owe them more papr than they have in debt
                 // so we pay down debt and send them the rest
-                _reduceDebt(auction.nftOwner, address(this),  breakEven);
-                perpetual.transfer(auction.nftOwner, totalOwed - breakEven);
-            } else { 
+                _reduceDebt(auction.nftOwner, address(this), debtCached);
+                perpetual.transfer(auction.nftOwner, totalOwed - debtCached);
+            } else {
                 // reduce vault debt
                 _reduceDebt(auction.nftOwner, address(this), totalOwed);
+                remaining = debtCached - totalOwed;
             }
         } else {
-            _reduceDebt(auction.nftOwner, address(this),  price);
+            _reduceDebt(auction.nftOwner, address(this), price);
+            remaining = debtCached - price;
         }
-        
-        if (isLastCollateral && price < breakEven) {
+
+        if (isLastCollateral && remaining != 0) {
             /// there will be debt left with no NFTs, set it to 0
-            _reduceDebtWithoutBurn(auction.nftOwner, price - breakEven);
+            _reduceDebtWithoutBurn(auction.nftOwner, remaining);
         }
     }
 
-    function startLiquidationAuction(address account, ILendingStrategy.Collateral calldata collateral) public returns (INFTEDA.Auction memory auction) {
+    function startLiquidationAuction(address account, ILendingStrategy.Collateral calldata collateral)
+        public
+        returns (INFTEDA.Auction memory auction)
+    {
         uint256 norm = updateNormalization();
 
         ILendingStrategy.VaultInfo storage info = _vaultInfo[account];
@@ -407,5 +402,15 @@ contract LendingStrategy is
         _vaultInfo[account].collateralValue += uint96(oraclePrice);
 
         emit AddCollateral(account, collateral, oraclePrice);
+    }
+
+    function _reduceDebt(address account, address burnFrom, uint256 amount) internal {
+        _reduceDebtWithoutBurn(account, amount);
+        DebtToken(address(perpetual)).burn(burnFrom, amount);
+    }
+
+    function _reduceDebtWithoutBurn(address account, uint256 amount) internal {
+        _vaultInfo[account].debt -= uint96(amount);
+        emit ReduceDebt(account, amount);
     }
 }

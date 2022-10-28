@@ -35,9 +35,9 @@ library OracleLibrary {
         view
         returns (int24 timeWeightedAverageTick)
     {
-        require(twapDuration != 0, 'BP');
+        require(twapDuration != 0, "BP");
 
-        unchecked{
+        unchecked {
             int56 delta = endTick - startTick;
 
             timeWeightedAverageTick = int24(delta / twapDuration);
