@@ -218,9 +218,7 @@ contract LendingStrategy is
 
         uint256 debtCached = _vaultInfo[auction.nftOwner].debt;
         uint256 maxDebtCached = isLastCollateral ? debtCached : maxDebt(collateralValueCached);
-        /// If this is the last NFT, then excess is anything above the debt's value
-        /// if this is not the last NFT, excess is anything beyond what needs to be paid to
-        /// go back under maxDebt
+        /// anything above what is needed to bring this vault under maxDebt is considered excess
         uint256 neededToSaveVault = maxDebtCached > debtCached ? 0 : debtCached - maxDebtCached;
         uint256 price = _purchaseNFT(auction, maxPrice, sendTo);
         uint256 excess = price > neededToSaveVault ? price - neededToSaveVault : 0;
