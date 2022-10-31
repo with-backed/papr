@@ -16,7 +16,9 @@ contract UniswapLP is Script {
     address deployer = vm.addr(pk);
     uint24 feeTier = 10000;
 
-    function run() public {}
+    function run() public {
+        _provideLiquidityAtOneToOne();
+    }
 
     function _provideLiquidityAtOneToOne() internal {
         uint256 amount = 1e19;
@@ -35,6 +37,8 @@ contract UniswapLP is Script {
 
         ERC20 underlying = strategy.underlying();
 
+        vm.startBroadcast();
+
         underlying.approve(address(positionManager), amount);
         TestERC20(address(underlying)).mint(deployer, amount);
 
@@ -49,7 +53,7 @@ contract UniswapLP is Script {
             0,
             0,
             address(this),
-            block.timestamp + 1
+            block.timestamp + 100
         );
 
         positionManager.mint(mintParams);
