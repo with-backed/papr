@@ -44,6 +44,8 @@ contract PurchaseLiquidationAuctionNFT is BaseLendingStrategyTest {
         uint256 expectedPayout = credit - (info.debt - neededToSave);
         uint256 beforeBalance = strategy.perpetual().balanceOf(borrower);
         strategy.perpetual().approve(address(strategy), auction.startPrice);
+        vm.expectEmit(true, true, false, true);
+        emit Transfer(address(strategy), address(0), penalty);
         vm.expectEmit(true, false, false, true);
         emit ReduceDebt(borrower, info.debt);
         vm.expectEmit(true, true, false, true);
@@ -63,6 +65,8 @@ contract PurchaseLiquidationAuctionNFT is BaseLendingStrategyTest {
         strategy.perpetual().approve(address(strategy), auction.startPrice);
         uint256 price = strategy.auctionCurrentPrice(auction);
         uint256 penalty = price * strategy.liquidationPenaltyBips() / 1e4;
+        vm.expectEmit(true, true, false, true);
+        emit Transfer(address(strategy), address(0), penalty);
         vm.expectEmit(true, false, false, true);
         emit ReduceDebt(borrower, price - penalty);
         vm.expectEmit(true, true, false, true);
@@ -100,6 +104,8 @@ contract PurchaseLiquidationAuctionNFT is BaseLendingStrategyTest {
         uint256 expectedPayout = credit - (info.debt - neededToSave);
         uint256 beforeBalance = strategy.perpetual().balanceOf(borrower);
         strategy.perpetual().approve(address(strategy), auction.startPrice);
+        vm.expectEmit(true, true, false, true);
+        emit Transfer(address(strategy), address(0), penalty);
         vm.expectEmit(true, false, false, true);
         emit ReduceDebt(borrower, info.debt);
         vm.expectEmit(true, true, false, true);
@@ -133,6 +139,8 @@ contract PurchaseLiquidationAuctionNFT is BaseLendingStrategyTest {
         uint256 excess = strategy.auctionCurrentPrice(auction) - neededToSave;
         uint256 penalty = excess * strategy.liquidationPenaltyBips() / 1e4;
         uint256 credit = excess - penalty + neededToSave;
+        vm.expectEmit(true, true, false, true);
+        emit Transfer(address(strategy), address(0), penalty);
         vm.expectEmit(true, false, false, true);
         emit ReduceDebt(borrower, credit);
         vm.expectEmit(true, true, false, true);
@@ -143,4 +151,35 @@ contract PurchaseLiquidationAuctionNFT is BaseLendingStrategyTest {
         ILendingStrategy.VaultInfo memory info = strategy.vaultInfo(borrower);
         assertEq(info.debt, beforeInfo.debt - credit);
     }
+
+    function testWhenNoExcess() public {
+        vm.stopPrank();
+        // add collateral
+        uint256 tokenId = collateralId + 5;
+        nft.mint(borrower, tokenId);
+        vm.startPrank(borrower);
+        nft.approve(address(strategy), tokenId);
+        collateral.id = tokenId;
+        strategy.addCollateral(collateral, oracleInfo);
+        vm.stopPrank();
+        vm.startPrank(purchaser);
+
+        vm.warp(block.timestamp + 2 weeks);
+        ILendingStrategy.VaultInfo memory beforeInfo = strategy.vaultInfo(borrower);
+        uint256 neededToSave = beforeInfo.debt - strategy.maxDebt(beforeInfo.collateralValue);
+        uint256 price = strategy.auctionCurrentPrice(auction);
+        // there will no excess
+        assertGt(neededToSave, price);
+        strategy.perpetual().approve(address(strategy), auction.startPrice);
+        vm.expectEmit(true, false, false, true);
+        emit ReduceDebt(borrower, price);
+        vm.expectEmit(true, true, false, true);
+        emit Transfer(address(strategy), address(0), price);
+        strategy.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser);
+        ILendingStrategy.VaultInfo memory afterInfo = strategy.vaultInfo(borrower);
+        assertEq(beforeInfo.debt - afterInfo.debt, price);
+    }
+
+    /// @note we do not test noExcess and last collateral because the contract considers any amount
+    /// to be excess
 }

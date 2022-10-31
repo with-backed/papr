@@ -228,6 +228,9 @@ contract LendingStrategy is
             uint256 fee = excess * liquidationPenaltyBips / 1e4;
             uint256 credit = excess - fee;
             uint256 totalOwed = credit + neededToSaveVault;
+
+            DebtToken(address(perpetual)).burn(address(this), fee);
+
             if (totalOwed > debtCached) {
                 // we owe them more papr than they have in debt
                 // so we pay down debt and send them the rest
@@ -359,15 +362,16 @@ contract LendingStrategy is
     function _increaseDebt(address account, address mintTo, uint256 amount) internal {
         updateNormalization();
 
-        // TODO, safe to uint96 ?
-        _vaultInfo[account].debt += uint96(amount);
-        DebtToken(address(perpetual)).mint(mintTo, amount);
+        uint256 newDebt = _vaultInfo[account].debt + amount;
 
-        uint256 debt = _vaultInfo[account].debt;
         uint256 max = maxDebt(_vaultInfo[account].collateralValue);
-        if (debt > max) {
-            revert ILendingStrategy.ExceedsMaxDebt(debt, max);
+        if (newDebt > max) {
+            revert ILendingStrategy.ExceedsMaxDebt(newDebt, max);
         }
+
+        // TODO safeCast
+        _vaultInfo[account].debt = uint96(newDebt);
+        DebtToken(address(perpetual)).mint(mintTo, amount);
 
         emit IncreaseDebt(account, amount);
     }
