@@ -6,8 +6,6 @@ import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
 import {LendingStrategy} from "src/core/LendingStrategy.sol";
 
 contract RemoveCollateralTest is BaseLendingStrategyTest {
-    ILendingStrategy.Collateral collateral;
-
     event RemoveCollateral(
         address indexed account, ILendingStrategy.Collateral collateral, uint256 vaultCollateralValue
     );
@@ -53,7 +51,6 @@ contract RemoveCollateralTest is BaseLendingStrategyTest {
     }
 
     function _addCollateral() internal {
-        collateral = ILendingStrategy.Collateral(nft, collateralId);
         vm.startPrank(borrower);
         nft.approve(address(strategy), collateralId);
         strategy.addCollateral(collateral, oracleInfo);

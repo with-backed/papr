@@ -12,8 +12,9 @@ interface ILendingStrategy {
     }
 
     struct VaultInfo {
-        uint128 debt;
-        uint128 collateralValue;
+        uint40 latestAuctionStartTime;
+        uint96 debt;
+        uint96 collateralValue;
     }
 
     struct OnERC721ReceivedArgs {
@@ -46,4 +47,10 @@ interface ILendingStrategy {
     error ExceedsMaxDebt(uint256 vaultDebt, uint256 maxDebt);
 
     error InvalidCollateral();
+
+    error MinAuctionSpacing();
+
+    error NotLiquidatable();
+
+    error InvalidCollateralAccountPair();
 }

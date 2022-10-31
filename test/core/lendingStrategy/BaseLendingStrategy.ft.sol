@@ -23,6 +23,7 @@ contract BaseLendingStrategyTest is MainnetForking, UniswapForking, OracleTest {
     LendingStrategy strategy;
 
     uint256 collateralId = 1;
+    ILendingStrategy.Collateral collateral = ILendingStrategy.Collateral({id: collateralId, addr: nft});
     address borrower = address(1);
     uint24 feeTier = 10000;
 
@@ -35,7 +36,7 @@ contract BaseLendingStrategyTest is MainnetForking, UniswapForking, OracleTest {
     ReservoirOracleUnderwriter.OracleInfo oracleInfo = _getOracleInfoForCollateral(address(nft), address(underlying));
 
     //
-    function setUp() public {
+    function setUp() public virtual {
         strategy = new LendingStrategy(
             "PUNKs Loans",
             "PL",
@@ -103,7 +104,19 @@ contract BaseLendingStrategyTest is MainnetForking, UniswapForking, OracleTest {
         });
     }
 
-    function _viableSqrtPriceLimit(bool sellingPAPR) internal returns (uint160) {
+    function _openMaxLoanAndSwap() internal {
+        safeTransferReceivedArgs.debt = strategy.maxDebt(oraclePrice) - 2;
+        safeTransferReceivedArgs.minOut = 1;
+        safeTransferReceivedArgs.sqrtPriceLimitX96 = _maxSqrtPriceLimit(true);
+        vm.prank(borrower);
+        nft.safeTransferFrom(borrower, address(strategy), collateralId, abi.encode(safeTransferReceivedArgs));
+    }
+
+    function _makeMaxLoanLiquidatable() internal {
+        vm.warp(block.timestamp + 1 days);
+    }
+
+    function _viableSqrtPriceLimit(bool sellingPAPR) internal view returns (uint160) {
         (uint160 sqrtPrice,,,,,,) = strategy.pool().slot0();
         int24 tick = TickMath.getTickAtSqrtRatio(sqrtPrice);
 
@@ -116,7 +129,7 @@ contract BaseLendingStrategyTest is MainnetForking, UniswapForking, OracleTest {
         return TickMath.getSqrtRatioAtTick(tick);
     }
 
-    function _maxSqrtPriceLimit(bool sellingPAPR) internal returns (uint160) {
+    function _maxSqrtPriceLimit(bool sellingPAPR) internal view returns (uint160) {
         if (sellingPAPR) {
             return !strategy.token0IsUnderlying() ? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1;
         } else {

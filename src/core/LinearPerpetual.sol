@@ -54,13 +54,14 @@ contract LinearPerpetual {
         indexMarkRatioMin = _indexMarkRatioMin;
     }
 
-    function updateNormalization() public {
-        if (lastUpdated == block.timestamp) {
-            return;
-        }
+    function updateNormalization() public returns (uint256 newNormalization) {
         uint128 previousNormalization = normalization;
+        if (lastUpdated == block.timestamp) {
+            return previousNormalization;
+        }
+
         int56 latestCumulativeTick = OracleLibrary.latestCumulativeTick(pool);
-        uint256 newNormalization = _newNorm(latestCumulativeTick, previousNormalization);
+        newNormalization = _newNorm(latestCumulativeTick, previousNormalization);
 
         normalization = uint128(newNormalization);
         lastUpdated = uint72(block.timestamp);
@@ -119,7 +120,8 @@ contract LinearPerpetual {
             indexMarkRatio = indexMarkRatioMax;
         } else {
             // index always = 1, denormalize mark
-            indexMarkRatio = FixedPointMathLib.divWadDown(1, FixedPointMathLib.divWadDown(m, cachedNorm));
+            indexMarkRatio =
+                FixedPointMathLib.divWadDown(FixedPointMathLib.WAD, FixedPointMathLib.divWadDown(m, cachedNorm));
             // cap at 140%, floor at 80%
             if (indexMarkRatio > indexMarkRatioMax) {
                 indexMarkRatio = indexMarkRatioMax;
