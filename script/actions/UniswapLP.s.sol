@@ -7,13 +7,11 @@ import {INonfungiblePositionManager} from "test/mocks/uniswap/INonfungiblePositi
 
 import {LendingStrategy} from "src/core/LendingStrategy.sol";
 import {TestERC20} from "test/mocks/TestERC20.sol";
+import {Base} from "script/actions/Base.s.sol";
 
-contract UniswapLP is Script {
-    LendingStrategy strategy = LendingStrategy(vm.envAddress("STRATEGY"));
+contract UniswapLP is Base {
     INonfungiblePositionManager positionManager =
         INonfungiblePositionManager(0xC36442b4a4522E871399CD717aBDD847Ab11FE88);
-    uint256 pk = vm.envUint("PRIVATE_KEY");
-    address deployer = vm.addr(pk);
     uint24 feeTier = 10000;
 
     function run() public {
@@ -21,7 +19,7 @@ contract UniswapLP is Script {
     }
 
     function _provideLiquidityAtOneToOne() internal {
-        uint256 amount = 1e19;
+        uint256 amount = 1e22;
         uint256 token0Amount;
         uint256 token1Amount;
         int24 tickLower;
