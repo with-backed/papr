@@ -299,8 +299,13 @@ contract LendingStrategy is
     // i.e. the debt token:underlying internal contract exchange rate (normalization)
     // at which this vault will be liquidated
     function liquidationPrice(address account) public view returns (uint256) {
-        uint256 maxLoanUnderlying = _vaultInfo[account].collateralValue * maxLTV;
-        return maxLoanUnderlying / _vaultInfo[account].debt;
+        uint256 debt = _vaultInfo[account].debt;
+        if (debt == 0) {
+            return type(uint256).max;
+        } else {
+            uint256 maxLoanUnderlying = _vaultInfo[account].collateralValue * maxLTV;
+            return maxLoanUnderlying / debt;
+        }
     }
 
     function maxDebt(uint256 collateralValue) public view returns (uint256) {
