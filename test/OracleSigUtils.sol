@@ -3,8 +3,8 @@ pragma solidity ^0.8.13;
 
 import {ReservoirOracle} from "@reservoir/ReservoirOracle.sol";
 
-contract OracleSigUtils {
-    bytes32 internal DOMAIN_SEPARATOR;
+library OracleSigUtils {
+    // bytes32 internal constant DOMAIN_SEPARATOR;
 
     bytes32 public constant MESSAGE_TYPEHASH = keccak256("Message(bytes32 id,bytes payload,uint256 timestamp)");
 
