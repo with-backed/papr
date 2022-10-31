@@ -101,7 +101,7 @@ contract Phunks is ERC721("CryptoPhunksV2", "PHUNK") {
     }
 }
 
-contract ContractScript is Script {
+contract DeployLendingStrategy is Script {
     LendingStrategy strategy;
     ERC20 underlying = ERC20(0x3089B47853df1b82877bEef6D904a0ce98a12553);
     // check next Id here https://goerli.etherscan.io/token/0x8232c5Fd480C2a74d2f25d3362f262fF3511CE49
@@ -144,9 +144,9 @@ contract ContractScript is Script {
         strategy.setAllowedCollateral(args);
         
         // will mint tokenId
-        Mfers(0x8232c5Fd480C2a74d2f25d3362f262fF3511CE49).mint(deployer);
+        // Mfers(0x8232c5Fd480C2a74d2f25d3362f262fF3511CE49).mint(deployer);
         
-        _openMaxLoanAndSwap(ERC721(0x8232c5Fd480C2a74d2f25d3362f262fF3511CE49), deployer);
+        // _openMaxLoanAndSwap(ERC721(0x8232c5Fd480C2a74d2f25d3362f262fF3511CE49), deployer);
 
         vm.stopBroadcast();
     }
