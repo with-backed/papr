@@ -106,21 +106,18 @@ contract DeployLendingStrategy is Script {
     ERC20 underlying = ERC20(0x3089B47853df1b82877bEef6D904a0ce98a12553);
     // check next Id here https://goerli.etherscan.io/token/0x8232c5Fd480C2a74d2f25d3362f262fF3511CE49
     uint256 tokenId = 19;
-    uint256 pk = vm.envUint('PRIVATE_KEY');
+    uint256 pk = vm.envUint("PRIVATE_KEY");
     address deployer = vm.addr(pk);
-    
 
     uint256 minOut;
     uint256 debt = 1e18;
     uint160 sqrtPriceLimitX96;
     uint128 oraclePrice = 3e20;
-    
+
     function setUp() public {}
 
     function run() public {
         vm.startBroadcast();
-
-        address deployer = vm.addr(pk);
 
         strategy = new LendingStrategy(
             "Test Loans",
@@ -142,15 +139,14 @@ contract DeployLendingStrategy is Script {
             ILendingStrategy.SetAllowedCollateralArg({addr: 0x8232c5Fd480C2a74d2f25d3362f262fF3511CE49, allowed: true});
 
         strategy.setAllowedCollateral(args);
-        
+
         // will mint tokenId
         // Mfers(0x8232c5Fd480C2a74d2f25d3362f262fF3511CE49).mint(deployer);
-        
+
         // _openMaxLoanAndSwap(ERC721(0x8232c5Fd480C2a74d2f25d3362f262fF3511CE49), deployer);
 
         vm.stopBroadcast();
     }
-
 
     function _openMaxLoanAndSwap(ERC721 nft, address borrower) internal {
         ILendingStrategy.OnERC721ReceivedArgs memory safeTransferReceivedArgs = ILendingStrategy.OnERC721ReceivedArgs({

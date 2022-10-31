@@ -3,6 +3,4 @@ pragma solidity ^0.8.13;
 
 import "forge-std/Script.sol";
 
-contract MintNFTAndBorrowMax is Script {
-    
-}
+contract MintNFTAndBorrowMax is Script {}

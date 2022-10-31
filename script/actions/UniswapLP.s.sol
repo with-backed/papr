@@ -9,15 +9,14 @@ import {LendingStrategy} from "src/core/LendingStrategy.sol";
 import {TestERC20} from "test/mocks/TestERC20.sol";
 
 contract UniswapLP is Script {
-    LendingStrategy strategy = LendingStrategy(vm.envAddress('STRATEGY'));
+    LendingStrategy strategy = LendingStrategy(vm.envAddress("STRATEGY"));
     INonfungiblePositionManager positionManager =
         INonfungiblePositionManager(0xC36442b4a4522E871399CD717aBDD847Ab11FE88);
-    uint256 pk = vm.envUint('PRIVATE_KEY');
+    uint256 pk = vm.envUint("PRIVATE_KEY");
     address deployer = vm.addr(pk);
     uint24 feeTier = 10000;
 
-    function run() public {   
-    }
+    function run() public {}
 
     function _provideLiquidityAtOneToOne() internal {
         uint256 amount = 1e19;
