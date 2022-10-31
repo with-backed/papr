@@ -301,7 +301,7 @@ contract LendingStrategy is
     function liquidationPrice(address account) public view returns (uint256) {
         uint256 debt = _vaultInfo[account].debt;
         if (debt == 0) {
-            return type(uint256).max;
+            revert ILendingStrategy.AccountHasNoDebt();
         } else {
             uint256 maxLoanUnderlying = _vaultInfo[account].collateralValue * maxLTV;
             return maxLoanUnderlying / debt;

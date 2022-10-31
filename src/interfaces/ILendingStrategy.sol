@@ -53,4 +53,6 @@ interface ILendingStrategy {
     error NotLiquidatable();
 
     error InvalidCollateralAccountPair();
+
+    error AccountHasNoDebt();
 }
