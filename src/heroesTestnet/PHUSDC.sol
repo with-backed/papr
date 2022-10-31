@@ -1,6 +1,6 @@
 pragma solidity ^0.8.13;
 
-import {ERC20} from "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
+import {ERC20} from "openzeppelin-contracts/token/ERC20/ERC20.sol";
 import {BoringOwnable} from "@boringsolidity/BoringOwnable.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {SafeCast} from "v3-core/contracts/libraries/SafeCast.sol";

@@ -2,7 +2,7 @@ pragma solidity ^0.8.13;
 
 import {ERC721} from "solmate/tokens/ERC721.sol";
 import {BoringOwnable} from "@boringsolidity/BoringOwnable.sol";
-import "openzeppelin-contracts/contracts/utils/Strings.sol";
+import "openzeppelin-contracts/utils/Strings.sol";
 
 contract Blitmap is ERC721("Blitmap", "PVPBLIT"), BoringOwnable {
     using Strings for uint256;
