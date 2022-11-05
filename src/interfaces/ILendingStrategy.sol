@@ -12,9 +12,9 @@ interface ILendingStrategy {
     }
 
     struct VaultInfo {
+        uint16 count;
         uint40 latestAuctionStartTime;
-        uint96 debt;
-        uint96 collateralValue;
+        uint200 debt;
     }
 
     struct OnERC721ReceivedArgs {
@@ -55,4 +55,6 @@ interface ILendingStrategy {
     error InvalidCollateralAccountPair();
 
     error AccountHasNoDebt();
+
+    error OnlyCollateralOwner();
 }

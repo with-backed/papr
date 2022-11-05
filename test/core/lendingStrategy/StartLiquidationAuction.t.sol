@@ -12,66 +12,61 @@ contract StartLiquidationAuctionTest is BaseLendingStrategyTest {
 
     /// TODO sets start price correctly
 
-    function testDecrementsVaultsCollateralValue() public {
-        ILendingStrategy.VaultInfo memory info = strategy.vaultInfo(borrower);
-        assertEq(info.collateralValue, oraclePrice);
+    function testDrecrementsCollateralCountCorrectly() public {
+        ILendingStrategy.VaultInfo memory beforeInfo = strategy.vaultInfo(borrower, collateral.addr);
         _makeMaxLoanLiquidatable();
-        strategy.startLiquidationAuction(borrower, collateral);
-        info = strategy.vaultInfo(borrower);
-        assertEq(info.collateralValue, 0);
+        strategy.startLiquidationAuction(borrower, collateral, oracleInfo);
+        ILendingStrategy.VaultInfo memory afterInfo = strategy.vaultInfo(borrower, collateral.addr);
+        assertEq(beforeInfo.count - afterInfo.count, 1);
     }
 
     function testUpdatesLatestAuctionStartTime() public {
         _makeMaxLoanLiquidatable();
-        strategy.startLiquidationAuction(borrower, collateral);
-        ILendingStrategy.VaultInfo memory info = strategy.vaultInfo(borrower);
+        strategy.startLiquidationAuction(borrower, collateral, oracleInfo);
+        ILendingStrategy.VaultInfo memory info = strategy.vaultInfo(borrower, collateral.addr);
         assertEq(info.latestAuctionStartTime, block.timestamp);
     }
 
-    function testDeletesFrozenOracleValuation() public {
-        bytes32 h = strategy.collateralHash(collateral, borrower);
-        uint256 valuation = strategy.collateralFrozenOraclePrice(h);
-        assertEq(valuation, oraclePrice);
+    function testDeletesOwnerRecord() public {
         _makeMaxLoanLiquidatable();
-        strategy.startLiquidationAuction(borrower, collateral);
-        valuation = strategy.collateralFrozenOraclePrice(h);
-        assertEq(valuation, 0);
+        strategy.startLiquidationAuction(borrower, collateral, oracleInfo);
+        assertEq(strategy.collateralOwner(collateral.addr, collateral.id), address(0));
     }
 
     function testRevertsIfNotLiquidatable() public {
         vm.expectRevert(ILendingStrategy.NotLiquidatable.selector);
-        strategy.startLiquidationAuction(borrower, collateral);
+        strategy.startLiquidationAuction(borrower, collateral, oracleInfo);
     }
 
     function testRevertsIfInvalidCollateralAccountPair() public {
         _makeMaxLoanLiquidatable();
         vm.expectRevert(ILendingStrategy.InvalidCollateralAccountPair.selector);
-        strategy.startLiquidationAuction(address(0xded), collateral);
+        strategy.startLiquidationAuction(address(0xded), collateral, oracleInfo);
     }
 
     function testRevertsIfAuctionOngoing() public {
         _makeMaxLoanLiquidatable();
-        strategy.startLiquidationAuction(borrower, collateral);
+        strategy.startLiquidationAuction(borrower, collateral, oracleInfo);
 
         nft.mint(borrower, collateralId + 1);
         vm.startPrank(borrower);
         nft.approve(address(strategy), collateralId + 1);
-        strategy.addCollateral(ILendingStrategy.Collateral(nft, collateralId + 1), oracleInfo);
+        strategy.addCollateral(ILendingStrategy.Collateral(nft, collateralId + 1));
 
         vm.expectRevert(ILendingStrategy.MinAuctionSpacing.selector);
-        strategy.startLiquidationAuction(borrower, ILendingStrategy.Collateral({id: collateralId + 1, addr: nft}));
+        strategy.startLiquidationAuction(borrower, ILendingStrategy.Collateral({id: collateralId + 1, addr: nft}), oracleInfo);
     }
 
     function testAllowsNewAuctionIfMinSpacingHasPassed() public {
         _makeMaxLoanLiquidatable();
-        strategy.startLiquidationAuction(borrower, collateral);
+        strategy.startLiquidationAuction(borrower, collateral, oracleInfo);
 
         nft.mint(borrower, collateralId + 1);
         vm.startPrank(borrower);
         nft.approve(address(strategy), collateralId + 1);
-        strategy.addCollateral(ILendingStrategy.Collateral(nft, collateralId + 1), oracleInfo);
+        strategy.addCollateral(ILendingStrategy.Collateral(nft, collateralId + 1));
 
         vm.warp(block.timestamp + strategy.liquidationAuctionMinSpacing());
-        strategy.startLiquidationAuction(borrower, ILendingStrategy.Collateral({id: collateralId + 1, addr: nft}));
+        strategy.startLiquidationAuction(borrower, ILendingStrategy.Collateral({id: collateralId + 1, addr: nft}), oracleInfo);
     }
 }

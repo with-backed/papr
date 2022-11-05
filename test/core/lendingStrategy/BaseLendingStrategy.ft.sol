@@ -33,7 +33,7 @@ contract BaseLendingStrategyTest is MainnetForking, UniswapForking, OracleTest {
     uint256 minOut;
     uint256 debt = 1e18;
     uint160 sqrtPriceLimitX96;
-    ReservoirOracleUnderwriter.OracleInfo oracleInfo = _getOracleInfoForCollateral(address(nft), address(underlying));
+    ReservoirOracleUnderwriter.OracleInfo oracleInfo = _getOracleInfoForCollateral(nft, underlying);
 
     //
     function setUp() public virtual {

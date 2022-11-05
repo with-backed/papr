@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
+import {ERC721} from "solmate/tokens/ERC721.sol";
 import {ReservoirOracle} from "@reservoir/ReservoirOracle.sol";
 
 contract ReservoirOracleUnderwriter {
@@ -35,7 +36,7 @@ contract ReservoirOracleUnderwriter {
         quoteCurrency = _quoteCurrency;
     }
 
-    function underwritePriceForCollateral(uint256 tokenId, address contractAddress, OracleInfo memory oracleInfo)
+    function underwritePriceForCollateral(ERC721 asset, PriceKind priceKind, OracleInfo memory oracleInfo)
         public
         returns (uint256)
     {
@@ -67,9 +68,9 @@ contract ReservoirOracleUnderwriter {
         bytes32 expectedId = keccak256(
             abi.encode(
                 keccak256("ContractWideCollectionPrice(uint8 kind,uint256 twapMinutes,address contract)"),
-                PriceKind.LOWER,
+                priceKind,
                 TWAP_MINUTES,
-                contractAddress
+                asset
             )
         );
 

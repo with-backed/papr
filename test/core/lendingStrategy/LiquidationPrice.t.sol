@@ -10,6 +10,6 @@ import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
 contract LiquidationPrice is BaseLendingStrategyTest {
     function testRevertsIfNoDebt() public {
         vm.expectRevert(ILendingStrategy.AccountHasNoDebt.selector);
-        strategy.liquidationPrice(borrower);
+        strategy.liquidationPrice(borrower, collateral.addr, oraclePrice);
     }
 }
