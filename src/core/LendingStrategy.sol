@@ -32,9 +32,9 @@ contract LendingStrategy is
 
     bool public immutable token0IsUnderlying;
     uint256 public liquidationAuctionMinSpacing = 2 days;
-    uint256 perPeriodAuctionDecayWAD = 0.7e18;
-    uint256 auctionDecayPeriod = 1 days;
-    uint256 auctionStartPriceMultiplier = 3;
+    uint256 public perPeriodAuctionDecayWAD = 0.7e18;
+    uint256 public auctionDecayPeriod = 1 days;
+    uint256 public auctionStartPriceMultiplier = 3;
     uint256 public liquidationPenaltyBips = 1000;
 
     mapping(address => ILendingStrategy.VaultInfo) private _vaultInfo;

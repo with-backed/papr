@@ -12,7 +12,6 @@ contract OracleTest is Test {
     uint128 oraclePrice = 3e18;
 
     uint256 internal oraclePrivateKey = 0xA11CE;
-    OracleSigUtils internal sigUtils = new OracleSigUtils();
     address oracleAddress = vm.addr(oraclePrivateKey);
 
     function _getOracleInfoForCollateral(address collateral, address underlying)
@@ -26,7 +25,7 @@ contract OracleTest is Test {
             signature: "" // populated ourselves on the OracleInfo.Sig struct
         });
 
-        bytes32 digest = sigUtils.getTypedDataHash(message);
+        bytes32 digest = OracleSigUtils.getTypedDataHash(message);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(oraclePrivateKey, digest);
 
         oracleInfo.message = message;
