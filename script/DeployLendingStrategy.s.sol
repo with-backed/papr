@@ -9,14 +9,10 @@ import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
 import {DebtToken} from "src/core/DebtToken.sol";
 import {LendingStrategy} from "src/core/LendingStrategy.sol";
 import "openzeppelin-contracts/utils/Strings.sol";
+import {Base} from "script/actions/Base.s.sol";
 
-contract DeployLendingStrategy is Script {
-    LendingStrategy strategy;
+contract DeployLendingStrategy is Base {
     ERC20 underlying = ERC20(0x3089B47853df1b82877bEef6D904a0ce98a12553);
-    // check next Id here https://goerli.etherscan.io/token/0x8232c5Fd480C2a74d2f25d3362f262fF3511CE49
-    uint256 tokenId = 19;
-    uint256 pk = vm.envUint("PRIVATE_KEY");
-    address deployer = vm.addr(pk);
 
     function setUp() public {}
 
