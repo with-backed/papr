@@ -4,11 +4,12 @@ pragma solidity ^0.8.13;
 import "forge-std/Script.sol";
 import {ERC721} from "solmate/tokens/ERC721.sol";
 
-import {Base} from "script/actions/Base.s.sol";
+import {Base, ReservoirOracleUnderwriter} from "script/actions/Base.s.sol";
 import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
 
 contract StartAuction is Base {
     function run() public {
+        oraclePriceKind = ReservoirOracleUnderwriter.PriceKind.TWAP;
         vm.startBroadcast();
         strategy.startLiquidationAuction(
             deployer,

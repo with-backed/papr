@@ -20,6 +20,7 @@ contract PurchaseAuctionNFT is Base {
             paymentAsset: strategy.perpetual()
         });
         uint256 price = strategy.auctionCurrentPrice(auction);
+        oraclePriceKind = ReservoirOracleUnderwriter.PriceKind.TWAP;
         vm.startBroadcast();
         strategy.purchaseLiquidationAuctionNFT(
             auction, price, deployer, _getOracleInfoForCollateral(address(auction.auctionAssetContract), 3e20)

@@ -22,9 +22,9 @@ contract MintNFTAndBorrowMax is Base {
 
     function run() public {
         // expected to mint tokenId
-        vm.startBroadcast();
-        nft.mint(deployer);
-        vm.stopBroadcast();
+        // vm.startBroadcast();
+        // nft.mint(deployer);
+        // vm.stopBroadcast();
 
         _openMaxLoanAndSwap(deployer);
     }
