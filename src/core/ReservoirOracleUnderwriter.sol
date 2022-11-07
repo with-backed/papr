@@ -23,7 +23,7 @@ contract ReservoirOracleUnderwriter {
         Sig sig;
     }
 
-    uint256 constant TWAP_SECONDS = 30 days / 60 / 60;
+    uint256 constant TWAP_SECONDS = 30 days;
     uint256 constant VALID_FOR = 20 minutes;
     address public immutable oracleSigner;
     address public immutable quoteCurrency;

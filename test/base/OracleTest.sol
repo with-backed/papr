@@ -40,7 +40,7 @@ contract OracleTest is Test {
             abi.encode(
                 keccak256("ContractWideCollectionPrice(uint8 kind,uint256 twapSeconds,address contract)"),
                 priceKind,
-                30 days / 60 / 60,
+                30 days,
                 collectionAddress
             )
         );
