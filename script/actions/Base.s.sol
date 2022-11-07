@@ -11,12 +11,18 @@ contract Base is Script {
     LendingStrategy strategy = LendingStrategy(vm.envAddress("STRATEGY"));
     uint256 pk = vm.envUint("PRIVATE_KEY");
     address deployer = vm.addr(pk);
-    ReservoirOracleUnderwriter.PriceKind oraclePriceKind = ReservoirOracleUnderwriter.PriceKind.LOWER;
+    ReservoirOracleUnderwriter.PriceKind oraclePriceKind =
+        ReservoirOracleUnderwriter.PriceKind.LOWER;
 
-    function _constructOracleId(address collectionAddress) internal returns (bytes32 id) {
+    function _constructOracleId(address collectionAddress)
+        internal
+        returns (bytes32 id)
+    {
         id = keccak256(
             abi.encode(
-                keccak256("ContractWideCollectionPrice(uint8 kind,uint256 twapMinutes,address contract)"),
+                keccak256(
+                    "ContractWideCollectionPrice(uint8 kind,uint256 twapSeconds,address contract)"
+                ),
                 oraclePriceKind,
                 30 days / 60,
                 collectionAddress

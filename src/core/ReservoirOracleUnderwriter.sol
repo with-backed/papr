@@ -23,7 +23,7 @@ contract ReservoirOracleUnderwriter {
         Sig sig;
     }
 
-    uint256 constant TWAP_MINUTES = 30 days / 60;
+    uint256 constant TWAP_SECONDS = 30 days / 60 / 60;
     uint256 constant VALID_FOR = 20 minutes;
     address public immutable oracleSigner;
     address public immutable quoteCurrency;
@@ -38,10 +38,11 @@ contract ReservoirOracleUnderwriter {
         quoteCurrency = _quoteCurrency;
     }
 
-    function underwritePriceForCollateral(ERC721 asset, PriceKind priceKind, OracleInfo memory oracleInfo)
-        public
-        returns (uint256)
-    {
+    function underwritePriceForCollateral(
+        ERC721 asset,
+        PriceKind priceKind,
+        OracleInfo memory oracleInfo
+    ) public returns (uint256) {
         address signerAddress = ecrecover(
             keccak256(
                 abi.encodePacked(
@@ -49,7 +50,9 @@ contract ReservoirOracleUnderwriter {
                     // EIP-712 structured-data hash
                     keccak256(
                         abi.encode(
-                            keccak256("Message(bytes32 id,bytes payload,uint256 timestamp)"),
+                            keccak256(
+                                "Message(bytes32 id,bytes payload,uint256 timestamp)"
+                            ),
                             oracleInfo.message.id,
                             keccak256(oracleInfo.message.payload),
                             oracleInfo.message.timestamp
@@ -69,9 +72,11 @@ contract ReservoirOracleUnderwriter {
 
         bytes32 expectedId = keccak256(
             abi.encode(
-                keccak256("ContractWideCollectionPrice(uint8 kind,uint256 twapMinutes,address contract)"),
+                keccak256(
+                    "ContractWideCollectionPrice(uint8 kind,uint256 twapSeconds,address contract)"
+                ),
                 priceKind,
-                TWAP_MINUTES,
+                TWAP_SECONDS,
                 asset
             )
         );
@@ -81,12 +86,16 @@ contract ReservoirOracleUnderwriter {
         }
 
         if (
-            oracleInfo.message.timestamp > block.timestamp || oracleInfo.message.timestamp + VALID_FOR < block.timestamp
+            oracleInfo.message.timestamp > block.timestamp ||
+            oracleInfo.message.timestamp + VALID_FOR < block.timestamp
         ) {
             revert OracleMessageTooOld();
         }
 
-        (address oracleQuoteCurrency, uint256 oraclePrice) = abi.decode(oracleInfo.message.payload, (address, uint256));
+        (address oracleQuoteCurrency, uint256 oraclePrice) = abi.decode(
+            oracleInfo.message.payload,
+            (address, uint256)
+        );
         if (oracleQuoteCurrency != quoteCurrency) {
             revert WrongCurrencyFromOracleMessage();
         }
