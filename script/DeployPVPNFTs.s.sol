@@ -4,7 +4,7 @@ import "forge-std/StdJson.sol";
 import "forge-std/Test.sol";
 import "forge-std/Script.sol";
 import {ERC721} from "solmate/tokens/ERC721.sol";
-import {Blitmap, Moonbird, Toadz} from "src/heroesTestnet/PVPNFTs.sol";
+import {Blitmap, Moonbird, Toadz, Dinos} from "src/heroesTestnet/PVPNFTs.sol";
 
 /*
 run with: forge script script/DeployPVPNFTs.s.sol:DeployPVPNFTs --private-key $PK --rpc-url $RPC
@@ -27,6 +27,8 @@ contract DeployPVPNFTs is Script, Test {
         moonbird.claimOwnership();
         Toadz toadz = new Toadz();
         toadz.claimOwnership();
+        Dinos dinos = new Dinos();
+        dinos.claimOwnership();
 
         string memory root = vm.projectRoot();
         string memory path = string.concat(root, "/script/mintPVPNFTs.json");
@@ -49,6 +51,12 @@ contract DeployPVPNFTs is Script, Test {
         pairs = abi.decode(rawPairs, (AddressAmountPair[]));
 
         mintForPairs(toadz, pairs);
+
+        //mint Dinos
+        rawPairs = json.parseRaw(".dinos");
+        pairs = abi.decode(rawPairs, (AddressAmountPair[]));
+
+        mintForPairs(dinos, pairs);
 
         vm.stopBroadcast();
     }
