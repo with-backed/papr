@@ -14,9 +14,7 @@ contract PurchaseAuctionNFT is Base {
         INFTEDA.Auction memory auction = INFTEDA.Auction({
             nftOwner: deployer,
             auctionAssetID: 20,
-            auctionAssetContract: ERC721(
-                0x8232c5Fd480C2a74d2f25d3362f262fF3511CE49
-            ),
+            auctionAssetContract: ERC721(0x8232c5Fd480C2a74d2f25d3362f262fF3511CE49),
             perPeriodDecayPercentWad: 700000000000000000,
             secondsInPeriod: 86400,
             startPrice: 899999835722514446763,
@@ -26,13 +24,7 @@ contract PurchaseAuctionNFT is Base {
         oraclePriceKind = ReservoirOracleUnderwriter.PriceKind.TWAP;
         vm.startBroadcast();
         strategy.purchaseLiquidationAuctionNFT(
-            auction,
-            price,
-            deployer,
-            _getOracleInfoForCollateral(
-                address(auction.auctionAssetContract),
-                3e20
-            )
+            auction, price, deployer, _getOracleInfoForCollateral(address(auction.auctionAssetContract), 3e20)
         );
     }
 }
