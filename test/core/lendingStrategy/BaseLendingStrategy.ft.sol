@@ -33,7 +33,7 @@ contract BaseLendingStrategyTest is MainnetForking, UniswapForking, OracleTest {
     uint256 minOut;
     uint256 debt = 1e18;
     uint160 sqrtPriceLimitX96;
-    ReservoirOracleUnderwriter.OracleInfo oracleInfo = _getOracleInfoForCollateral(nft, underlying);
+    ReservoirOracleUnderwriter.OracleInfo oracleInfo;
 
     //
     function setUp() public virtual {
@@ -55,6 +55,7 @@ contract BaseLendingStrategyTest is MainnetForking, UniswapForking, OracleTest {
         vm.prank(borrower);
         nft.approve(address(strategy), collateralId);
 
+        oracleInfo = _getOracleInfoForCollateral(nft, underlying);
         _provideLiquidityAtOneToOne();
         _populateOnReceivedArgs();
     }
@@ -114,6 +115,8 @@ contract BaseLendingStrategyTest is MainnetForking, UniswapForking, OracleTest {
 
     function _makeMaxLoanLiquidatable() internal {
         vm.warp(block.timestamp + 1 days);
+        // update oracle signature
+        oracleInfo = _getOracleInfoForCollateral(nft, underlying);
     }
 
     function _viableSqrtPriceLimit(bool sellingPAPR) internal view returns (uint160) {

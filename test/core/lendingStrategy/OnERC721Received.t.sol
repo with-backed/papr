@@ -28,6 +28,9 @@ contract OnERC721ReceivedTest is BaseLendingStrategyTest {
     /// mainly a gas bench mark test
     function testAddDebtAndWhenNormStale() public {
         vm.warp(block.timestamp + 1 weeks);
+        // update oracle timestamp
+        oracleInfo = _getOracleInfoForCollateral(nft, underlying);
+        safeTransferReceivedArgs.oracleInfo = oracleInfo;
         vm.startPrank(borrower);
         safeTransferReceivedArgs.minOut = 1;
         uint160 priceLimit = _maxSqrtPriceLimit(true);

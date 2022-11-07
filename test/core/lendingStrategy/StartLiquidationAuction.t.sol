@@ -73,6 +73,7 @@ contract StartLiquidationAuctionTest is BaseLendingStrategyTest {
         strategy.addCollateral(ILendingStrategy.Collateral(nft, collateralId + 1));
 
         vm.warp(block.timestamp + strategy.liquidationAuctionMinSpacing());
+        oracleInfo = _getOracleInfoForCollateral(nft, underlying);
         strategy.startLiquidationAuction(
             borrower, ILendingStrategy.Collateral({id: collateralId + 1, addr: nft}), oracleInfo
         );

@@ -8,7 +8,6 @@ import {TickMath} from "fullrange/libraries/TickMath.sol";
 
 import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
 import {LendingStrategy} from "src/core/LendingStrategy.sol";
-import {OracleSigUtils} from "test/OracleSigUtils.sol";
 import {Base} from "script/actions/Base.s.sol";
 
 abstract contract MintableERC721 is ERC721 {
@@ -36,39 +35,10 @@ contract MintNFTAndBorrowMax is Base {
             minOut: 1,
             debt: strategy.maxDebt(oraclePrice) - 2,
             sqrtPriceLimitX96: _maxSqrtPriceLimit(true),
-            oracleInfo: _getOracleInfoForCollateral(address(nft))
+            oracleInfo: _getOracleInfoForCollateral(address(nft), oraclePrice)
         });
         vm.startBroadcast();
         nft.safeTransferFrom(borrower, address(strategy), tokenId, abi.encode(safeTransferReceivedArgs));
-    }
-
-    function _constructOracleId(address collectionAddress) internal returns (bytes32 id) {
-        id = keccak256(
-            abi.encode(
-                keccak256("ContractWideCollectionPrice(uint8 kind,uint256 twapMinutes,address contract)"),
-                ReservoirOracleUnderwriter.PriceKind.LOWER,
-                30 days / 60,
-                collectionAddress
-            )
-        );
-    }
-
-    function _getOracleInfoForCollateral(address collateral)
-        internal
-        returns (ReservoirOracleUnderwriter.OracleInfo memory oracleInfo)
-    {
-        ReservoirOracle.Message memory message = ReservoirOracle.Message({
-            id: _constructOracleId(collateral),
-            payload: abi.encode(strategy.underlying(), oraclePrice),
-            timestamp: block.timestamp,
-            signature: "" // populated ourselves on the OracleInfo.Sig struct
-        });
-
-        bytes32 digest = OracleSigUtils.getTypedDataHash(message);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, digest);
-
-        oracleInfo.message = message;
-        oracleInfo.sig = ReservoirOracleUnderwriter.Sig({v: v, r: r, s: s});
     }
 
     function _maxSqrtPriceLimit(bool sellingPAPR) internal view returns (uint160) {

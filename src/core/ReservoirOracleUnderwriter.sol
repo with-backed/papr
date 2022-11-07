@@ -24,12 +24,14 @@ contract ReservoirOracleUnderwriter {
     }
 
     uint256 constant TWAP_MINUTES = 30 days / 60;
+    uint256 constant VALID_FOR = 20 minutes;
     address public immutable oracleSigner;
     address public immutable quoteCurrency;
 
     error IncorrectOracleSigner();
     error WrongCollateralFromOracleMessage();
     error WrongCurrencyFromOracleMessage();
+    error OracleMessageTooOld();
 
     constructor(address _oracleSigner, address _quoteCurrency) {
         oracleSigner = _oracleSigner;
@@ -76,6 +78,12 @@ contract ReservoirOracleUnderwriter {
 
         if (oracleInfo.message.id != expectedId) {
             revert WrongCollateralFromOracleMessage();
+        }
+
+        if (
+            oracleInfo.message.timestamp > block.timestamp || oracleInfo.message.timestamp + VALID_FOR < block.timestamp
+        ) {
+            revert OracleMessageTooOld();
         }
 
         (address oracleQuoteCurrency, uint256 oraclePrice) = abi.decode(oracleInfo.message.payload, (address, uint256));
