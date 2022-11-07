@@ -16,9 +16,9 @@ contract Base is Script {
     function _constructOracleId(address collectionAddress) internal returns (bytes32 id) {
         id = keccak256(
             abi.encode(
-                keccak256("ContractWideCollectionPrice(uint8 kind,uint256 twapMinutes,address contract)"),
+                keccak256("ContractWideCollectionPrice(uint8 kind,uint256 twapSeconds,address contract)"),
                 oraclePriceKind,
-                30 days / 60,
+                30 days,
                 collectionAddress
             )
         );

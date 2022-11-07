@@ -38,9 +38,9 @@ contract OracleTest is Test {
     function _constructOracleId(ERC721 collectionAddress) internal returns (bytes32 id) {
         id = keccak256(
             abi.encode(
-                keccak256("ContractWideCollectionPrice(uint8 kind,uint256 twapMinutes,address contract)"),
+                keccak256("ContractWideCollectionPrice(uint8 kind,uint256 twapSeconds,address contract)"),
                 priceKind,
-                30 days / 60,
+                30 days,
                 collectionAddress
             )
         );

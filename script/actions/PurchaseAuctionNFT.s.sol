@@ -7,6 +7,7 @@ import {INFTEDA} from "NFTEDA/extensions/NFTEDAStarterIncentive.sol";
 
 import {Base} from "script/actions/Base.s.sol";
 import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
+import {ReservoirOracleUnderwriter} from "src/core/ReservoirOracleUnderwriter.sol";
 
 contract PurchaseAuctionNFT is Base {
     function run() public {
