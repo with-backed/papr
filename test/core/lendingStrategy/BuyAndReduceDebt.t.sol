@@ -12,13 +12,16 @@ contract BuyAndReduceDebt is BaseLendingStrategyTest {
         vm.startPrank(borrower);
         nft.approve(address(strategy), collateralId);
         strategy.addCollateral(ILendingStrategy.Collateral(nft, collateralId));
-        uint256 underlyingOut = strategy.mintAndSellDebt(debt, 1e16, _maxSqrtPriceLimit({sellingPAPR: true}), borrower);
+        uint256 underlyingOut = strategy.mintAndSellDebt(
+            collateral.addr, debt, 1e16, _maxSqrtPriceLimit({sellingPAPR: true}), borrower, oracleInfo
+        );
         ILendingStrategy.VaultInfo memory vaultInfo = strategy.vaultInfo(borrower, collateral.addr);
         assertEq(vaultInfo.debt, debt);
         assertEq(underlyingOut, underlying.balanceOf(borrower));
         underlying.approve(address(strategy), underlyingOut);
-        uint256 debtPaid =
-            strategy.buyAndReduceDebt(borrower, collateral.addr, underlyingOut, 1, _maxSqrtPriceLimit({sellingPAPR: false}), borrower);
+        uint256 debtPaid = strategy.buyAndReduceDebt(
+            borrower, collateral.addr, underlyingOut, 1, _maxSqrtPriceLimit({sellingPAPR: false}), borrower, oracleInfo
+        );
         assertGt(debtPaid, 0);
         vaultInfo = strategy.vaultInfo(borrower, collateral.addr);
         assertEq(vaultInfo.debt, debt - debtPaid);
@@ -28,7 +31,9 @@ contract BuyAndReduceDebt is BaseLendingStrategyTest {
         vm.startPrank(borrower);
         nft.approve(address(strategy), collateralId);
         strategy.addCollateral(collateral);
-        uint256 underlyingOut = strategy.mintAndSellDebt(debt, 1e16, _maxSqrtPriceLimit({sellingPAPR: true}), borrower);
+        uint256 underlyingOut = strategy.mintAndSellDebt(
+            collateral.addr, debt, 1e16, _maxSqrtPriceLimit({sellingPAPR: true}), borrower, oracleInfo
+        );
         underlying.approve(address(strategy), underlyingOut);
         uint160 priceLimit = _maxSqrtPriceLimit({sellingPAPR: false});
         uint256 out = quoter.quoteExactInputSingle({
@@ -39,6 +44,8 @@ contract BuyAndReduceDebt is BaseLendingStrategyTest {
             sqrtPriceLimitX96: priceLimit
         });
         vm.expectRevert(abi.encodeWithSelector(ILendingStrategy.TooLittleOut.selector, out, out + 1));
-        uint256 debtPaid = strategy.buyAndReduceDebt(borrower, collateral.addr, underlyingOut, out + 1, priceLimit, address(borrower));
+        uint256 debtPaid = strategy.buyAndReduceDebt(
+            borrower, collateral.addr, underlyingOut, out + 1, priceLimit, address(borrower), oracleInfo
+        );
     }
 }

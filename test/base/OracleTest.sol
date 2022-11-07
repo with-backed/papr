@@ -15,6 +15,7 @@ contract OracleTest is Test {
 
     uint256 internal oraclePrivateKey = 0xA11CE;
     address oracleAddress = vm.addr(oraclePrivateKey);
+    ReservoirOracleUnderwriter.PriceKind priceKind = ReservoirOracleUnderwriter.PriceKind.LOWER;
 
     function _getOracleInfoForCollateral(ERC721 collateral, ERC20 underlying)
         internal
@@ -38,7 +39,7 @@ contract OracleTest is Test {
         id = keccak256(
             abi.encode(
                 keccak256("ContractWideCollectionPrice(uint8 kind,uint256 twapMinutes,address contract)"),
-                ReservoirOracleUnderwriter.PriceKind.LOWER,
+                priceKind,
                 30 days / 60,
                 collectionAddress
             )

@@ -22,7 +22,7 @@ contract AddCollateralTest is BaseLendingStrategyTest {
         vm.startPrank(borrower);
         nft.approve(address(strategy), collateralId);
         vm.expectRevert(ILendingStrategy.InvalidCollateral.selector);
-        strategy.addCollateral(collateral);
+        strategy.addCollateral(ILendingStrategy.Collateral(ERC721(address(1)), 1));
     }
 
     // function testAddCollateralFailsIfInvalidOracleSigner() public {

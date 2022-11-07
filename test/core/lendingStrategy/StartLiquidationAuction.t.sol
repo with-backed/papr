@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
+import {ReservoirOracleUnderwriter} from "src/core/ReservoirOracleUnderwriter.sol";
+
 import {BaseLendingStrategyTest} from "test/core/lendingStrategy/BaseLendingStrategy.ft.sol";
 import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
 
@@ -8,6 +10,8 @@ contract StartLiquidationAuctionTest is BaseLendingStrategyTest {
     function setUp() public override {
         super.setUp();
         _openMaxLoanAndSwap();
+        priceKind = ReservoirOracleUnderwriter.PriceKind.TWAP;
+        oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
     }
 
     /// TODO sets start price correctly
@@ -54,7 +58,9 @@ contract StartLiquidationAuctionTest is BaseLendingStrategyTest {
         strategy.addCollateral(ILendingStrategy.Collateral(nft, collateralId + 1));
 
         vm.expectRevert(ILendingStrategy.MinAuctionSpacing.selector);
-        strategy.startLiquidationAuction(borrower, ILendingStrategy.Collateral({id: collateralId + 1, addr: nft}), oracleInfo);
+        strategy.startLiquidationAuction(
+            borrower, ILendingStrategy.Collateral({id: collateralId + 1, addr: nft}), oracleInfo
+        );
     }
 
     function testAllowsNewAuctionIfMinSpacingHasPassed() public {
@@ -67,6 +73,8 @@ contract StartLiquidationAuctionTest is BaseLendingStrategyTest {
         strategy.addCollateral(ILendingStrategy.Collateral(nft, collateralId + 1));
 
         vm.warp(block.timestamp + strategy.liquidationAuctionMinSpacing());
-        strategy.startLiquidationAuction(borrower, ILendingStrategy.Collateral({id: collateralId + 1, addr: nft}), oracleInfo);
+        strategy.startLiquidationAuction(
+            borrower, ILendingStrategy.Collateral({id: collateralId + 1, addr: nft}), oracleInfo
+        );
     }
 }

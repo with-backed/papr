@@ -6,9 +6,7 @@ import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
 import {LendingStrategy} from "src/core/LendingStrategy.sol";
 
 contract RemoveCollateralTest is BaseLendingStrategyTest {
-    event RemoveCollateral(
-        address indexed account, ILendingStrategy.Collateral collateral, uint256 vaultCollateralValue
-    );
+    event RemoveCollateral(address indexed account, ILendingStrategy.Collateral collateral);
 
     function testRemoveCollateralSendsCorrectly() public {
         _addCollateral();
@@ -19,12 +17,12 @@ contract RemoveCollateralTest is BaseLendingStrategyTest {
     function testRemoveCollateralFailsIfWrongAddress() public {
         _addCollateral();
         vm.stopPrank();
-        vm.expectRevert(ILendingStrategy.InvalidCollateralVaultIDCombination.selector);
+        vm.expectRevert(ILendingStrategy.OnlyCollateralOwner.selector);
         strategy.removeCollateral(borrower, collateral, oracleInfo);
     }
 
     function testRemoveCollateralFailsIfDoesNotExist() public {
-        vm.expectRevert(ILendingStrategy.InvalidCollateralVaultIDCombination.selector);
+        vm.expectRevert(ILendingStrategy.OnlyCollateralOwner.selector);
         strategy.removeCollateral(borrower, collateral, oracleInfo);
     }
 
@@ -37,8 +35,8 @@ contract RemoveCollateralTest is BaseLendingStrategyTest {
 
     function testRemoveCollateralEmitsCorrectly() public {
         _addCollateral();
-        vm.expectEmit(true, true, true, true);
-        emit RemoveCollateral(borrower, collateral, 0);
+        vm.expectEmit(true, true, false, false);
+        emit RemoveCollateral(borrower, collateral);
         strategy.removeCollateral(borrower, collateral, oracleInfo);
     }
 

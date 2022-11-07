@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
+import {ReservoirOracleUnderwriter} from "src/core/ReservoirOracleUnderwriter.sol";
 import {INFTEDA} from "NFTEDA/extensions/NFTEDAStarterIncentive.sol";
 
 import {BaseLendingStrategyTest} from "test/core/lendingStrategy/BaseLendingStrategy.ft.sol";
@@ -17,6 +18,8 @@ contract PurchaseLiquidationAuctionNFT is BaseLendingStrategyTest {
         super.setUp();
         _openMaxLoanAndSwap();
         _makeMaxLoanLiquidatable();
+        priceKind = ReservoirOracleUnderwriter.PriceKind.TWAP;
+        oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
         auction = strategy.startLiquidationAuction(borrower, collateral, oracleInfo);
         nft.mint(purchaser, collateralId + 1);
         nft.mint(purchaser, collateralId + 2);
@@ -50,7 +53,7 @@ contract PurchaseLiquidationAuctionNFT is BaseLendingStrategyTest {
         emit ReduceDebt(borrower, info.debt);
         vm.expectEmit(true, true, false, true);
         emit Transfer(address(strategy), address(0), info.debt);
-        strategy.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser);
+        strategy.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
         uint256 afterBalance = strategy.perpetual().balanceOf(borrower);
         assertGt(afterBalance, beforeBalance);
         assertEq(afterBalance - beforeBalance, expectedPayout);
@@ -75,7 +78,7 @@ contract PurchaseLiquidationAuctionNFT is BaseLendingStrategyTest {
         // burning debt not covered by auction
         vm.expectEmit(true, false, false, true);
         emit ReduceDebt(borrower, info.debt - (price - penalty));
-        strategy.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser);
+        strategy.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
         uint256 afterBalance = strategy.perpetual().balanceOf(borrower);
         assertEq(afterBalance, beforeBalance);
         info = strategy.vaultInfo(borrower, collateral.addr);
@@ -110,7 +113,7 @@ contract PurchaseLiquidationAuctionNFT is BaseLendingStrategyTest {
         emit ReduceDebt(borrower, info.debt);
         vm.expectEmit(true, true, false, true);
         emit Transfer(address(strategy), address(0), info.debt);
-        strategy.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser);
+        strategy.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
         uint256 afterBalance = strategy.perpetual().balanceOf(borrower);
         assertGt(afterBalance, beforeBalance);
         assertEq(afterBalance - beforeBalance, expectedPayout);
@@ -135,7 +138,7 @@ contract PurchaseLiquidationAuctionNFT is BaseLendingStrategyTest {
         ILendingStrategy.VaultInfo memory beforeInfo = strategy.vaultInfo(borrower, collateral.addr);
         uint256 beforeBalance = strategy.perpetual().balanceOf(borrower);
         strategy.perpetual().approve(address(strategy), auction.startPrice);
-        uint256 neededToSave = beforeInfo.debt - strategy.maxDebt(oraclePrice);
+        uint256 neededToSave = beforeInfo.debt - strategy.maxDebt(oraclePrice * beforeInfo.count);
         uint256 excess = strategy.auctionCurrentPrice(auction) - neededToSave;
         uint256 penalty = excess * strategy.liquidationPenaltyBips() / 1e4;
         uint256 credit = excess - penalty + neededToSave;
@@ -145,7 +148,7 @@ contract PurchaseLiquidationAuctionNFT is BaseLendingStrategyTest {
         emit ReduceDebt(borrower, credit);
         vm.expectEmit(true, true, false, true);
         emit Transfer(address(strategy), address(0), credit);
-        strategy.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser);
+        strategy.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
         uint256 afterBalance = strategy.perpetual().balanceOf(borrower);
         assertEq(afterBalance, beforeBalance);
         ILendingStrategy.VaultInfo memory info = strategy.vaultInfo(borrower, collateral.addr);
@@ -175,7 +178,7 @@ contract PurchaseLiquidationAuctionNFT is BaseLendingStrategyTest {
         emit ReduceDebt(borrower, price);
         vm.expectEmit(true, true, false, true);
         emit Transfer(address(strategy), address(0), price);
-        strategy.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser);
+        strategy.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
         ILendingStrategy.VaultInfo memory afterInfo = strategy.vaultInfo(borrower, collateral.addr);
         assertEq(beforeInfo.debt - afterInfo.debt, price);
     }
