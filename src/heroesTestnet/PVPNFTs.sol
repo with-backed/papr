@@ -57,3 +57,21 @@ contract Toadz is ERC721("Toadz", "PVPTOADZ"), BoringOwnable {
         return string.concat("https://arweave.net/OVAmf1xgB6atP0uZg1U0fMd0Lw6DlsVqdvab-WTXZ1Q/", id.toString());
     }
 }
+
+contract Dinos is ERC721("Tiny Dinos", "PVPDinos"), BoringOwnable {
+    using Strings for uint256;
+
+    constructor() {
+        transferOwnership(msg.sender, false, false);
+    }
+
+    uint256 _nonce;
+
+    function mint(address to) external onlyOwner {
+        _mint(to, ++_nonce);
+    }
+
+    function tokenURI(uint256 id) public view override returns (string memory) {
+        return string.concat("ipfs://QmZPSjZKMjDUcqGuy6xS2EDQsJVFLyGHj3LUM2DkmCEfHo/", id.toString());
+    }
+}

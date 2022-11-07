@@ -16,5 +16,11 @@
       "addr": "0xE89CB2053A04Daf86ABaa1f4bC6D50744e57d39E",
       "amount": 1
     }
+  ],
+  "dinos": [
+    {
+      "addr": "0xE89CB2053A04Daf86ABaa1f4bC6D50744e57d39E",
+      "amount": 1
+    }
   ]
 }
