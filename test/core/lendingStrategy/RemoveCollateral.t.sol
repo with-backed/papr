@@ -6,53 +6,50 @@ import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
 import {LendingStrategy} from "src/core/LendingStrategy.sol";
 
 contract RemoveCollateralTest is BaseLendingStrategyTest {
-    event RemoveCollateral(
-        address indexed account, ILendingStrategy.Collateral collateral, uint256 vaultCollateralValue
-    );
+    event RemoveCollateral(address indexed account, ILendingStrategy.Collateral collateral);
 
     function testRemoveCollateralSendsCorrectly() public {
         _addCollateral();
-        strategy.removeCollateral(address(1), collateral);
-        assertEq(nft.ownerOf(collateralId), address(1));
+        strategy.removeCollateral(borrower, collateral, oracleInfo);
+        assertEq(nft.ownerOf(collateralId), borrower);
     }
 
     function testRemoveCollateralFailsIfWrongAddress() public {
         _addCollateral();
         vm.stopPrank();
-        vm.expectRevert(ILendingStrategy.InvalidCollateralVaultIDCombination.selector);
-        strategy.removeCollateral(address(1), collateral);
+        vm.expectRevert(ILendingStrategy.OnlyCollateralOwner.selector);
+        strategy.removeCollateral(borrower, collateral, oracleInfo);
     }
 
     function testRemoveCollateralFailsIfDoesNotExist() public {
-        vm.expectRevert(ILendingStrategy.InvalidCollateralVaultIDCombination.selector);
-        strategy.removeCollateral(address(1), collateral);
+        vm.expectRevert(ILendingStrategy.OnlyCollateralOwner.selector);
+        strategy.removeCollateral(borrower, collateral, oracleInfo);
     }
 
     function testRemoveCollateralFailsIfMaxDebtExceeded() public {
         _addCollateral();
-        strategy.increaseDebt(address(1), 1);
+        strategy.increaseDebt(borrower, collateral.addr, 1, oracleInfo);
         vm.expectRevert(abi.encodeWithSelector(ILendingStrategy.ExceedsMaxDebt.selector, 1, 0));
-        strategy.removeCollateral(address(1), collateral);
+        strategy.removeCollateral(borrower, collateral, oracleInfo);
     }
 
     function testRemoveCollateralEmitsCorrectly() public {
         _addCollateral();
-        vm.expectEmit(true, true, true, true);
-        emit RemoveCollateral(borrower, collateral, 0);
-        strategy.removeCollateral(address(1), collateral);
+        vm.expectEmit(true, true, false, false);
+        emit RemoveCollateral(borrower, collateral);
+        strategy.removeCollateral(borrower, collateral, oracleInfo);
     }
 
     function testRemoveCollateralUpdatesPricesCorrectly() public {
         _addCollateral();
-        strategy.removeCollateral(address(1), collateral);
-        assertEq(0, strategy.collateralFrozenOraclePrice(strategy.collateralHash(collateral, borrower)));
-        ILendingStrategy.VaultInfo memory vaultInfo = strategy.vaultInfo(borrower);
-        assertEq(0, vaultInfo.collateralValue);
+        strategy.removeCollateral(borrower, collateral, _getOracleInfoForCollateral(collateral.addr, underlying));
+        ILendingStrategy.VaultInfo memory vaultInfo = strategy.vaultInfo(borrower, collateral.addr);
+        assertEq(0, vaultInfo.count);
     }
 
     function _addCollateral() internal {
         vm.startPrank(borrower);
         nft.approve(address(strategy), collateralId);
-        strategy.addCollateral(collateral, oracleInfo);
+        strategy.addCollateral(collateral);
     }
 }

@@ -19,8 +19,8 @@ contract OnERC721ReceivedTest is BaseLendingStrategyTest {
             sqrtPriceLimitX96: priceLimit
         });
         nft.safeTransferFrom(borrower, address(strategy), collateralId, abi.encode(safeTransferReceivedArgs));
-        ILendingStrategy.VaultInfo memory vaultInfo = strategy.vaultInfo(borrower);
-        assertEq(vaultInfo.collateralValue, oraclePrice);
+        ILendingStrategy.VaultInfo memory vaultInfo = strategy.vaultInfo(borrower, collateral.addr);
+        assertEq(vaultInfo.count, 1);
         assertEq(vaultInfo.debt, debt);
         assertEq(expectedOut, underlying.balanceOf(borrower));
     }
@@ -28,6 +28,9 @@ contract OnERC721ReceivedTest is BaseLendingStrategyTest {
     /// mainly a gas bench mark test
     function testAddDebtAndWhenNormStale() public {
         vm.warp(block.timestamp + 1 weeks);
+        // update oracle timestamp
+        oracleInfo = _getOracleInfoForCollateral(nft, underlying);
+        safeTransferReceivedArgs.oracleInfo = oracleInfo;
         vm.startPrank(borrower);
         safeTransferReceivedArgs.minOut = 1;
         uint160 priceLimit = _maxSqrtPriceLimit(true);
@@ -40,8 +43,8 @@ contract OnERC721ReceivedTest is BaseLendingStrategyTest {
             sqrtPriceLimitX96: priceLimit
         });
         nft.safeTransferFrom(borrower, address(strategy), collateralId, abi.encode(safeTransferReceivedArgs));
-        ILendingStrategy.VaultInfo memory vaultInfo = strategy.vaultInfo(borrower);
-        assertEq(vaultInfo.collateralValue, oraclePrice);
+        ILendingStrategy.VaultInfo memory vaultInfo = strategy.vaultInfo(borrower, collateral.addr);
+        assertEq(vaultInfo.count, 1);
         assertEq(vaultInfo.debt, debt);
         assertEq(expectedOut, underlying.balanceOf(borrower));
     }

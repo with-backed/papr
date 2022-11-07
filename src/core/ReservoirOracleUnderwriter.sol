@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
+import {ERC721} from "solmate/tokens/ERC721.sol";
 import {ReservoirOracle} from "@reservoir/ReservoirOracle.sol";
 
 contract ReservoirOracleUnderwriter {
@@ -23,19 +24,21 @@ contract ReservoirOracleUnderwriter {
     }
 
     uint256 constant TWAP_MINUTES = 30 days / 60;
+    uint256 constant VALID_FOR = 20 minutes;
     address public immutable oracleSigner;
     address public immutable quoteCurrency;
 
     error IncorrectOracleSigner();
     error WrongCollateralFromOracleMessage();
     error WrongCurrencyFromOracleMessage();
+    error OracleMessageTooOld();
 
     constructor(address _oracleSigner, address _quoteCurrency) {
         oracleSigner = _oracleSigner;
         quoteCurrency = _quoteCurrency;
     }
 
-    function underwritePriceForCollateral(uint256 tokenId, address contractAddress, OracleInfo memory oracleInfo)
+    function underwritePriceForCollateral(ERC721 asset, PriceKind priceKind, OracleInfo memory oracleInfo)
         public
         returns (uint256)
     {
@@ -67,14 +70,20 @@ contract ReservoirOracleUnderwriter {
         bytes32 expectedId = keccak256(
             abi.encode(
                 keccak256("ContractWideCollectionPrice(uint8 kind,uint256 twapMinutes,address contract)"),
-                PriceKind.LOWER,
+                priceKind,
                 TWAP_MINUTES,
-                contractAddress
+                asset
             )
         );
 
         if (oracleInfo.message.id != expectedId) {
             revert WrongCollateralFromOracleMessage();
+        }
+
+        if (
+            oracleInfo.message.timestamp > block.timestamp || oracleInfo.message.timestamp + VALID_FOR < block.timestamp
+        ) {
+            revert OracleMessageTooOld();
         }
 
         (address oracleQuoteCurrency, uint256 oraclePrice) = abi.decode(oracleInfo.message.payload, (address, uint256));

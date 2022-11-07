@@ -37,16 +37,16 @@ contract LendingStrategy is
     uint256 public auctionStartPriceMultiplier = 3;
     uint256 public liquidationPenaltyBips = 1000;
 
-    mapping(address => ILendingStrategy.VaultInfo) private _vaultInfo;
-    mapping(bytes32 => uint256) public collateralFrozenOraclePrice;
+    // account => asset => vaultInfo
+    mapping(address => mapping(ERC721 => ILendingStrategy.VaultInfo)) private _vaultInfo;
+    // nft address => tokenId => account
+    mapping(ERC721 => mapping(uint256 => address)) public collateralOwner;
     mapping(address => bool) public isAllowed;
 
     event IncreaseDebt(address indexed account, uint256 amount);
-    event AddCollateral(address indexed account, ILendingStrategy.Collateral collateral, uint256 price);
+    event AddCollateral(address indexed account, ILendingStrategy.Collateral collateral);
     event ReduceDebt(address indexed account, uint256 amount);
-    event RemoveCollateral(
-        address indexed account, ILendingStrategy.Collateral collateral, uint256 vaultCollateralValue
-    );
+    event RemoveCollateral(address indexed account, ILendingStrategy.Collateral collateral);
 
     event ChangeCollateralAllowed(ILendingStrategy.SetAllowedCollateralArg arg);
 
@@ -90,7 +90,7 @@ contract LendingStrategy is
 
         ILendingStrategy.Collateral memory collateral = ILendingStrategy.Collateral(ERC721(msg.sender), _id);
 
-        _addCollateralToVault(from, collateral, request.oracleInfo);
+        _addCollateralToVault(from, collateral);
 
         if (request.minOut > 0) {
             _swap(
@@ -99,36 +99,54 @@ contract LendingStrategy is
                 request.debt,
                 request.minOut,
                 request.sqrtPriceLimitX96,
-                abi.encode(from, address(this))
+                abi.encode(from, collateral.addr, address(this), request.oracleInfo)
             );
         } else if (request.debt > 0) {
-            _increaseDebt(from, request.mintDebtOrProceedsTo, uint256(request.debt));
+            _increaseDebt(
+                from, collateral.addr, request.mintDebtOrProceedsTo, uint256(request.debt), request.oracleInfo
+            );
         }
 
         return ERC721TokenReceiver.onERC721Received.selector;
     }
 
     /// TODO consider passing token0IsUnderlying to save an SLOAD
-    function mintAndSellDebt(uint256 debt, uint256 minOut, uint160 sqrtPriceLimitX96, address proceedsTo)
-        public
-        returns (uint256)
-    {
+    function mintAndSellDebt(
+        ERC721 collateralAsset,
+        uint256 debt,
+        uint256 minOut,
+        uint160 sqrtPriceLimitX96,
+        address proceedsTo,
+        ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
+    ) public returns (uint256) {
         return _swap(
-            proceedsTo, !token0IsUnderlying, debt, minOut, sqrtPriceLimitX96, abi.encode(msg.sender, address(this))
+            proceedsTo,
+            !token0IsUnderlying,
+            debt,
+            minOut,
+            sqrtPriceLimitX96,
+            abi.encode(msg.sender, collateralAsset, address(this), oracleInfo)
         );
     }
 
     function buyAndReduceDebt(
         address account,
+        ERC721 collateralAsset,
         uint256 underlyingAmount,
         uint256 minOut,
         uint160 sqrtPriceLimitX96,
-        address proceedsTo
+        address proceedsTo,
+        ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
     ) public returns (uint256 out) {
         out = _swap(
-            proceedsTo, token0IsUnderlying, underlyingAmount, minOut, sqrtPriceLimitX96, abi.encode(account, msg.sender)
+            proceedsTo,
+            token0IsUnderlying,
+            underlyingAmount,
+            minOut,
+            sqrtPriceLimitX96,
+            abi.encode(account, collateralAsset, msg.sender, oracleInfo)
         );
-        reduceDebt(account, uint96(out));
+        reduceDebt(account, collateralAsset, uint96(out));
     }
 
     function uniswapV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata _data) external {
@@ -138,23 +156,21 @@ contract LendingStrategy is
             revert("wrong caller");
         }
 
-        (address account, address payer) = abi.decode(_data, (address, address));
+        (address account, ERC721 asset, address payer, ReservoirOracleUnderwriter.OracleInfo memory oracleInfo) =
+            abi.decode(_data, (address, ERC721, address, ReservoirOracleUnderwriter.OracleInfo));
 
         //determine the amount that needs to be repaid as part of the flashswap
         uint256 amountToPay = amount0Delta > 0 ? uint256(amount0Delta) : uint256(amount1Delta);
 
         if (payer == address(this)) {
-            _increaseDebt(account, msg.sender, amountToPay);
+            _increaseDebt(account, asset, msg.sender, amountToPay, oracleInfo);
         } else {
             underlying.transferFrom(payer, msg.sender, amountToPay);
         }
     }
 
-    function addCollateral(
-        ILendingStrategy.Collateral calldata collateral,
-        ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
-    ) public {
-        _addCollateralToVault(msg.sender, collateral, oracleInfo);
+    function addCollateral(ILendingStrategy.Collateral calldata collateral) public {
+        _addCollateralToVault(msg.sender, collateral);
         collateral.addr.transferFrom(msg.sender, address(this), collateral.id);
     }
 
@@ -163,60 +179,75 @@ contract LendingStrategy is
     /// @dev anyone could use this method to add collateral to anyone else's vault
     /// we think this is acceptable and it is useful so that a periphery contract
     /// can modify the tx.origin's vault
-    function addCollateralWithCallback(
-        ILendingStrategy.Collateral calldata collateral,
-        ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo,
-        bytes calldata data
-    ) public {
+    function addCollateralWithCallback(ILendingStrategy.Collateral calldata collateral, bytes calldata data) public {
         if (collateral.addr.ownerOf(collateral.id) == address(this)) {
             revert();
         }
-        _addCollateralToVault(msg.sender, collateral, oracleInfo);
+        _addCollateralToVault(msg.sender, collateral);
         IPostCollateralCallback(msg.sender).postCollateralCallback(collateral, data);
         if (collateral.addr.ownerOf(collateral.id) != address(this)) {
             revert();
         }
     }
 
-    function removeCollateral(address sendTo, ILendingStrategy.Collateral calldata collateral) external {
-        bytes32 h = collateralHash(collateral, msg.sender);
-        uint256 price = collateralFrozenOraclePrice[h];
-
-        if (price == 0) {
-            revert ILendingStrategy.InvalidCollateralVaultIDCombination();
+    function removeCollateral(
+        address sendTo,
+        ILendingStrategy.Collateral calldata collateral,
+        ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
+    ) external {
+        if (collateralOwner[collateral.addr][collateral.id] != msg.sender) {
+            revert ILendingStrategy.OnlyCollateralOwner();
         }
 
-        delete collateralFrozenOraclePrice[h];
-        uint256 newVaultCollateralValue = _vaultInfo[msg.sender].collateralValue - price;
-        _vaultInfo[msg.sender].collateralValue = uint96(newVaultCollateralValue);
+        delete collateralOwner[collateral.addr][collateral.id];
+
+        uint16 newCount;
+        unchecked {
+            newCount = _vaultInfo[msg.sender][collateral.addr].count - 1;
+            _vaultInfo[msg.sender][collateral.addr].count = newCount;
+        }
 
         // allows for onReceive hook to sell and repay debt before the
         // debt check below
         collateral.addr.safeTransferFrom(address(this), sendTo, collateral.id);
 
-        uint256 debt = _vaultInfo[msg.sender].debt;
-        uint256 max = maxDebt(newVaultCollateralValue);
+        uint256 debt = _vaultInfo[msg.sender][collateral.addr].debt;
+        uint256 oraclePrice =
+            underwritePriceForCollateral(collateral.addr, ReservoirOracleUnderwriter.PriceKind.LOWER, oracleInfo);
+        uint256 max = maxDebt(oraclePrice * newCount);
 
         if (debt > max) {
             revert ILendingStrategy.ExceedsMaxDebt(debt, max);
         }
 
-        emit RemoveCollateral(msg.sender, collateral, newVaultCollateralValue);
+        emit RemoveCollateral(msg.sender, collateral);
     }
 
-    function increaseDebt(address mintTo, uint256 amount) public {
-        _increaseDebt(msg.sender, mintTo, amount);
+    function increaseDebt(
+        address mintTo,
+        ERC721 asset,
+        uint256 amount,
+        ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
+    ) public {
+        _increaseDebt({account: msg.sender, asset: asset, mintTo: mintTo, amount: amount, oracleInfo: oracleInfo});
     }
 
-    function reduceDebt(address account, uint256 amount) public {
-        _reduceDebt(account, msg.sender, amount);
+    function reduceDebt(address account, ERC721 asset, uint256 amount) public {
+        _reduceDebt({account: account, asset: asset, burnFrom: msg.sender, amount: amount});
     }
 
-    function purchaseLiquidationAuctionNFT(Auction calldata auction, uint256 maxPrice, address sendTo) public {
-        uint256 collateralValueCached = _vaultInfo[auction.nftOwner].collateralValue;
+    function purchaseLiquidationAuctionNFT(
+        Auction calldata auction,
+        uint256 maxPrice,
+        address sendTo,
+        ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
+    ) public {
+        uint256 collateralValueCached = underwritePriceForCollateral(
+            auction.auctionAssetContract, ReservoirOracleUnderwriter.PriceKind.TWAP, oracleInfo
+        ) * _vaultInfo[auction.nftOwner][auction.auctionAssetContract].count;
         bool isLastCollateral = collateralValueCached == 0;
 
-        uint256 debtCached = _vaultInfo[auction.nftOwner].debt;
+        uint256 debtCached = _vaultInfo[auction.nftOwner][auction.auctionAssetContract].debt;
         uint256 maxDebtCached = isLastCollateral ? debtCached : maxDebt(collateralValueCached);
         /// anything above what is needed to bring this vault under maxDebt is considered excess
         uint256 neededToSaveVault = maxDebtCached > debtCached ? 0 : debtCached - maxDebtCached;
@@ -225,49 +256,57 @@ contract LendingStrategy is
         uint256 remaining;
 
         if (excess > 0) {
-            uint256 fee = excess * liquidationPenaltyBips / 1e4;
-            uint256 credit = excess - fee;
-            uint256 totalOwed = credit + neededToSaveVault;
-
-            DebtToken(address(perpetual)).burn(address(this), fee);
-
-            if (totalOwed > debtCached) {
-                // we owe them more papr than they have in debt
-                // so we pay down debt and send them the rest
-                _reduceDebt(auction.nftOwner, address(this), debtCached);
-                perpetual.transfer(auction.nftOwner, totalOwed - debtCached);
-            } else {
-                // reduce vault debt
-                _reduceDebt(auction.nftOwner, address(this), totalOwed);
-                remaining = debtCached - totalOwed;
-            }
+            remaining = _handleExcess(excess, neededToSaveVault, debtCached, auction);
         } else {
-            _reduceDebt(auction.nftOwner, address(this), price);
+            _reduceDebt(auction.nftOwner, auction.auctionAssetContract, address(this), price);
             remaining = debtCached - price;
         }
 
         if (isLastCollateral && remaining != 0) {
             /// there will be debt left with no NFTs, set it to 0
-            _reduceDebtWithoutBurn(auction.nftOwner, remaining);
+            _reduceDebtWithoutBurn(auction.nftOwner, auction.auctionAssetContract, remaining);
         }
     }
 
-    function startLiquidationAuction(address account, ILendingStrategy.Collateral calldata collateral)
-        public
-        returns (INFTEDA.Auction memory auction)
+    function _handleExcess(uint256 excess, uint256 neededToSaveVault, uint256 debtCached, Auction calldata auction)
+        internal
+        returns (uint256 remaining)
     {
+        uint256 fee = excess * liquidationPenaltyBips / 1e4;
+        uint256 credit = excess - fee;
+        uint256 totalOwed = credit + neededToSaveVault;
+
+        DebtToken(address(perpetual)).burn(address(this), fee);
+
+        if (totalOwed > debtCached) {
+            // we owe them more papr than they have in debt
+            // so we pay down debt and send them the rest
+            _reduceDebt(auction.nftOwner, auction.auctionAssetContract, address(this), debtCached);
+            perpetual.transfer(auction.nftOwner, totalOwed - debtCached);
+        } else {
+            // reduce vault debt
+            _reduceDebt(auction.nftOwner, auction.auctionAssetContract, address(this), totalOwed);
+            remaining = debtCached - totalOwed;
+        }
+    }
+
+    function startLiquidationAuction(
+        address account,
+        ILendingStrategy.Collateral calldata collateral,
+        ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
+    ) public returns (INFTEDA.Auction memory auction) {
         uint256 norm = updateNormalization();
 
-        ILendingStrategy.VaultInfo storage info = _vaultInfo[account];
+        ILendingStrategy.VaultInfo storage info = _vaultInfo[account][collateral.addr];
 
         // check collateral belongs to account
-        bytes32 h = collateralHash(collateral, account);
-        uint256 price = collateralFrozenOraclePrice[h];
-        if (price == 0) {
+        if (collateralOwner[collateral.addr][collateral.id] != account) {
             revert ILendingStrategy.InvalidCollateralAccountPair();
         }
 
-        if (norm < liquidationPrice(account)) {
+        uint256 oraclePrice =
+            underwritePriceForCollateral(collateral.addr, ReservoirOracleUnderwriter.PriceKind.TWAP, oracleInfo);
+        if (info.debt < maxDebt(oraclePrice * info.count)) {
             revert ILendingStrategy.NotLiquidatable();
         }
 
@@ -276,9 +315,9 @@ contract LendingStrategy is
         }
 
         info.latestAuctionStartTime = uint40(block.timestamp);
-        info.collateralValue -= uint96(price);
+        info.count -= 1;
 
-        delete collateralFrozenOraclePrice[h];
+        delete collateralOwner[collateral.addr][collateral.id];
 
         _startAuction(
             auction = Auction({
@@ -289,7 +328,7 @@ contract LendingStrategy is
                 secondsInPeriod: auctionDecayPeriod,
                 // start price is frozen price * auctionStartPriceMultiplier,
                 // converted to perpetual value at the current contract price
-                startPrice: (price * auctionStartPriceMultiplier) * FixedPointMathLib.WAD / norm,
+                startPrice: (oraclePrice * auctionStartPriceMultiplier) * FixedPointMathLib.WAD / norm,
                 paymentAsset: perpetual
             })
         );
@@ -298,35 +337,36 @@ contract LendingStrategy is
     // normalization value at liquidation
     // i.e. the debt token:underlying internal contract exchange rate (normalization)
     // at which this vault will be liquidated
-    function liquidationPrice(address account) public view returns (uint256) {
-        uint256 debt = _vaultInfo[account].debt;
+    function liquidationPrice(address account, ERC721 asset, uint256 collateralPrice) public view returns (uint256) {
+        uint256 debt = _vaultInfo[account][asset].debt;
         if (debt == 0) {
             revert ILendingStrategy.AccountHasNoDebt();
         } else {
-            uint256 maxLoanUnderlying = _vaultInfo[account].collateralValue * maxLTV;
+            // TODO do we need to divide out WAD?
+            uint256 maxLoanUnderlying = _vaultInfo[account][asset].count * collateralPrice * maxLTV;
             return maxLoanUnderlying / debt;
         }
     }
 
-    function maxDebt(uint256 collateralValue) public view returns (uint256) {
-        uint256 maxLoanUnderlying = collateralValue * maxLTV;
+    function maxDebt(uint256 totalCollateraValue) public view returns (uint256) {
+        uint256 maxLoanUnderlying = totalCollateraValue * maxLTV;
         return maxLoanUnderlying / normalization;
     }
 
-    function collateralHash(ILendingStrategy.Collateral memory collateral, address account)
-        public
-        pure
-        returns (bytes32)
-    {
-        return keccak256(abi.encode(collateral, account));
+    function vaultTotalCollateralValue(address account, ERC721 asset, uint256 price) public view returns (uint256) {
+        return _vaultInfo[account][asset].count * price;
     }
 
-    function vaultIdentifier(uint256 nonce, address account) public view returns (uint256) {
-        return uint256(keccak256(abi.encode(nonce, account)));
-    }
+    // function collateralHash(ILendingStrategy.Collateral memory collateral, address account)
+    //     public
+    //     pure
+    //     returns (bytes32)
+    // {
+    //     return keccak256(abi.encode(collateral, account));
+    // }
 
-    function vaultInfo(address account) public view returns (ILendingStrategy.VaultInfo memory) {
-        return _vaultInfo[account];
+    function vaultInfo(address account, ERC721 asset) public view returns (ILendingStrategy.VaultInfo memory) {
+        return _vaultInfo[account][asset];
     }
 
     function setAllowedCollateral(ILendingStrategy.SetAllowedCollateralArg[] calldata args) public onlyOwner {
@@ -364,60 +404,51 @@ contract LendingStrategy is
         }
     }
 
-    function _increaseDebt(address account, address mintTo, uint256 amount) internal {
+    function _increaseDebt(
+        address account,
+        ERC721 asset,
+        address mintTo,
+        uint256 amount,
+        ReservoirOracleUnderwriter.OracleInfo memory oracleInfo
+    ) internal {
         updateNormalization();
 
-        uint256 newDebt = _vaultInfo[account].debt + amount;
+        uint256 newDebt = _vaultInfo[account][asset].debt + amount;
+        uint256 oraclePrice =
+            underwritePriceForCollateral(asset, ReservoirOracleUnderwriter.PriceKind.LOWER, oracleInfo);
 
-        uint256 max = maxDebt(_vaultInfo[account].collateralValue);
+        // TODO do we need to check if oraclePrice is 0?
+
+        uint256 max = maxDebt(_vaultInfo[account][asset].count * oraclePrice);
         if (newDebt > max) {
             revert ILendingStrategy.ExceedsMaxDebt(newDebt, max);
         }
 
         // TODO safeCast
-        _vaultInfo[account].debt = uint96(newDebt);
+        _vaultInfo[account][asset].debt = uint200(newDebt);
         DebtToken(address(perpetual)).mint(mintTo, amount);
 
         emit IncreaseDebt(account, amount);
     }
 
-    function _addCollateralToVault(
-        address account,
-        ILendingStrategy.Collateral memory collateral,
-        ReservoirOracleUnderwriter.OracleInfo memory oracleInfo
-    ) internal {
-        bytes32 h = collateralHash(collateral, account);
-        /// TODO: do we need this check? I think was just for the callback
-        /// case but I added a check there that the collateral is not
-        /// already in the vault
-        if (collateralFrozenOraclePrice[h] != 0) {
-            // collateral is already here
-            revert();
-        }
-
+    function _addCollateralToVault(address account, ILendingStrategy.Collateral memory collateral) internal {
         if (!isAllowed[address(collateral.addr)]) {
             revert ILendingStrategy.InvalidCollateral();
         }
 
-        uint256 oraclePrice = underwritePriceForCollateral(collateral.id, address(collateral.addr), oracleInfo);
+        collateralOwner[collateral.addr][collateral.id] = account;
+        _vaultInfo[account][collateral.addr].count += 1;
 
-        if (oraclePrice == 0) {
-            revert();
-        }
-
-        collateralFrozenOraclePrice[h] = oraclePrice;
-        _vaultInfo[account].collateralValue += uint96(oraclePrice);
-
-        emit AddCollateral(account, collateral, oraclePrice);
+        emit AddCollateral(account, collateral);
     }
 
-    function _reduceDebt(address account, address burnFrom, uint256 amount) internal {
-        _reduceDebtWithoutBurn(account, amount);
+    function _reduceDebt(address account, ERC721 asset, address burnFrom, uint256 amount) internal {
+        _reduceDebtWithoutBurn(account, asset, amount);
         DebtToken(address(perpetual)).burn(burnFrom, amount);
     }
 
-    function _reduceDebtWithoutBurn(address account, uint256 amount) internal {
-        _vaultInfo[account].debt -= uint96(amount);
+    function _reduceDebtWithoutBurn(address account, ERC721 asset, uint256 amount) internal {
+        _vaultInfo[account][asset].debt = uint200(_vaultInfo[account][asset].debt - amount);
         emit ReduceDebt(account, amount);
     }
 }

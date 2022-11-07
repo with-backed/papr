@@ -2,6 +2,8 @@
 pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
+import {ERC721} from "solmate/tokens/ERC721.sol";
 
 import {ReservoirOracle} from "@reservoir/ReservoirOracle.sol";
 import {ReservoirOracleUnderwriter} from "src/core/ReservoirOracleUnderwriter.sol";
@@ -9,12 +11,13 @@ import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
 import {OracleSigUtils} from "test/OracleSigUtils.sol";
 
 contract OracleTest is Test {
-    uint128 oraclePrice = 3e18;
+    uint256 oraclePrice = 3e18;
 
     uint256 internal oraclePrivateKey = 0xA11CE;
     address oracleAddress = vm.addr(oraclePrivateKey);
+    ReservoirOracleUnderwriter.PriceKind priceKind = ReservoirOracleUnderwriter.PriceKind.LOWER;
 
-    function _getOracleInfoForCollateral(address collateral, address underlying)
+    function _getOracleInfoForCollateral(ERC721 collateral, ERC20 underlying)
         internal
         returns (ReservoirOracleUnderwriter.OracleInfo memory oracleInfo)
     {
@@ -32,11 +35,11 @@ contract OracleTest is Test {
         oracleInfo.sig = ReservoirOracleUnderwriter.Sig({v: v, r: r, s: s});
     }
 
-    function _constructOracleId(address collectionAddress) internal returns (bytes32 id) {
+    function _constructOracleId(ERC721 collectionAddress) internal returns (bytes32 id) {
         id = keccak256(
             abi.encode(
                 keccak256("ContractWideCollectionPrice(uint8 kind,uint256 twapMinutes,address contract)"),
-                ReservoirOracleUnderwriter.PriceKind.LOWER,
+                priceKind,
                 30 days / 60,
                 collectionAddress
             )

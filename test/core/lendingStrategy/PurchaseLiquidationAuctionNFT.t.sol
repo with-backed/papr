@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
+import {ReservoirOracleUnderwriter} from "src/core/ReservoirOracleUnderwriter.sol";
 import {INFTEDA} from "NFTEDA/extensions/NFTEDAStarterIncentive.sol";
 
 import {BaseLendingStrategyTest} from "test/core/lendingStrategy/BaseLendingStrategy.ft.sol";
@@ -17,7 +18,10 @@ contract PurchaseLiquidationAuctionNFT is BaseLendingStrategyTest {
         super.setUp();
         _openMaxLoanAndSwap();
         _makeMaxLoanLiquidatable();
-        auction = strategy.startLiquidationAuction(borrower, collateral);
+        safeTransferReceivedArgs.oracleInfo = oracleInfo;
+        priceKind = ReservoirOracleUnderwriter.PriceKind.TWAP;
+        oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
+        auction = strategy.startLiquidationAuction(borrower, collateral, oracleInfo);
         nft.mint(purchaser, collateralId + 1);
         nft.mint(purchaser, collateralId + 2);
         nft.mint(purchaser, collateralId + 3);
@@ -36,7 +40,8 @@ contract PurchaseLiquidationAuctionNFT is BaseLendingStrategyTest {
     function testWhenLastNFTAndSurplus() public {
         /// https://www.wolframalpha.com/input?i=solve+4+%3D+8.999+*+0.3+%5E+%28x+%2F+86400%29
         vm.warp(block.timestamp + 58187);
-        ILendingStrategy.VaultInfo memory info = strategy.vaultInfo(borrower);
+        oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
+        ILendingStrategy.VaultInfo memory info = strategy.vaultInfo(borrower, collateral.addr);
         uint256 neededToSave = 0;
         uint256 excess = strategy.auctionCurrentPrice(auction) - neededToSave;
         uint256 penalty = excess * strategy.liquidationPenaltyBips() / 1e4;
@@ -50,17 +55,18 @@ contract PurchaseLiquidationAuctionNFT is BaseLendingStrategyTest {
         emit ReduceDebt(borrower, info.debt);
         vm.expectEmit(true, true, false, true);
         emit Transfer(address(strategy), address(0), info.debt);
-        strategy.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser);
+        strategy.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
         uint256 afterBalance = strategy.perpetual().balanceOf(borrower);
         assertGt(afterBalance, beforeBalance);
         assertEq(afterBalance - beforeBalance, expectedPayout);
-        info = strategy.vaultInfo(borrower);
+        info = strategy.vaultInfo(borrower, collateral.addr);
         assertEq(info.debt, 0);
     }
 
     function testWhenLastNFTAndShortfall() public {
         // https://www.wolframalpha.com/input?i=solve+1.5+%3D+8.999+*+0.3+%5E+%28x+%2F+86400%29
         vm.warp(block.timestamp + 128575);
+        oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
         uint256 beforeBalance = strategy.perpetual().balanceOf(borrower);
         strategy.perpetual().approve(address(strategy), auction.startPrice);
         uint256 price = strategy.auctionCurrentPrice(auction);
@@ -71,14 +77,14 @@ contract PurchaseLiquidationAuctionNFT is BaseLendingStrategyTest {
         emit ReduceDebt(borrower, price - penalty);
         vm.expectEmit(true, true, false, true);
         emit Transfer(address(strategy), address(0), price - penalty);
-        ILendingStrategy.VaultInfo memory info = strategy.vaultInfo(borrower);
+        ILendingStrategy.VaultInfo memory info = strategy.vaultInfo(borrower, collateral.addr);
         // burning debt not covered by auction
         vm.expectEmit(true, false, false, true);
         emit ReduceDebt(borrower, info.debt - (price - penalty));
-        strategy.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser);
+        strategy.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
         uint256 afterBalance = strategy.perpetual().balanceOf(borrower);
         assertEq(afterBalance, beforeBalance);
-        info = strategy.vaultInfo(borrower);
+        info = strategy.vaultInfo(borrower, collateral.addr);
         assertEq(info.debt, 0);
     }
 
@@ -90,14 +96,15 @@ contract PurchaseLiquidationAuctionNFT is BaseLendingStrategyTest {
         vm.startPrank(borrower);
         nft.approve(address(strategy), tokenId);
         collateral.id = tokenId;
-        strategy.addCollateral(collateral, oracleInfo);
+        strategy.addCollateral(collateral);
         vm.stopPrank();
         vm.startPrank(purchaser);
 
         /// https://www.wolframalpha.com/input?i=solve+4+%3D+8.999+*+0.3+%5E+%28x+%2F+86400%29
         vm.warp(block.timestamp + 58187);
-        ILendingStrategy.VaultInfo memory info = strategy.vaultInfo(borrower);
-        uint256 neededToSave = info.debt - strategy.maxDebt(info.collateralValue);
+        oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
+        ILendingStrategy.VaultInfo memory info = strategy.vaultInfo(borrower, collateral.addr);
+        uint256 neededToSave = info.debt - strategy.maxDebt(oraclePrice);
         uint256 excess = strategy.auctionCurrentPrice(auction) - neededToSave;
         uint256 penalty = excess * strategy.liquidationPenaltyBips() / 1e4;
         uint256 credit = excess - penalty;
@@ -110,11 +117,11 @@ contract PurchaseLiquidationAuctionNFT is BaseLendingStrategyTest {
         emit ReduceDebt(borrower, info.debt);
         vm.expectEmit(true, true, false, true);
         emit Transfer(address(strategy), address(0), info.debt);
-        strategy.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser);
+        strategy.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
         uint256 afterBalance = strategy.perpetual().balanceOf(borrower);
         assertGt(afterBalance, beforeBalance);
         assertEq(afterBalance - beforeBalance, expectedPayout);
-        info = strategy.vaultInfo(borrower);
+        info = strategy.vaultInfo(borrower, collateral.addr);
         assertEq(info.debt, 0);
     }
 
@@ -126,16 +133,17 @@ contract PurchaseLiquidationAuctionNFT is BaseLendingStrategyTest {
         vm.startPrank(borrower);
         nft.approve(address(strategy), tokenId);
         collateral.id = tokenId;
-        strategy.addCollateral(collateral, oracleInfo);
+        strategy.addCollateral(collateral);
         vm.stopPrank();
         vm.startPrank(purchaser);
 
         // https://www.wolframalpha.com/input?i=solve+1.5+%3D+8.999+*+0.3+%5E+%28x+%2F+86400%29
         vm.warp(block.timestamp + 128575);
-        ILendingStrategy.VaultInfo memory beforeInfo = strategy.vaultInfo(borrower);
+        oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
+        ILendingStrategy.VaultInfo memory beforeInfo = strategy.vaultInfo(borrower, collateral.addr);
         uint256 beforeBalance = strategy.perpetual().balanceOf(borrower);
         strategy.perpetual().approve(address(strategy), auction.startPrice);
-        uint256 neededToSave = beforeInfo.debt - strategy.maxDebt(beforeInfo.collateralValue);
+        uint256 neededToSave = beforeInfo.debt - strategy.maxDebt(oraclePrice * beforeInfo.count);
         uint256 excess = strategy.auctionCurrentPrice(auction) - neededToSave;
         uint256 penalty = excess * strategy.liquidationPenaltyBips() / 1e4;
         uint256 credit = excess - penalty + neededToSave;
@@ -145,10 +153,10 @@ contract PurchaseLiquidationAuctionNFT is BaseLendingStrategyTest {
         emit ReduceDebt(borrower, credit);
         vm.expectEmit(true, true, false, true);
         emit Transfer(address(strategy), address(0), credit);
-        strategy.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser);
+        strategy.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
         uint256 afterBalance = strategy.perpetual().balanceOf(borrower);
         assertEq(afterBalance, beforeBalance);
-        ILendingStrategy.VaultInfo memory info = strategy.vaultInfo(borrower);
+        ILendingStrategy.VaultInfo memory info = strategy.vaultInfo(borrower, collateral.addr);
         assertEq(info.debt, beforeInfo.debt - credit);
     }
 
@@ -160,13 +168,14 @@ contract PurchaseLiquidationAuctionNFT is BaseLendingStrategyTest {
         vm.startPrank(borrower);
         nft.approve(address(strategy), tokenId);
         collateral.id = tokenId;
-        strategy.addCollateral(collateral, oracleInfo);
+        strategy.addCollateral(collateral);
         vm.stopPrank();
         vm.startPrank(purchaser);
 
         vm.warp(block.timestamp + 2 weeks);
-        ILendingStrategy.VaultInfo memory beforeInfo = strategy.vaultInfo(borrower);
-        uint256 neededToSave = beforeInfo.debt - strategy.maxDebt(beforeInfo.collateralValue);
+        oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
+        ILendingStrategy.VaultInfo memory beforeInfo = strategy.vaultInfo(borrower, collateral.addr);
+        uint256 neededToSave = beforeInfo.debt - strategy.maxDebt(oraclePrice * beforeInfo.count);
         uint256 price = strategy.auctionCurrentPrice(auction);
         // there will no excess
         assertGt(neededToSave, price);
@@ -175,8 +184,8 @@ contract PurchaseLiquidationAuctionNFT is BaseLendingStrategyTest {
         emit ReduceDebt(borrower, price);
         vm.expectEmit(true, true, false, true);
         emit Transfer(address(strategy), address(0), price);
-        strategy.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser);
-        ILendingStrategy.VaultInfo memory afterInfo = strategy.vaultInfo(borrower);
+        strategy.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
+        ILendingStrategy.VaultInfo memory afterInfo = strategy.vaultInfo(borrower, collateral.addr);
         assertEq(beforeInfo.debt - afterInfo.debt, price);
     }
 

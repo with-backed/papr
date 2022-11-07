@@ -21,6 +21,8 @@ contract PurchaseAuctionNFT is Base {
         });
         uint256 price = strategy.auctionCurrentPrice(auction);
         vm.startBroadcast();
-        strategy.purchaseLiquidationAuctionNFT(auction, price, deployer);
+        strategy.purchaseLiquidationAuctionNFT(
+            auction, price, deployer, _getOracleInfoForCollateral(address(auction.auctionAssetContract), 3e20)
+        );
     }
 }
