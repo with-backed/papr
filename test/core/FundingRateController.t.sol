@@ -4,12 +4,12 @@ pragma solidity ^0.8.13;
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import "forge-std/Test.sol";
 
-import {LinearPerpetual} from "src/core/LinearPerpetual.sol";
+import {FundingRateController} from "src/core/FundingRateController.sol";
 
-contract LinearPerpetualTest is Test {
+contract FundingRateControllerTest is Test {
     event UpdateNormalization(uint256 newNorm);
 
-    LinearPerpetual lp;
+    FundingRateController fundingRateController;
 
     ERC20 underlying;
     ERC20 perpetual;
@@ -18,7 +18,8 @@ contract LinearPerpetualTest is Test {
     uint256 indexMarkRatioMin;
 
     function setUp() public {
-        lp = new LinearPerpetual(underlying, perpetual, maxLTV, indexMarkRatioMax, indexMarkRatioMin);
+        fundingRateController =
+            new FundingRateController(underlying, perpetual, maxLTV, indexMarkRatioMax, indexMarkRatioMin);
     }
 
     function updateNormalizationEmitsCorrectly() public {

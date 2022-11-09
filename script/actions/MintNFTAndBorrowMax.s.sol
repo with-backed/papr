@@ -6,8 +6,8 @@ import {ERC721} from "solmate/tokens/ERC721.sol";
 import {ReservoirOracleUnderwriter, ReservoirOracle} from "src/core/ReservoirOracleUnderwriter.sol";
 import {TickMath} from "fullrange/libraries/TickMath.sol";
 
-import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
-import {LendingStrategy} from "src/core/LendingStrategy.sol";
+import {IPaprController} from "src/interfaces/IPaprController.sol";
+import {PaprController} from "src/core/PaprController.sol";
 import {Base} from "script/actions/Base.s.sol";
 
 abstract contract MintableERC721 is ERC721 {
@@ -30,7 +30,7 @@ contract MintNFTAndBorrowMax is Base {
     }
 
     function _openMaxLoanAndSwap(address borrower) internal {
-        ILendingStrategy.OnERC721ReceivedArgs memory safeTransferReceivedArgs = ILendingStrategy.OnERC721ReceivedArgs({
+        IPaprController.OnERC721ReceivedArgs memory safeTransferReceivedArgs = IPaprController.OnERC721ReceivedArgs({
             mintDebtOrProceedsTo: borrower,
             minOut: 1,
             debt: strategy.maxDebt(oraclePrice) - 2,

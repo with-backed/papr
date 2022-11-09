@@ -5,7 +5,7 @@ import {ReservoirOracleUnderwriter} from "src/core/ReservoirOracleUnderwriter.so
 import {ERC721} from "solmate/tokens/ERC721.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 
-interface ILendingStrategy {
+interface IPaprController {
     struct Collateral {
         ERC721 addr;
         uint256 id;

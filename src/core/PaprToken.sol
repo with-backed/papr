@@ -5,8 +5,8 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 
 import {CreatorGuarded} from "src/core/base/CreatorGuarded.sol";
 
-contract DebtToken is ERC20 {
-    address creator;
+contract PaprToken is ERC20 {
+    address immutable creator;
 
     constructor(string memory strategy, string memory symbol, string memory underlyingSymbol)
         ERC20(string.concat("pAPR ", strategy), string.concat("pAPR", symbol, "_", underlyingSymbol), 18)

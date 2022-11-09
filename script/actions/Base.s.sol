@@ -4,11 +4,11 @@ pragma solidity ^0.8.13;
 import "forge-std/Script.sol";
 import {ReservoirOracleUnderwriter, ReservoirOracle} from "src/core/ReservoirOracleUnderwriter.sol";
 
-import {LendingStrategy} from "src/core/LendingStrategy.sol";
+import {PaprController} from "src/core/PaprController.sol";
 import {OracleSigUtils} from "test/OracleSigUtils.sol";
 
 contract Base is Script {
-    LendingStrategy strategy = LendingStrategy(vm.envAddress("STRATEGY"));
+    PaprController strategy = PaprController(vm.envAddress("STRATEGY"));
     uint256 pk = vm.envUint("PRIVATE_KEY");
     address deployer = vm.addr(pk);
     ReservoirOracleUnderwriter.PriceKind oraclePriceKind = ReservoirOracleUnderwriter.PriceKind.LOWER;

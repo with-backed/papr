@@ -8,15 +8,15 @@ import {IUniswapV3Pool} from "v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {SafeCast} from "v3-core/contracts/libraries/SafeCast.sol";
 import {TickMath} from "fullrange/libraries/TickMath.sol";
 
-import {DebtToken} from "./DebtToken.sol";
+import {PaprToken} from "./PaprToken.sol";
 import {Multicall} from "src/core/base/Multicall.sol";
 import {IPostCollateralCallback} from "src/interfaces/IPostCollateralCallback.sol";
-import {ILendingStrategy} from "src/interfaces/IPostCollateralCallback.sol";
+import {IPaprController} from "src/interfaces/IPostCollateralCallback.sol";
 import {OracleLibrary} from "src/libraries/OracleLibrary.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {BoringOwnable} from "@boringsolidity/BoringOwnable.sol";
 
-contract LinearPerpetual {
+contract FundingRateController {
     event UpdateNormalization(uint256 newNorm);
 
     uint256 public immutable start;
@@ -29,10 +29,10 @@ contract LinearPerpetual {
     // TODO having these in storage is expensive vs. constants
     // + users might want some guarentees. We should probably lock the max/min or
     // lock the period. Really only need to pull one lever?
-    uint256 indexMarkRatioMax;
-    uint256 indexMarkRatioMin;
+    uint256 targetMarkRatioMax;
+    uint256 targetMarkRatioMin;
     // single slot, write together
-    uint128 public normalization;
+    uint128 public target;
     uint72 public lastUpdated;
     int56 lastCumulativeTick;
 
@@ -40,8 +40,8 @@ contract LinearPerpetual {
         ERC20 _underlying,
         ERC20 _perpetual,
         uint256 _maxLTV,
-        uint256 _indexMarkRatioMax,
-        uint256 _indexMarkRatioMin
+        uint256 _targetMarkRatioMax,
+        uint256 _targetMarkRatioMin
     ) {
         underlying = _underlying;
         perpetual = _perpetual;
@@ -50,50 +50,48 @@ contract LinearPerpetual {
 
         start = block.timestamp;
 
-        indexMarkRatioMax = _indexMarkRatioMax;
-        indexMarkRatioMin = _indexMarkRatioMin;
+        targetMarkRatioMax = _targetMarkRatioMax;
+        targetMarkRatioMin = _targetMarkRatioMin;
     }
 
-    function updateNormalization() public returns (uint256 newNormalization) {
-        uint128 previousNormalization = normalization;
+    function updateNormalization() public returns (uint256 newTarget) {
+        uint128 previousTarget = target;
         if (lastUpdated == block.timestamp) {
-            return previousNormalization;
+            return previousTarget;
         }
 
         int56 latestCumulativeTick = OracleLibrary.latestCumulativeTick(pool);
-        newNormalization = _newNorm(latestCumulativeTick, previousNormalization);
+        newTarget = _newTarget(latestCumulativeTick, previousTarget);
 
-        normalization = uint128(newNormalization);
+        target = uint128(newTarget);
         lastUpdated = uint72(block.timestamp);
         lastCumulativeTick = latestCumulativeTick;
 
-        emit UpdateNormalization(newNormalization);
+        emit UpdateNormalization(newTarget);
     }
 
-    function newNorm() public view returns (uint256) {
-        return _newNorm(OracleLibrary.latestCumulativeTick(pool), normalization);
+    function newTarget() public view returns (uint256) {
+        return _newTarget(OracleLibrary.latestCumulativeTick(pool), target);
     }
 
     function markTwapSinceLastUpdate() public view returns (uint256) {
         return _markTwapSinceLastUpdate(OracleLibrary.latestCumulativeTick(pool));
     }
 
-    /// aka norm growth if updated right now,
-    /// e.g. a result of 12e17 = 1.2 = 20% growth since lastUpdate
-    function multiplier() public view returns (int256) {
-        return _multiplier(OracleLibrary.latestCumulativeTick(pool), normalization);
+    function multiplier() public view returns (uint256) {
+        return _multiplier(OracleLibrary.latestCumulativeTick(pool), target);
     }
 
     function _init() internal {
         lastUpdated = uint72(block.timestamp);
-        normalization = uint128(FixedPointMathLib.WAD);
+        target = uint128(FixedPointMathLib.WAD);
         lastCumulativeTick = OracleLibrary.latestCumulativeTick(pool);
 
         emit UpdateNormalization(FixedPointMathLib.WAD);
     }
 
-    function _newNorm(int56 latestCumulativeTick, uint256 cachedNorm) internal view returns (uint256) {
-        return FixedPointMathLib.mulWadDown(normalization, uint256(_multiplier(latestCumulativeTick, cachedNorm)));
+    function _newTarget(int56 latestCumulativeTick, uint256 cachedTarget) internal view returns (uint256) {
+        return FixedPointMathLib.mulWadDown(target, _multiplier(latestCumulativeTick, cachedTarget));
     }
 
     function _markTwapSinceLastUpdate(int56 latestCumulativeTick) internal view returns (uint256) {
@@ -110,26 +108,23 @@ contract LinearPerpetual {
     }
 
     // computing funding rate for the past period
-    function _multiplier(int56 latestCumulativeTick, uint256 cachedNorm) internal view returns (int256) {
+    function _multiplier(int56 latestCumulativeTick, uint256 cachedTarget) internal view returns (uint256) {
         uint256 m = _markTwapSinceLastUpdate(latestCumulativeTick);
-        // TODO: do we need signed ints? when does powWAD return a negative?
         uint256 period = block.timestamp - lastUpdated;
         uint256 periodRatio = FixedPointMathLib.divWadDown(period, PERIOD);
-        uint256 indexMarkRatio;
+        uint256 targetMarkRatio;
         if (m == 0) {
-            indexMarkRatio = indexMarkRatioMax;
+            targetMarkRatio = targetMarkRatioMax;
         } else {
-            // index always = 1, denormalize mark
-            indexMarkRatio =
-                FixedPointMathLib.divWadDown(FixedPointMathLib.WAD, FixedPointMathLib.divWadDown(m, cachedNorm));
-            // cap at 140%, floor at 80%
-            if (indexMarkRatio > indexMarkRatioMax) {
-                indexMarkRatio = indexMarkRatioMax;
-            } else if (indexMarkRatio < indexMarkRatioMin) {
-                indexMarkRatio = indexMarkRatioMin;
+            targetMarkRatio = FixedPointMathLib.divWadDown(cachedTarget, m);
+            if (targetMarkRatio > targetMarkRatioMax) {
+                targetMarkRatio = targetMarkRatioMax;
+            } else if (targetMarkRatio < targetMarkRatioMin) {
+                targetMarkRatio = targetMarkRatioMin;
             }
         }
 
-        return FixedPointMathLib.powWad(int256(indexMarkRatio), int256(periodRatio));
+        // safe to cast because targetMarkRatio > 0
+        return uint256(FixedPointMathLib.powWad(int256(targetMarkRatio), int256(periodRatio)));
     }
 }

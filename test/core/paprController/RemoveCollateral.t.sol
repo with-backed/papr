@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {BaseLendingStrategyTest} from "test/core/lendingStrategy/BaseLendingStrategy.ft.sol";
-import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
-import {LendingStrategy} from "src/core/LendingStrategy.sol";
+import {BasePaprControllerTest} from "test/core/paprController/BasePaprController.ft.sol";
+import {IPaprController} from "src/interfaces/IPaprController.sol";
+import {PaprController} from "src/core/PaprController.sol";
 
-contract RemoveCollateralTest is BaseLendingStrategyTest {
-    event RemoveCollateral(address indexed account, ILendingStrategy.Collateral collateral);
+contract RemoveCollateralTest is BasePaprControllerTest {
+    event RemoveCollateral(address indexed account, IPaprController.Collateral collateral);
 
     function testRemoveCollateralSendsCorrectly() public {
         _addCollateral();
@@ -17,19 +17,19 @@ contract RemoveCollateralTest is BaseLendingStrategyTest {
     function testRemoveCollateralFailsIfWrongAddress() public {
         _addCollateral();
         vm.stopPrank();
-        vm.expectRevert(ILendingStrategy.OnlyCollateralOwner.selector);
+        vm.expectRevert(IPaprController.OnlyCollateralOwner.selector);
         strategy.removeCollateral(borrower, collateral, oracleInfo);
     }
 
     function testRemoveCollateralFailsIfDoesNotExist() public {
-        vm.expectRevert(ILendingStrategy.OnlyCollateralOwner.selector);
+        vm.expectRevert(IPaprController.OnlyCollateralOwner.selector);
         strategy.removeCollateral(borrower, collateral, oracleInfo);
     }
 
     function testRemoveCollateralFailsIfMaxDebtExceeded() public {
         _addCollateral();
         strategy.increaseDebt(borrower, collateral.addr, 1, oracleInfo);
-        vm.expectRevert(abi.encodeWithSelector(ILendingStrategy.ExceedsMaxDebt.selector, 1, 0));
+        vm.expectRevert(abi.encodeWithSelector(IPaprController.ExceedsMaxDebt.selector, 1, 0));
         strategy.removeCollateral(borrower, collateral, oracleInfo);
     }
 
@@ -43,7 +43,7 @@ contract RemoveCollateralTest is BaseLendingStrategyTest {
     function testRemoveCollateralUpdatesPricesCorrectly() public {
         _addCollateral();
         strategy.removeCollateral(borrower, collateral, _getOracleInfoForCollateral(collateral.addr, underlying));
-        ILendingStrategy.VaultInfo memory vaultInfo = strategy.vaultInfo(borrower, collateral.addr);
+        IPaprController.VaultInfo memory vaultInfo = strategy.vaultInfo(borrower, collateral.addr);
         assertEq(0, vaultInfo.count);
     }
 

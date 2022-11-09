@@ -6,9 +6,9 @@ import "forge-std/Test.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {TickMath} from "fullrange/libraries/TickMath.sol";
 
-import {LendingStrategy} from "src/core/LendingStrategy.sol";
+import {PaprController} from "src/core/PaprController.sol";
 import {ReservoirOracleUnderwriter} from "src/core/ReservoirOracleUnderwriter.sol";
-import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
+import {IPaprController} from "src/interfaces/IPaprController.sol";
 import {ReservoirOracleUnderwriter} from "src/core/ReservoirOracleUnderwriter.sol";
 import {TestERC721} from "test/mocks/TestERC721.sol";
 import {TestERC20} from "test/mocks/TestERC20.sol";
@@ -17,17 +17,17 @@ import {UniswapForking} from "test/base/UniswapForking.sol";
 import {OracleTest} from "test/base/OracleTest.sol";
 import {INonfungiblePositionManager} from "test/mocks/uniswap/INonfungiblePositionManager.sol";
 
-contract BaseLendingStrategyTest is MainnetForking, UniswapForking, OracleTest {
+contract BasePaprControllerTest is MainnetForking, UniswapForking, OracleTest {
     TestERC721 nft = new TestERC721();
     TestERC20 underlying = new TestERC20();
-    LendingStrategy strategy;
+    PaprController strategy;
 
     uint256 collateralId = 1;
-    ILendingStrategy.Collateral collateral = ILendingStrategy.Collateral({id: collateralId, addr: nft});
+    IPaprController.Collateral collateral = IPaprController.Collateral({id: collateralId, addr: nft});
     address borrower = address(1);
     uint24 feeTier = 10000;
 
-    ILendingStrategy.OnERC721ReceivedArgs safeTransferReceivedArgs;
+    IPaprController.OnERC721ReceivedArgs safeTransferReceivedArgs;
 
     // global args for safe transfer receive data
     uint256 minOut;
@@ -37,7 +37,7 @@ contract BaseLendingStrategyTest is MainnetForking, UniswapForking, OracleTest {
 
     //
     function setUp() public virtual {
-        strategy = new LendingStrategy(
+        strategy = new PaprController(
             "PUNKs Loans",
             "PL",
             0.5e18,
@@ -48,8 +48,8 @@ contract BaseLendingStrategyTest is MainnetForking, UniswapForking, OracleTest {
         );
 
         strategy.claimOwnership();
-        ILendingStrategy.SetAllowedCollateralArg[] memory args = new ILendingStrategy.SetAllowedCollateralArg[](1);
-        args[0] = ILendingStrategy.SetAllowedCollateralArg(address(nft), true);
+        IPaprController.SetAllowedCollateralArg[] memory args = new IPaprController.SetAllowedCollateralArg[](1);
+        args[0] = IPaprController.SetAllowedCollateralArg(address(nft), true);
         strategy.setAllowedCollateral(args);
         nft.mint(borrower, collateralId);
         vm.prank(borrower);
@@ -96,7 +96,7 @@ contract BaseLendingStrategyTest is MainnetForking, UniswapForking, OracleTest {
     }
 
     function _populateOnReceivedArgs() internal {
-        safeTransferReceivedArgs = ILendingStrategy.OnERC721ReceivedArgs({
+        safeTransferReceivedArgs = IPaprController.OnERC721ReceivedArgs({
             mintDebtOrProceedsTo: borrower,
             minOut: minOut,
             debt: debt,

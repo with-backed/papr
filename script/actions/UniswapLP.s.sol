@@ -5,7 +5,7 @@ import "forge-std/Script.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {INonfungiblePositionManager} from "test/mocks/uniswap/INonfungiblePositionManager.sol";
 
-import {LendingStrategy} from "src/core/LendingStrategy.sol";
+import {PaprController} from "src/core/PaprController.sol";
 import {TestERC20} from "test/mocks/TestERC20.sol";
 import {Base} from "script/actions/Base.s.sol";
 
