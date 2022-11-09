@@ -3,19 +3,19 @@ pragma solidity ^0.8.13;
 
 import {TickMath} from "fullrange/libraries/TickMath.sol";
 
-import {BaseLendingStrategyTest} from "test/core/lendingStrategy/BaseLendingStrategy.ft.sol";
-import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
-import {LendingStrategy} from "src/core/LendingStrategy.sol";
+import {BasePaprControllerTest} from "test/core/paprController/BasePaprController.ft.sol";
+import {IPaprController} from "src/interfaces/IPaprController.sol";
+import {PaprController} from "src/core/PaprController.sol";
 
-contract BuyAndReduceDebt is BaseLendingStrategyTest {
+contract BuyAndReduceDebt is BasePaprControllerTest {
     function testBuyAndReduceDebtReducesDebt() public {
         vm.startPrank(borrower);
         nft.approve(address(strategy), collateralId);
-        strategy.addCollateral(ILendingStrategy.Collateral(nft, collateralId));
+        strategy.addCollateral(IPaprController.Collateral(nft, collateralId));
         uint256 underlyingOut = strategy.mintAndSellDebt(
             collateral.addr, debt, 1e16, _maxSqrtPriceLimit({sellingPAPR: true}), borrower, oracleInfo
         );
-        ILendingStrategy.VaultInfo memory vaultInfo = strategy.vaultInfo(borrower, collateral.addr);
+        IPaprController.VaultInfo memory vaultInfo = strategy.vaultInfo(borrower, collateral.addr);
         assertEq(vaultInfo.debt, debt);
         assertEq(underlyingOut, underlying.balanceOf(borrower));
         underlying.approve(address(strategy), underlyingOut);
@@ -43,7 +43,7 @@ contract BuyAndReduceDebt is BaseLendingStrategyTest {
             amountIn: underlyingOut,
             sqrtPriceLimitX96: priceLimit
         });
-        vm.expectRevert(abi.encodeWithSelector(ILendingStrategy.TooLittleOut.selector, out, out + 1));
+        vm.expectRevert(abi.encodeWithSelector(IPaprController.TooLittleOut.selector, out, out + 1));
         uint256 debtPaid = strategy.buyAndReduceDebt(
             borrower, collateral.addr, underlyingOut, out + 1, priceLimit, address(borrower), oracleInfo
         );

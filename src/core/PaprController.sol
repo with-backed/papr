@@ -10,18 +10,18 @@ import {SafeCast} from "v3-core/contracts/libraries/SafeCast.sol";
 import {TickMath} from "fullrange/libraries/TickMath.sol";
 import {INFTEDA, NFTEDAStarterIncentive} from "NFTEDA/extensions/NFTEDAStarterIncentive.sol";
 
-import {DebtToken} from "./DebtToken.sol";
-import {LinearPerpetual} from "./LinearPerpetual.sol";
+import {PaprToken} from "./PaprToken.sol";
+import {FundingRateController} from "./FundingRateController.sol";
 import {Multicall} from "src/core/base/Multicall.sol";
 import {ReservoirOracleUnderwriter} from "src/core/ReservoirOracleUnderwriter.sol";
 import {IPostCollateralCallback} from "src/interfaces/IPostCollateralCallback.sol";
-import {ILendingStrategy} from "src/interfaces/IPostCollateralCallback.sol";
+import {IPaprController} from "src/interfaces/IPaprController.sol";
 import {OracleLibrary} from "src/libraries/OracleLibrary.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {BoringOwnable} from "@boringsolidity/BoringOwnable.sol";
 
-contract LendingStrategy is
-    LinearPerpetual,
+contract PaprController is
+    FundingRateController,
     ERC721TokenReceiver,
     Multicall,
     BoringOwnable,
@@ -38,17 +38,17 @@ contract LendingStrategy is
     uint256 public liquidationPenaltyBips = 1000;
 
     // account => asset => vaultInfo
-    mapping(address => mapping(ERC721 => ILendingStrategy.VaultInfo)) private _vaultInfo;
+    mapping(address => mapping(ERC721 => IPaprController.VaultInfo)) private _vaultInfo;
     // nft address => tokenId => account
     mapping(ERC721 => mapping(uint256 => address)) public collateralOwner;
     mapping(address => bool) public isAllowed;
 
     event IncreaseDebt(address indexed account, uint256 amount);
-    event AddCollateral(address indexed account, ILendingStrategy.Collateral collateral);
+    event AddCollateral(address indexed account, IPaprController.Collateral collateral);
     event ReduceDebt(address indexed account, uint256 amount);
-    event RemoveCollateral(address indexed account, ILendingStrategy.Collateral collateral);
+    event RemoveCollateral(address indexed account, IPaprController.Collateral collateral);
 
-    event ChangeCollateralAllowed(ILendingStrategy.SetAllowedCollateralArg arg);
+    event ChangeCollateralAllowed(IPaprController.SetAllowedCollateralArg arg);
 
     constructor(
         string memory name,
@@ -60,9 +60,9 @@ contract LendingStrategy is
         address oracleSigner
     )
         NFTEDAStarterIncentive(1e18)
-        LinearPerpetual(
+        FundingRateController(
             underlying,
-            new DebtToken(name, symbol, underlying.symbol()),
+            new PaprToken(name, symbol, underlying.symbol()),
             maxLTV,
             indexMarkRatioMax,
             indexMarkRatioMin
@@ -86,9 +86,9 @@ contract LendingStrategy is
         override
         returns (bytes4)
     {
-        ILendingStrategy.OnERC721ReceivedArgs memory request = abi.decode(data, (ILendingStrategy.OnERC721ReceivedArgs));
+        IPaprController.OnERC721ReceivedArgs memory request = abi.decode(data, (IPaprController.OnERC721ReceivedArgs));
 
-        ILendingStrategy.Collateral memory collateral = ILendingStrategy.Collateral(ERC721(msg.sender), _id);
+        IPaprController.Collateral memory collateral = IPaprController.Collateral(ERC721(msg.sender), _id);
 
         _addCollateralToVault(from, collateral);
 
@@ -169,7 +169,7 @@ contract LendingStrategy is
         }
     }
 
-    function addCollateral(ILendingStrategy.Collateral calldata collateral) public {
+    function addCollateral(IPaprController.Collateral calldata collateral) public {
         _addCollateralToVault(msg.sender, collateral);
         collateral.addr.transferFrom(msg.sender, address(this), collateral.id);
     }
@@ -179,7 +179,7 @@ contract LendingStrategy is
     /// @dev anyone could use this method to add collateral to anyone else's vault
     /// we think this is acceptable and it is useful so that a periphery contract
     /// can modify the tx.origin's vault
-    function addCollateralWithCallback(ILendingStrategy.Collateral calldata collateral, bytes calldata data) public {
+    function addCollateralWithCallback(IPaprController.Collateral calldata collateral, bytes calldata data) public {
         if (collateral.addr.ownerOf(collateral.id) == address(this)) {
             revert();
         }
@@ -192,11 +192,11 @@ contract LendingStrategy is
 
     function removeCollateral(
         address sendTo,
-        ILendingStrategy.Collateral calldata collateral,
+        IPaprController.Collateral calldata collateral,
         ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
     ) external {
         if (collateralOwner[collateral.addr][collateral.id] != msg.sender) {
-            revert ILendingStrategy.OnlyCollateralOwner();
+            revert IPaprController.OnlyCollateralOwner();
         }
 
         delete collateralOwner[collateral.addr][collateral.id];
@@ -217,7 +217,7 @@ contract LendingStrategy is
         uint256 max = maxDebt(oraclePrice * newCount);
 
         if (debt > max) {
-            revert ILendingStrategy.ExceedsMaxDebt(debt, max);
+            revert IPaprController.ExceedsMaxDebt(debt, max);
         }
 
         emit RemoveCollateral(msg.sender, collateral);
@@ -276,7 +276,7 @@ contract LendingStrategy is
         uint256 credit = excess - fee;
         uint256 totalOwed = credit + neededToSaveVault;
 
-        DebtToken(address(perpetual)).burn(address(this), fee);
+        PaprToken(address(perpetual)).burn(address(this), fee);
 
         if (totalOwed > debtCached) {
             // we owe them more papr than they have in debt
@@ -292,26 +292,26 @@ contract LendingStrategy is
 
     function startLiquidationAuction(
         address account,
-        ILendingStrategy.Collateral calldata collateral,
+        IPaprController.Collateral calldata collateral,
         ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
     ) public returns (INFTEDA.Auction memory auction) {
         uint256 norm = updateNormalization();
 
-        ILendingStrategy.VaultInfo storage info = _vaultInfo[account][collateral.addr];
+        IPaprController.VaultInfo storage info = _vaultInfo[account][collateral.addr];
 
         // check collateral belongs to account
         if (collateralOwner[collateral.addr][collateral.id] != account) {
-            revert ILendingStrategy.InvalidCollateralAccountPair();
+            revert IPaprController.InvalidCollateralAccountPair();
         }
 
         uint256 oraclePrice =
             underwritePriceForCollateral(collateral.addr, ReservoirOracleUnderwriter.PriceKind.TWAP, oracleInfo);
         if (info.debt < maxDebt(oraclePrice * info.count)) {
-            revert ILendingStrategy.NotLiquidatable();
+            revert IPaprController.NotLiquidatable();
         }
 
         if (block.timestamp - info.latestAuctionStartTime < liquidationAuctionMinSpacing) {
-            revert ILendingStrategy.MinAuctionSpacing();
+            revert IPaprController.MinAuctionSpacing();
         }
 
         info.latestAuctionStartTime = uint40(block.timestamp);
@@ -340,9 +340,8 @@ contract LendingStrategy is
     function liquidationPrice(address account, ERC721 asset, uint256 collateralPrice) public view returns (uint256) {
         uint256 debt = _vaultInfo[account][asset].debt;
         if (debt == 0) {
-            revert ILendingStrategy.AccountHasNoDebt();
+            revert IPaprController.AccountHasNoDebt();
         } else {
-            // TODO do we need to divide out WAD?
             uint256 maxLoanUnderlying = _vaultInfo[account][asset].count * collateralPrice * maxLTV;
             return maxLoanUnderlying / debt;
         }
@@ -350,26 +349,18 @@ contract LendingStrategy is
 
     function maxDebt(uint256 totalCollateraValue) public view returns (uint256) {
         uint256 maxLoanUnderlying = totalCollateraValue * maxLTV;
-        return maxLoanUnderlying / normalization;
+        return maxLoanUnderlying / target;
     }
 
     function vaultTotalCollateralValue(address account, ERC721 asset, uint256 price) public view returns (uint256) {
         return _vaultInfo[account][asset].count * price;
     }
 
-    // function collateralHash(ILendingStrategy.Collateral memory collateral, address account)
-    //     public
-    //     pure
-    //     returns (bytes32)
-    // {
-    //     return keccak256(abi.encode(collateral, account));
-    // }
-
-    function vaultInfo(address account, ERC721 asset) public view returns (ILendingStrategy.VaultInfo memory) {
+    function vaultInfo(address account, ERC721 asset) public view returns (IPaprController.VaultInfo memory) {
         return _vaultInfo[account][asset];
     }
 
-    function setAllowedCollateral(ILendingStrategy.SetAllowedCollateralArg[] calldata args) public onlyOwner {
+    function setAllowedCollateral(IPaprController.SetAllowedCollateralArg[] calldata args) public onlyOwner {
         for (uint256 i = 0; i < args.length;) {
             isAllowed[args[i].addr] = args[i].allowed;
             emit ChangeCollateralAllowed(args[i]);
@@ -400,7 +391,7 @@ contract LendingStrategy is
         out = uint256(-(zeroForOne ? amount1 : amount0));
 
         if (out < minOut) {
-            revert ILendingStrategy.TooLittleOut(out, minOut);
+            revert IPaprController.TooLittleOut(out, minOut);
         }
     }
 
@@ -421,19 +412,19 @@ contract LendingStrategy is
 
         uint256 max = maxDebt(_vaultInfo[account][asset].count * oraclePrice);
         if (newDebt > max) {
-            revert ILendingStrategy.ExceedsMaxDebt(newDebt, max);
+            revert IPaprController.ExceedsMaxDebt(newDebt, max);
         }
 
         // TODO safeCast
         _vaultInfo[account][asset].debt = uint200(newDebt);
-        DebtToken(address(perpetual)).mint(mintTo, amount);
+        PaprToken(address(perpetual)).mint(mintTo, amount);
 
         emit IncreaseDebt(account, amount);
     }
 
-    function _addCollateralToVault(address account, ILendingStrategy.Collateral memory collateral) internal {
+    function _addCollateralToVault(address account, IPaprController.Collateral memory collateral) internal {
         if (!isAllowed[address(collateral.addr)]) {
-            revert ILendingStrategy.InvalidCollateral();
+            revert IPaprController.InvalidCollateral();
         }
 
         collateralOwner[collateral.addr][collateral.id] = account;
@@ -444,7 +435,7 @@ contract LendingStrategy is
 
     function _reduceDebt(address account, ERC721 asset, address burnFrom, uint256 amount) internal {
         _reduceDebtWithoutBurn(account, asset, amount);
-        DebtToken(address(perpetual)).burn(burnFrom, amount);
+        PaprToken(address(perpetual)).burn(burnFrom, amount);
     }
 
     function _reduceDebtWithoutBurn(address account, ERC721 asset, uint256 amount) internal {

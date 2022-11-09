@@ -7,7 +7,7 @@ import {ERC721} from "solmate/tokens/ERC721.sol";
 
 import {ReservoirOracle} from "@reservoir/ReservoirOracle.sol";
 import {ReservoirOracleUnderwriter} from "src/core/ReservoirOracleUnderwriter.sol";
-import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
+import {IPaprController} from "src/interfaces/IPaprController.sol";
 import {OracleSigUtils} from "test/OracleSigUtils.sol";
 
 contract OracleTest is Test {

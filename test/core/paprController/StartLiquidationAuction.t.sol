@@ -3,10 +3,10 @@ pragma solidity ^0.8.13;
 
 import {ReservoirOracleUnderwriter} from "src/core/ReservoirOracleUnderwriter.sol";
 
-import {BaseLendingStrategyTest} from "test/core/lendingStrategy/BaseLendingStrategy.ft.sol";
-import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
+import {BasePaprControllerTest} from "test/core/paprController/BasePaprController.ft.sol";
+import {IPaprController} from "src/interfaces/IPaprController.sol";
 
-contract StartLiquidationAuctionTest is BaseLendingStrategyTest {
+contract StartLiquidationAuctionTest is BasePaprControllerTest {
     function setUp() public override {
         super.setUp();
         _openMaxLoanAndSwap();
@@ -17,17 +17,17 @@ contract StartLiquidationAuctionTest is BaseLendingStrategyTest {
     /// TODO sets start price correctly
 
     function testDrecrementsCollateralCountCorrectly() public {
-        ILendingStrategy.VaultInfo memory beforeInfo = strategy.vaultInfo(borrower, collateral.addr);
+        IPaprController.VaultInfo memory beforeInfo = strategy.vaultInfo(borrower, collateral.addr);
         _makeMaxLoanLiquidatable();
         strategy.startLiquidationAuction(borrower, collateral, oracleInfo);
-        ILendingStrategy.VaultInfo memory afterInfo = strategy.vaultInfo(borrower, collateral.addr);
+        IPaprController.VaultInfo memory afterInfo = strategy.vaultInfo(borrower, collateral.addr);
         assertEq(beforeInfo.count - afterInfo.count, 1);
     }
 
     function testUpdatesLatestAuctionStartTime() public {
         _makeMaxLoanLiquidatable();
         strategy.startLiquidationAuction(borrower, collateral, oracleInfo);
-        ILendingStrategy.VaultInfo memory info = strategy.vaultInfo(borrower, collateral.addr);
+        IPaprController.VaultInfo memory info = strategy.vaultInfo(borrower, collateral.addr);
         assertEq(info.latestAuctionStartTime, block.timestamp);
     }
 
@@ -38,13 +38,13 @@ contract StartLiquidationAuctionTest is BaseLendingStrategyTest {
     }
 
     function testRevertsIfNotLiquidatable() public {
-        vm.expectRevert(ILendingStrategy.NotLiquidatable.selector);
+        vm.expectRevert(IPaprController.NotLiquidatable.selector);
         strategy.startLiquidationAuction(borrower, collateral, oracleInfo);
     }
 
     function testRevertsIfInvalidCollateralAccountPair() public {
         _makeMaxLoanLiquidatable();
-        vm.expectRevert(ILendingStrategy.InvalidCollateralAccountPair.selector);
+        vm.expectRevert(IPaprController.InvalidCollateralAccountPair.selector);
         strategy.startLiquidationAuction(address(0xded), collateral, oracleInfo);
     }
 
@@ -55,11 +55,11 @@ contract StartLiquidationAuctionTest is BaseLendingStrategyTest {
         nft.mint(borrower, collateralId + 1);
         vm.startPrank(borrower);
         nft.approve(address(strategy), collateralId + 1);
-        strategy.addCollateral(ILendingStrategy.Collateral(nft, collateralId + 1));
+        strategy.addCollateral(IPaprController.Collateral(nft, collateralId + 1));
 
-        vm.expectRevert(ILendingStrategy.MinAuctionSpacing.selector);
+        vm.expectRevert(IPaprController.MinAuctionSpacing.selector);
         strategy.startLiquidationAuction(
-            borrower, ILendingStrategy.Collateral({id: collateralId + 1, addr: nft}), oracleInfo
+            borrower, IPaprController.Collateral({id: collateralId + 1, addr: nft}), oracleInfo
         );
     }
 
@@ -70,12 +70,12 @@ contract StartLiquidationAuctionTest is BaseLendingStrategyTest {
         nft.mint(borrower, collateralId + 1);
         vm.startPrank(borrower);
         nft.approve(address(strategy), collateralId + 1);
-        strategy.addCollateral(ILendingStrategy.Collateral(nft, collateralId + 1));
+        strategy.addCollateral(IPaprController.Collateral(nft, collateralId + 1));
 
         vm.warp(block.timestamp + strategy.liquidationAuctionMinSpacing());
         oracleInfo = _getOracleInfoForCollateral(nft, underlying);
         strategy.startLiquidationAuction(
-            borrower, ILendingStrategy.Collateral({id: collateralId + 1, addr: nft}), oracleInfo
+            borrower, IPaprController.Collateral({id: collateralId + 1, addr: nft}), oracleInfo
         );
     }
 }

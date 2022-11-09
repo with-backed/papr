@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {BaseLendingStrategyTest} from "test/core/lendingStrategy/BaseLendingStrategy.ft.sol";
-import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
-import {LendingStrategy} from "src/core/LendingStrategy.sol";
+import {BasePaprControllerTest} from "test/core/paprController/BasePaprController.ft.sol";
+import {IPaprController} from "src/interfaces/IPaprController.sol";
+import {PaprController} from "src/core/PaprController.sol";
 
-contract OnERC721ReceivedTest is BaseLendingStrategyTest {
+contract OnERC721ReceivedTest is BasePaprControllerTest {
     function testAddDebtAndSwap() public {
         vm.startPrank(borrower);
         safeTransferReceivedArgs.minOut = 1;
@@ -19,7 +19,7 @@ contract OnERC721ReceivedTest is BaseLendingStrategyTest {
             sqrtPriceLimitX96: priceLimit
         });
         nft.safeTransferFrom(borrower, address(strategy), collateralId, abi.encode(safeTransferReceivedArgs));
-        ILendingStrategy.VaultInfo memory vaultInfo = strategy.vaultInfo(borrower, collateral.addr);
+        IPaprController.VaultInfo memory vaultInfo = strategy.vaultInfo(borrower, collateral.addr);
         assertEq(vaultInfo.count, 1);
         assertEq(vaultInfo.debt, debt);
         assertEq(expectedOut, underlying.balanceOf(borrower));
@@ -43,7 +43,7 @@ contract OnERC721ReceivedTest is BaseLendingStrategyTest {
             sqrtPriceLimitX96: priceLimit
         });
         nft.safeTransferFrom(borrower, address(strategy), collateralId, abi.encode(safeTransferReceivedArgs));
-        ILendingStrategy.VaultInfo memory vaultInfo = strategy.vaultInfo(borrower, collateral.addr);
+        IPaprController.VaultInfo memory vaultInfo = strategy.vaultInfo(borrower, collateral.addr);
         assertEq(vaultInfo.count, 1);
         assertEq(vaultInfo.debt, debt);
         assertEq(expectedOut, underlying.balanceOf(borrower));

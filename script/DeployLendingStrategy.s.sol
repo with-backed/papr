@@ -5,13 +5,12 @@ import "forge-std/Script.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {ERC721} from "solmate/tokens/ERC721.sol";
 
-import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
-import {DebtToken} from "src/core/DebtToken.sol";
-import {LendingStrategy} from "src/core/LendingStrategy.sol";
+import {IPaprController} from "src/interfaces/IPaprController.sol";
+import {PaprController} from "src/core/PaprController.sol";
 import "openzeppelin-contracts/utils/Strings.sol";
 import {Base} from "script/actions/Base.s.sol";
 
-contract DeployLendingStrategy is Base {
+contract DeployPaprController is Base {
     ERC20 underlying = ERC20(0x3089B47853df1b82877bEef6D904a0ce98a12553);
 
     function setUp() public {}
@@ -19,7 +18,7 @@ contract DeployLendingStrategy is Base {
     function run() public {
         vm.startBroadcast();
 
-        strategy = new LendingStrategy(
+        strategy = new PaprController(
             "Test Loans",
             "TL",
             5e17,
@@ -30,13 +29,13 @@ contract DeployLendingStrategy is Base {
         );
         strategy.claimOwnership();
 
-        ILendingStrategy.SetAllowedCollateralArg[] memory args = new ILendingStrategy.SetAllowedCollateralArg[](3);
+        IPaprController.SetAllowedCollateralArg[] memory args = new IPaprController.SetAllowedCollateralArg[](3);
         args[0] =
-            ILendingStrategy.SetAllowedCollateralArg({addr: 0xb7D7fe7995D1E347916fAae8e16CFd6dD21a9bAE, allowed: true});
+            IPaprController.SetAllowedCollateralArg({addr: 0xb7D7fe7995D1E347916fAae8e16CFd6dD21a9bAE, allowed: true});
         args[1] =
-            ILendingStrategy.SetAllowedCollateralArg({addr: 0x6EF2C9CB23F03014d18d7E4CeEAeC497dB00247C, allowed: true});
+            IPaprController.SetAllowedCollateralArg({addr: 0x6EF2C9CB23F03014d18d7E4CeEAeC497dB00247C, allowed: true});
         args[2] =
-            ILendingStrategy.SetAllowedCollateralArg({addr: 0x8232c5Fd480C2a74d2f25d3362f262fF3511CE49, allowed: true});
+            IPaprController.SetAllowedCollateralArg({addr: 0x8232c5Fd480C2a74d2f25d3362f262fF3511CE49, allowed: true});
 
         strategy.setAllowedCollateral(args);
 

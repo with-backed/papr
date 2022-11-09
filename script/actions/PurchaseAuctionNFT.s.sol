@@ -6,7 +6,7 @@ import {ERC721} from "solmate/tokens/ERC721.sol";
 import {INFTEDA} from "NFTEDA/extensions/NFTEDAStarterIncentive.sol";
 
 import {Base} from "script/actions/Base.s.sol";
-import {ILendingStrategy} from "src/interfaces/ILendingStrategy.sol";
+import {IPaprController} from "src/interfaces/IPaprController.sol";
 import {ReservoirOracleUnderwriter} from "src/core/ReservoirOracleUnderwriter.sol";
 
 contract PurchaseAuctionNFT is Base {
