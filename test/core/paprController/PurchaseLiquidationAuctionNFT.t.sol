@@ -3,12 +3,13 @@ pragma solidity ^0.8.13;
 
 import {ReservoirOracleUnderwriter} from "src/core/ReservoirOracleUnderwriter.sol";
 import {INFTEDA} from "NFTEDA/extensions/NFTEDAStarterIncentive.sol";
+import {ERC721} from "solmate/tokens/ERC721.sol";
 
 import {BasePaprControllerTest} from "test/core/paprController/BasePaprController.ft.sol";
 import {IPaprController} from "src/interfaces/IPaprController.sol";
 
 contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
-    event ReduceDebt(address indexed account, uint256 amount);
+    event ReduceDebt(address indexed account, ERC721 indexed collateralAddress, uint256 amount);
     event Transfer(address indexed from, address indexed to, uint256 amount);
 
     INFTEDA.Auction auction;
@@ -52,7 +53,7 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         vm.expectEmit(true, true, false, true);
         emit Transfer(address(strategy), address(0), penalty);
         vm.expectEmit(true, false, false, true);
-        emit ReduceDebt(borrower, info.debt);
+        emit ReduceDebt(borrower, collateral.addr, info.debt);
         vm.expectEmit(true, true, false, true);
         emit Transfer(address(strategy), address(0), info.debt);
         strategy.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
@@ -74,13 +75,13 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         vm.expectEmit(true, true, false, true);
         emit Transfer(address(strategy), address(0), penalty);
         vm.expectEmit(true, false, false, true);
-        emit ReduceDebt(borrower, price - penalty);
+        emit ReduceDebt(borrower, collateral.addr, price - penalty);
         vm.expectEmit(true, true, false, true);
         emit Transfer(address(strategy), address(0), price - penalty);
         IPaprController.VaultInfo memory info = strategy.vaultInfo(borrower, collateral.addr);
         // burning debt not covered by auction
         vm.expectEmit(true, false, false, true);
-        emit ReduceDebt(borrower, info.debt - (price - penalty));
+        emit ReduceDebt(borrower, collateral.addr, info.debt - (price - penalty));
         strategy.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
         uint256 afterBalance = strategy.perpetual().balanceOf(borrower);
         assertEq(afterBalance, beforeBalance);
@@ -114,7 +115,7 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         vm.expectEmit(true, true, false, true);
         emit Transfer(address(strategy), address(0), penalty);
         vm.expectEmit(true, false, false, true);
-        emit ReduceDebt(borrower, info.debt);
+        emit ReduceDebt(borrower, collateral.addr, info.debt);
         vm.expectEmit(true, true, false, true);
         emit Transfer(address(strategy), address(0), info.debt);
         strategy.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
@@ -150,7 +151,7 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         vm.expectEmit(true, true, false, true);
         emit Transfer(address(strategy), address(0), penalty);
         vm.expectEmit(true, false, false, true);
-        emit ReduceDebt(borrower, credit);
+        emit ReduceDebt(borrower, collateral.addr, credit);
         vm.expectEmit(true, true, false, true);
         emit Transfer(address(strategy), address(0), credit);
         strategy.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
@@ -181,7 +182,7 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         assertGt(neededToSave, price);
         strategy.perpetual().approve(address(strategy), auction.startPrice);
         vm.expectEmit(true, false, false, true);
-        emit ReduceDebt(borrower, price);
+        emit ReduceDebt(borrower, collateral.addr, price);
         vm.expectEmit(true, true, false, true);
         emit Transfer(address(strategy), address(0), price);
         strategy.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);

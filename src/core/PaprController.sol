@@ -43,9 +43,9 @@ contract PaprController is
     mapping(ERC721 => mapping(uint256 => address)) public collateralOwner;
     mapping(address => bool) public isAllowed;
 
-    event IncreaseDebt(address indexed account, uint256 amount);
+    event IncreaseDebt(address indexed account, ERC721 indexed collateralAddress, uint256 amount);
     event AddCollateral(address indexed account, IPaprController.Collateral collateral);
-    event ReduceDebt(address indexed account, uint256 amount);
+    event ReduceDebt(address indexed account, ERC721 indexed collateralAddress, uint256 amount);
     event RemoveCollateral(address indexed account, IPaprController.Collateral collateral);
 
     event ChangeCollateralAllowed(IPaprController.SetAllowedCollateralArg arg);
@@ -419,7 +419,7 @@ contract PaprController is
         _vaultInfo[account][asset].debt = uint200(newDebt);
         PaprToken(address(perpetual)).mint(mintTo, amount);
 
-        emit IncreaseDebt(account, amount);
+        emit IncreaseDebt(account, asset, amount);
     }
 
     function _addCollateralToVault(address account, IPaprController.Collateral memory collateral) internal {
@@ -440,6 +440,6 @@ contract PaprController is
 
     function _reduceDebtWithoutBurn(address account, ERC721 asset, uint256 amount) internal {
         _vaultInfo[account][asset].debt = uint200(_vaultInfo[account][asset].debt - amount);
-        emit ReduceDebt(account, amount);
+        emit ReduceDebt(account, asset, amount);
     }
 }
