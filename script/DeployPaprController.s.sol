@@ -18,7 +18,7 @@ contract DeployPaprController is Base {
     function run() public {
         vm.startBroadcast();
 
-        strategy = new PaprController(
+        controller = new PaprController(
             "Test Loans",
             "TL",
             5e17,
@@ -27,7 +27,7 @@ contract DeployPaprController is Base {
             underlying,
             deployer
         );
-        strategy.claimOwnership();
+        controller.claimOwnership();
 
         IPaprController.SetAllowedCollateralArg[] memory args = new IPaprController.SetAllowedCollateralArg[](3);
         args[0] =
@@ -37,7 +37,7 @@ contract DeployPaprController is Base {
         args[2] =
             IPaprController.SetAllowedCollateralArg({addr: 0x8232c5Fd480C2a74d2f25d3362f262fF3511CE49, allowed: true});
 
-        strategy.setAllowedCollateral(args);
+        controller.setAllowedCollateral(args);
 
         vm.stopBroadcast();
     }

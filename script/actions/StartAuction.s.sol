@@ -11,10 +11,10 @@ contract StartAuction is Base {
     function run() public {
         oraclePriceKind = ReservoirOracleUnderwriter.PriceKind.TWAP;
         vm.startBroadcast();
-        strategy.startLiquidationAuction(
+        controller.startLiquidationAuction(
             deployer,
-            IPaprController.Collateral({id: 20, addr: ERC721(0x8232c5Fd480C2a74d2f25d3362f262fF3511CE49)}),
-            _getOracleInfoForCollateral(0x8232c5Fd480C2a74d2f25d3362f262fF3511CE49, 3e20)
+            IPaprController.Collateral({id: 21, addr: ERC721(0x8232c5Fd480C2a74d2f25d3362f262fF3511CE49)}),
+            _getOracleInfoForCollateral(0x8232c5Fd480C2a74d2f25d3362f262fF3511CE49, 1e18)
         );
     }
 }

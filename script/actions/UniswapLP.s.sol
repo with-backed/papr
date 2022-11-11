@@ -25,7 +25,7 @@ contract UniswapLP is Base {
         int24 tickLower;
         int24 tickUpper;
 
-        if (strategy.token0IsUnderlying()) {
+        if (controller.token0IsUnderlying()) {
             token0Amount = amount;
             tickUpper = 200;
         } else {
@@ -33,7 +33,7 @@ contract UniswapLP is Base {
             tickLower = -200;
         }
 
-        ERC20 underlying = strategy.underlying();
+        ERC20 underlying = controller.underlying();
 
         vm.startBroadcast();
 
@@ -41,8 +41,8 @@ contract UniswapLP is Base {
         TestERC20(address(underlying)).mint(deployer, amount);
 
         INonfungiblePositionManager.MintParams memory mintParams = INonfungiblePositionManager.MintParams(
-            strategy.pool().token0(),
-            strategy.pool().token1(),
+            controller.pool().token0(),
+            controller.pool().token1(),
             feeTier,
             tickLower,
             tickUpper,

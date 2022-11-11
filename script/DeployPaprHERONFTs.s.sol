@@ -4,13 +4,13 @@ import "forge-std/StdJson.sol";
 import "forge-std/Test.sol";
 import "forge-std/Script.sol";
 import {ERC721} from "solmate/tokens/ERC721.sol";
-import {Blitmap, Moonbird, Toadz, Dinos} from "src/heroesTestnet/PVPNFTs.sol";
+import {Blitmap, Moonbird, Toadz, Dinos} from "src/heroTestnet/HeroNfts.sol";
 
 /*
 run with: forge script script/DeployPVPNFTs.s.sol:DeployPVPNFTs --private-key $PK --rpc-url $RPC
 */
 
-contract DeployPVPNFTs is Script, Test {
+contract DeployPaprHERONFT is Script, Test {
     using stdJson for string;
 
     struct AddressAmountPair {

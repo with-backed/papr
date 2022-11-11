@@ -8,7 +8,7 @@ import {PaprController} from "src/core/PaprController.sol";
 import {OracleSigUtils} from "test/OracleSigUtils.sol";
 
 contract Base is Script {
-    PaprController strategy = PaprController(vm.envAddress("STRATEGY"));
+    PaprController controller = PaprController(vm.envAddress("STRATEGY"));
     uint256 pk = vm.envUint("PRIVATE_KEY");
     address deployer = vm.addr(pk);
     ReservoirOracleUnderwriter.PriceKind oraclePriceKind = ReservoirOracleUnderwriter.PriceKind.LOWER;
@@ -30,7 +30,7 @@ contract Base is Script {
     {
         ReservoirOracle.Message memory message = ReservoirOracle.Message({
             id: _constructOracleId(collateral),
-            payload: abi.encode(strategy.underlying(), price),
+            payload: abi.encode(controller.underlying(), price),
             timestamp: block.timestamp,
             signature: "" // populated ourselves on the OracleInfo.Sig struct
         });
