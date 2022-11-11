@@ -17,7 +17,7 @@ contract PurchaseAuctionNFT is Base {
             auctionAssetContract: ERC721(0x8232c5Fd480C2a74d2f25d3362f262fF3511CE49),
             perPeriodDecayPercentWad: 700000000000000000,
             secondsInPeriod: 86400,
-            startPrice: 2999999985119791657,
+            startPrice: 2999999994047916656,
             paymentAsset: controller.perpetual()
         });
         uint256 price = controller.auctionCurrentPrice(auction);

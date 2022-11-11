@@ -8,7 +8,7 @@ import {PaprController} from "src/core/PaprController.sol";
 import {OracleSigUtils} from "test/OracleSigUtils.sol";
 
 contract Base is Script {
-    PaprController controller = PaprController(vm.envAddress("STRATEGY"));
+    PaprController controller = PaprController(vm.envAddress("CONTROLLER"));
     uint256 pk = vm.envUint("PRIVATE_KEY");
     address deployer = vm.addr(pk);
     ReservoirOracleUnderwriter.PriceKind oraclePriceKind = ReservoirOracleUnderwriter.PriceKind.LOWER;
