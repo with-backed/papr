@@ -17,7 +17,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {BoringOwnable} from "@boringsolidity/BoringOwnable.sol";
 
 contract FundingRateController {
-    event UpdateNormalization(uint256 newNorm);
+    event UpdateTarget(uint256 newTarget);
 
     uint256 public immutable start;
     ERC20 public immutable underlying;
@@ -67,7 +67,7 @@ contract FundingRateController {
         lastUpdated = uint72(block.timestamp);
         lastCumulativeTick = latestCumulativeTick;
 
-        emit UpdateNormalization(newTarget);
+        emit UpdateTarget(newTarget);
     }
 
     function newTarget() public view returns (uint256) {
@@ -87,7 +87,7 @@ contract FundingRateController {
         target = uint128(FixedPointMathLib.WAD);
         lastCumulativeTick = OracleLibrary.latestCumulativeTick(pool);
 
-        emit UpdateNormalization(FixedPointMathLib.WAD);
+        emit UpdateTarget(FixedPointMathLib.WAD);
     }
 
     function _newTarget(int56 latestCumulativeTick, uint256 cachedTarget) internal view returns (uint256) {
