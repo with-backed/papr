@@ -78,4 +78,13 @@ contract StartLiquidationAuctionTest is BasePaprControllerTest {
             borrower, IPaprController.Collateral({id: collateralId + 1, addr: nft}), oracleInfo
         );
     }
+
+    event RemoveCollateral(address indexed account, IPaprController.Collateral collateral);
+
+    function testEmitsRemoveCollateral() public {
+        _makeMaxLoanLiquidatable();
+        vm.expectEmit(true, false, false, true);
+        emit RemoveCollateral(borrower, collateral);
+        strategy.startLiquidationAuction(borrower, collateral, oracleInfo);
+    }
 }

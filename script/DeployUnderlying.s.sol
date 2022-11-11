@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 import "forge-std/StdJson.sol";
 import "forge-std/Test.sol";
 import "forge-std/Script.sol";
-import {phUSDC} from "src/heroesTestnet/phUSDC.sol";
+import {phUSDC} from "src/heroTestnet/phUSDC.sol";
 
 /*
 run with: forge script script/DeployUnderlying.s.sol:DeployUnderlying --private-key $PK --rpc-url $RPC

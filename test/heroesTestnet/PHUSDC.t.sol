@@ -1,7 +1,7 @@
 pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
-import {phUSDC} from "src/heroesTestnet/phUSDC.sol";
+import {phUSDC} from "src/heroTestnet/phUSDC.sol";
 
 contract phUSDCTest is Test {
     phUSDC phusdc;

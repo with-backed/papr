@@ -242,6 +242,10 @@ contract PaprController is
         address sendTo,
         ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
     ) public {
+        // TODO consider clearing latestAuctionStartTime if this is the most recent auction
+        // need to check auctionStartTime() which means hashing auction to get ID, gas kind
+        // of annoying
+
         uint256 collateralValueCached = underwritePriceForCollateral(
             auction.auctionAssetContract, ReservoirOracleUnderwriter.PriceKind.TWAP, oracleInfo
         ) * _vaultInfo[auction.nftOwner][auction.auctionAssetContract].count;
@@ -316,6 +320,8 @@ contract PaprController is
 
         info.latestAuctionStartTime = uint40(block.timestamp);
         info.count -= 1;
+
+        emit RemoveCollateral(account, collateral);
 
         delete collateralOwner[collateral.addr][collateral.id];
 
