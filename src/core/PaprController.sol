@@ -135,16 +135,16 @@ contract PaprController is
         uint256 underlyingAmount,
         uint256 minOut,
         uint160 sqrtPriceLimitX96,
-        address proceedsTo,
-        ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
+        address proceedsTo
     ) public returns (uint256 out) {
+        ReservoirOracleUnderwriter.OracleInfo memory dummyInfo;
         out = _swap(
             proceedsTo,
             token0IsUnderlying,
             underlyingAmount,
             minOut,
             sqrtPriceLimitX96,
-            abi.encode(account, collateralAsset, msg.sender, oracleInfo)
+            abi.encode(account, collateralAsset, msg.sender, dummyInfo)
         );
         reduceDebt(account, collateralAsset, uint96(out));
     }
