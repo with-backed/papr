@@ -22,9 +22,9 @@ contract MintNFTAndBorrowMax is Base {
 
     function run() public {
         // expected to mint tokenId
-        vm.startBroadcast();
-        nft.mint(deployer);
-        vm.stopBroadcast();
+        // vm.startBroadcast();
+        // nft.mint(deployer);
+        // vm.stopBroadcast();
 
         _openMaxLoanAndSwap(deployer);
     }
@@ -33,7 +33,7 @@ contract MintNFTAndBorrowMax is Base {
         IPaprController.OnERC721ReceivedArgs memory safeTransferReceivedArgs = IPaprController.OnERC721ReceivedArgs({
             mintDebtOrProceedsTo: borrower,
             minOut: 1,
-            debt: controller.maxDebt(oraclePrice) - 2,
+            debt: controller.maxDebt(oraclePrice) - 10,
             sqrtPriceLimitX96: _maxSqrtPriceLimit(true),
             oracleInfo: _getOracleInfoForCollateral(address(nft), oraclePrice)
         });

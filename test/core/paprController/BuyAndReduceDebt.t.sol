@@ -20,7 +20,7 @@ contract BuyAndReduceDebt is BasePaprControllerTest {
         assertEq(underlyingOut, underlying.balanceOf(borrower));
         underlying.approve(address(strategy), underlyingOut);
         uint256 debtPaid = strategy.buyAndReduceDebt(
-            borrower, collateral.addr, underlyingOut, 1, _maxSqrtPriceLimit({sellingPAPR: false}), borrower, oracleInfo
+            borrower, collateral.addr, underlyingOut, 1, _maxSqrtPriceLimit({sellingPAPR: false}), borrower
         );
         assertGt(debtPaid, 0);
         vaultInfo = strategy.vaultInfo(borrower, collateral.addr);
@@ -45,7 +45,7 @@ contract BuyAndReduceDebt is BasePaprControllerTest {
         });
         vm.expectRevert(abi.encodeWithSelector(IPaprController.TooLittleOut.selector, out, out + 1));
         uint256 debtPaid = strategy.buyAndReduceDebt(
-            borrower, collateral.addr, underlyingOut, out + 1, priceLimit, address(borrower), oracleInfo
+            borrower, collateral.addr, underlyingOut, out + 1, priceLimit, address(borrower)
         );
     }
 }
