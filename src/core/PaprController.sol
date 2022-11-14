@@ -54,6 +54,7 @@ contract PaprController is
         string memory name,
         string memory symbol,
         uint256 maxLTV,
+        /// @dev ratios are specific to the decimals of perpetual vs underlying
         uint256 indexMarkRatioMax,
         uint256 indexMarkRatioMin,
         ERC20 underlying,
@@ -72,13 +73,19 @@ contract PaprController is
         IUniswapV3Factory factory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
 
         pool = IUniswapV3Pool(factory.createPool(address(underlying), address(perpetual), 10000));
-        // TODO: get correct sqrtRatio for USDC vs. 18 decimals
-        pool.initialize(TickMath.getSqrtRatioAtTick(0));
         token0IsUnderlying = pool.token0() == address(underlying);
+        uint256 underlyingONE = 10 ** underlying.decimals();
+
+        // initialize the pool at 1:1 
+        pool.initialize(TickMath.getSqrtRatioAtTick(
+            TickMath.getTickAtSqrtRatio(
+                uint160(token0IsUnderlying ? (((10 ** 18) << 96) / underlyingONE) : ((underlyingONE << 96) / (10 ** 18)))
+            ) / 2
+        ));
 
         transferOwnership(msg.sender, false, false);
 
-        _init();
+        _init(underlyingONE);
     }
 
     function onERC721Received(address from, address, uint256 _id, bytes calldata data)

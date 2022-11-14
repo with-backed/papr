@@ -82,12 +82,12 @@ contract FundingRateController {
         return _multiplier(OracleLibrary.latestCumulativeTick(pool), target);
     }
 
-    function _init() internal {
+    function _init(uint256 _target) internal {
         lastUpdated = uint72(block.timestamp);
-        target = uint128(FixedPointMathLib.WAD);
+        target = uint128(_target);
         lastCumulativeTick = OracleLibrary.latestCumulativeTick(pool);
 
-        emit UpdateTarget(FixedPointMathLib.WAD);
+        emit UpdateTarget(_target);
     }
 
     function _newTarget(int56 latestCumulativeTick, uint256 cachedTarget) internal view returns (uint256) {
