@@ -65,7 +65,6 @@ contract BasePaprControllerTest is MainnetForking, UniswapForking, OracleTest {
         uint256 token0Amount;
         uint256 token1Amount;
         (, int24 currentTick,,,,,) = strategy.pool().slot0();
-        emit log_int(currentTick);
         int24 tickLower = currentTick;
         int24 tickUpper = currentTick;
 
