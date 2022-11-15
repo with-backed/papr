@@ -82,12 +82,12 @@ contract FundingRateController {
         return _multiplier(OracleLibrary.latestCumulativeTick(pool), target);
     }
 
-    function _init() internal {
+    function _init(uint256 _target) internal {
         lastUpdated = uint72(block.timestamp);
-        target = uint128(FixedPointMathLib.WAD);
+        target = uint128(_target);
         lastCumulativeTick = OracleLibrary.latestCumulativeTick(pool);
 
-        emit UpdateTarget(FixedPointMathLib.WAD);
+        emit UpdateTarget(_target);
     }
 
     function _newTarget(int56 latestCumulativeTick, uint256 cachedTarget) internal view returns (uint256) {
@@ -97,9 +97,8 @@ contract FundingRateController {
     function _markTwapSinceLastUpdate(int56 latestCumulativeTick) internal view returns (uint256) {
         uint256 delta = block.timestamp - lastUpdated;
         if (delta == 0) {
-            return OracleLibrary.getQuoteAtTick(
-                int24(latestCumulativeTick), 1e18, address(perpetual), address(underlying)
-            );
+            return
+                OracleLibrary.getQuoteAtTick(int24(latestCumulativeTick), 1e18, address(perpetual), address(underlying));
         } else {
             int24 twapTick =
                 OracleLibrary.timeWeightedAverageTick(lastCumulativeTick, latestCumulativeTick, int56(uint56(delta)));

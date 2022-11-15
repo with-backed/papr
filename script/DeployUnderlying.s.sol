@@ -6,8 +6,7 @@ import "forge-std/Script.sol";
 import {phUSDC} from "src/heroTestnet/phUSDC.sol";
 
 /*
-run with: forge script script/DeployUnderlying.s.sol:DeployUnderlying --private-key $PK --rpc-url $RPC
-*/
+run with: forge script script/DeployUnderlying.s.sol:DeployUnderlying --private-key $PK --rpc-url $RPC*/
 
 contract DeployUnderlying is Script, Test {
     using stdJson for string;
