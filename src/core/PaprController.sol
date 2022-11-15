@@ -54,7 +54,6 @@ contract PaprController is
         string memory name,
         string memory symbol,
         uint256 maxLTV,
-        /// @dev ratios are specific to the decimals of perpetual vs underlying
         uint256 indexMarkRatioMax,
         uint256 indexMarkRatioMin,
         ERC20 underlying,
@@ -76,12 +75,16 @@ contract PaprController is
         token0IsUnderlying = pool.token0() == address(underlying);
         uint256 underlyingONE = 10 ** underlying.decimals();
 
-        // initialize the pool at 1:1 
-        pool.initialize(TickMath.getSqrtRatioAtTick(
-            TickMath.getTickAtSqrtRatio(
-                uint160(token0IsUnderlying ? (((10 ** 18) << 96) / underlyingONE) : ((underlyingONE << 96) / (10 ** 18)))
-            ) / 2
-        ));
+        // initialize the pool at 1:1
+        pool.initialize(
+            TickMath.getSqrtRatioAtTick(
+                TickMath.getTickAtSqrtRatio(
+                    uint160(
+                        token0IsUnderlying ? (((10 ** 18) << 96) / underlyingONE) : ((underlyingONE << 96) / (10 ** 18))
+                    )
+                ) / 2
+            )
+        );
 
         transferOwnership(msg.sender, false, false);
 

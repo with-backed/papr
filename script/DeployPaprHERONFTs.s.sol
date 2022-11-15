@@ -7,8 +7,7 @@ import {ERC721} from "solmate/tokens/ERC721.sol";
 import {Blitmap, Moonbird, Toadz, Dinos} from "src/heroTestnet/HeroNfts.sol";
 
 /*
-run with: forge script script/DeployPVPNFTs.s.sol:DeployPVPNFTs --private-key $PK --rpc-url $RPC
-*/
+run with: forge script script/DeployPVPNFTs.s.sol:DeployPVPNFTs --private-key $PK --rpc-url $RPC*/
 
 contract DeployPaprHERONFT is Script, Test {
     using stdJson for string;
