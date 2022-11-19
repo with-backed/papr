@@ -14,7 +14,9 @@ contract AddCollateralTest is BasePaprControllerTest {
     function testAddCollateral() public {
         vm.startPrank(borrower);
         nft.approve(address(strategy), collateralId);
-        strategy.addCollateral(collateral);
+        IPaprController.Collateral[] memory c = new IPaprController.Collateral[](1);
+        c[0] = collateral;
+        strategy.addCollateral(c);
         emit log_uint(strategy.maxDebt(oraclePrice));
         strategy.increaseDebt(borrower, collateral.addr, strategy.maxDebt(oraclePrice), oracleInfo);
         emit log_uint(strategy.liquidationPrice(borrower, collateral.addr, oraclePrice));
@@ -25,19 +27,21 @@ contract AddCollateralTest is BasePaprControllerTest {
         vm.startPrank(borrower);
         nft.approve(address(strategy), collateralId);
         vm.expectRevert(IPaprController.InvalidCollateral.selector);
-        strategy.addCollateral(IPaprController.Collateral(ERC721(address(1)), 1));
+        IPaprController.Collateral[] memory c = new IPaprController.Collateral[](1);
+        c[0] = IPaprController.Collateral(ERC721(address(1)), 1);
+        strategy.addCollateral(c);
     }
 
     function testAddCollateralMulticall() public {
         nft.mint(borrower, collateralId + 1);
         vm.startPrank(borrower);
         nft.setApprovalForAll(address(strategy), true);
-        bytes[] memory data = new bytes[](2);
+        bytes[] memory data = new bytes[](1);
+        IPaprController.Collateral[] memory c = new IPaprController.Collateral[](2);
+        c[0] = IPaprController.Collateral(nft, collateralId);
+        c[1] = IPaprController.Collateral(nft, collateralId + 1);
         data[0] = abi.encodeWithSelector(
-            strategy.addCollateral.selector, IPaprController.Collateral(nft, collateralId), oracleInfo
-        );
-        data[1] = abi.encodeWithSelector(
-            strategy.addCollateral.selector, IPaprController.Collateral(nft, collateralId + 1), oracleInfo
+            strategy.addCollateral.selector, c
         );
         strategy.multicall(data);
     }

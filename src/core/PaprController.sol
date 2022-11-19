@@ -179,9 +179,15 @@ contract PaprController is
         }
     }
 
-    function addCollateral(IPaprController.Collateral calldata collateral) public {
-        _addCollateralToVault(msg.sender, collateral);
-        collateral.addr.transferFrom(msg.sender, address(this), collateral.id);
+    function addCollateral(IPaprController.Collateral[] calldata collateralArr) public {
+        for(uint i = 0; i < collateralArr.length;) {
+            IPaprController.Collateral memory collateral = collateralArr[i];
+            _addCollateralToVault(msg.sender, collateral);
+            collateral.addr.transferFrom(msg.sender, address(this), collateral.id);
+            unchecked {
+                ++i;
+            }
+        }
     }
 
     /// Alternative to using safeTransferFrom,
@@ -189,14 +195,20 @@ contract PaprController is
     /// @dev anyone could use this method to add collateral to anyone else's vault
     /// we think this is acceptable and it is useful so that a periphery contract
     /// can modify the tx.origin's vault
-    function addCollateralWithCallback(IPaprController.Collateral calldata collateral, bytes calldata data) public {
-        if (collateral.addr.ownerOf(collateral.id) == address(this)) {
-            revert();
-        }
-        _addCollateralToVault(msg.sender, collateral);
-        IPostCollateralCallback(msg.sender).postCollateralCallback(collateral, data);
-        if (collateral.addr.ownerOf(collateral.id) != address(this)) {
-            revert();
+    function addCollateralWithCallback(address account, IPaprController.Collateral[] calldata collateralArr, bytes calldata data) public {
+        for(uint i = 0; i < collateralArr.length;) {
+            IPaprController.Collateral memory collateral = collateralArr[i];
+            if (collateral.addr.ownerOf(collateral.id) == address(this)) {
+                revert();
+            }
+            _addCollateralToVault(account, collateral);
+            IPostCollateralCallback(msg.sender).postCollateralCallback(collateral, data);
+            if (collateral.addr.ownerOf(collateral.id) != address(this)) {
+                revert();
+            }
+            unchecked {
+                ++i;
+            }
         }
     }
 

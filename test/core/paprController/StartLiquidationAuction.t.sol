@@ -55,7 +55,9 @@ contract StartLiquidationAuctionTest is BasePaprControllerTest {
         nft.mint(borrower, collateralId + 1);
         vm.startPrank(borrower);
         nft.approve(address(strategy), collateralId + 1);
-        strategy.addCollateral(IPaprController.Collateral(nft, collateralId + 1));
+        IPaprController.Collateral[] memory c = new IPaprController.Collateral[](1);
+        c[0] = IPaprController.Collateral(nft, collateralId + 1);
+        strategy.addCollateral(c);
 
         vm.expectRevert(IPaprController.MinAuctionSpacing.selector);
         strategy.startLiquidationAuction(
@@ -70,7 +72,9 @@ contract StartLiquidationAuctionTest is BasePaprControllerTest {
         nft.mint(borrower, collateralId + 1);
         vm.startPrank(borrower);
         nft.approve(address(strategy), collateralId + 1);
-        strategy.addCollateral(IPaprController.Collateral(nft, collateralId + 1));
+        IPaprController.Collateral[] memory c = new IPaprController.Collateral[](1);
+        c[0] = IPaprController.Collateral(nft, collateralId + 1);
+        strategy.addCollateral(c);
 
         vm.warp(block.timestamp + strategy.liquidationAuctionMinSpacing());
         oracleInfo = _getOracleInfoForCollateral(nft, underlying);

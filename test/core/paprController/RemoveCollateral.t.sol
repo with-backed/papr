@@ -50,6 +50,8 @@ contract RemoveCollateralTest is BasePaprControllerTest {
     function _addCollateral() internal {
         vm.startPrank(borrower);
         nft.approve(address(strategy), collateralId);
-        strategy.addCollateral(collateral);
+        IPaprController.Collateral[] memory c = new IPaprController.Collateral[](1);
+        c[0] = collateral;
+        strategy.addCollateral(c);
     }
 }

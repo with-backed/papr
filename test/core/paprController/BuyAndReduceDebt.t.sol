@@ -11,7 +11,9 @@ contract BuyAndReduceDebt is BasePaprControllerTest {
     function testBuyAndReduceDebtReducesDebt() public {
         vm.startPrank(borrower);
         nft.approve(address(strategy), collateralId);
-        strategy.addCollateral(IPaprController.Collateral(nft, collateralId));
+        IPaprController.Collateral[] memory c = new IPaprController.Collateral[](1);
+        c[0] = collateral;
+        strategy.addCollateral(c);
         uint256 underlyingOut = strategy.mintAndSellDebt(
             collateral.addr, debt, 982507, _maxSqrtPriceLimit({sellingPAPR: true}), borrower, oracleInfo
         );
@@ -30,7 +32,9 @@ contract BuyAndReduceDebt is BasePaprControllerTest {
     function testBuyAndReduceDebtRevertsIfMinOutTooLittle() public {
         vm.startPrank(borrower);
         nft.approve(address(strategy), collateralId);
-        strategy.addCollateral(collateral);
+        IPaprController.Collateral[] memory c = new IPaprController.Collateral[](1);
+        c[0] = collateral;
+        strategy.addCollateral(c);
         uint256 underlyingOut = strategy.mintAndSellDebt(
             collateral.addr, debt, 982507, _maxSqrtPriceLimit({sellingPAPR: true}), borrower, oracleInfo
         );
