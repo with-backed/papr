@@ -26,23 +26,25 @@ contract HeroClaimTest is Test {
     TestERC20 phUSDC = new TestERC20();
 
     function testFuzz(address[20] memory members, HeroClaim.AccountClaim[20] memory claims) public {
-        vm.assume(members[0] != address(0));
-        address[] memory _members = new address[](1);
-        HeroClaim.AccountClaim[] memory _claims = new HeroClaim.AccountClaim[](1);
-        for (uint256 i = 0; i < 1; i++) {
+        address[] memory _members = new address[](20);
+        HeroClaim.AccountClaim[] memory _claims = new HeroClaim.AccountClaim[](20);
+        for (uint256 i = 0; i < 20; i++) {
             _members[i] = members[i];
             _claims[i] = claims[i];
         }
         (bytes32 root, bytes32[][] memory tree) = MerkleDropHelper.constructTree(_members, _claims);
         claimContract = new HeroClaim(root, phUSDC, toadz, moonBirds, dinos, blits);
-        for (uint256 i = 0; i < 1; i++) {
+        for (uint256 i = 0; i < 20; i++) {
+            vm.assume(members[i] != address(0));
+            vm.assume(!claimContract.claimed(members[i]));
             phUSDC.mint(address(claimContract), claims[i].phUSDCAmount);
             _mint(toadz, claims[i].toadzCount);
             _mint(blits, claims[i].blitCount);
             _mint(moonBirds, claims[i].moonBirdCount);
             _mint(dinos, claims[i].dinoCount);
-            vm.startPrank(members[0]);
-            claimContract.claim(claims[0], MerkleDropHelper.createProof(0, tree));
+            bytes32[] memory proof = MerkleDropHelper.createProof(i, tree);
+            vm.prank(members[i]);
+            claimContract.claim(claims[i], proof);
             assertEq(phUSDC.balanceOf(members[i]), claims[i].phUSDCAmount);
             assertEq(toadz.balanceOf(members[i]), claims[i].toadzCount);
             assertEq(blits.balanceOf(members[i]), claims[i].blitCount);
