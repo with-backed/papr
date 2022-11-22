@@ -15,9 +15,7 @@ contract AddCollateralTest is BasePaprControllerTest {
         vm.startPrank(borrower);
         nft.approve(address(strategy), collateralId);
         strategy.addCollateral(collateral);
-        emit log_uint(strategy.maxDebt(oraclePrice));
         strategy.increaseDebt(borrower, collateral.addr, strategy.maxDebt(oraclePrice), oracleInfo);
-        emit log_uint(strategy.liquidationPrice(borrower, collateral.addr, oraclePrice));
     }
 
     function testAddCollateralFailsIfInvalidCollateral() public {
