@@ -41,20 +41,6 @@ contract HeroClaim {
         blits = _blits;
     }
 
-    function prove(bytes32 leaf, bytes32[] memory siblings) public view returns (bool) {
-        // In a sparse tree, empty leaves have a value of 0, so don't allow 0 as input.
-        require(leaf != 0, "invalid leaf value");
-        bytes32 node = leaf;
-        for (uint256 i = 0; i < siblings.length; ++i) {
-            bytes32 sibling = siblings[i];
-            node = keccak256(
-                // Siblings are always hashed in sorted order.
-                node > sibling ? abi.encode(sibling, node) : abi.encode(node, sibling)
-            );
-        }
-        return node == merkleRoot;
-    }
-
     function claim(AccountClaim calldata claim, bytes32[] calldata merkleProof) public {
         require(!claimed[msg.sender], "claimed");
 
