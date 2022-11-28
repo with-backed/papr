@@ -14,10 +14,7 @@ import {PaprToken} from "./PaprToken.sol";
 import {FundingRateController} from "./FundingRateController.sol";
 import {Multicall} from "src/core/base/Multicall.sol";
 import {ReservoirOracleUnderwriter} from "src/core/ReservoirOracleUnderwriter.sol";
-import {IPostCollateralCallback} from "src/interfaces/IPostCollateralCallback.sol";
 import {IPaprController} from "src/interfaces/IPaprController.sol";
-import {OracleLibrary} from "src/libraries/OracleLibrary.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {BoringOwnable} from "@boringsolidity/BoringOwnable.sol";
 
 contract PaprController is
@@ -182,22 +179,6 @@ contract PaprController is
     function addCollateral(IPaprController.Collateral calldata collateral) public {
         _addCollateralToVault(msg.sender, collateral);
         collateral.addr.transferFrom(msg.sender, address(this), collateral.id);
-    }
-
-    /// Alternative to using safeTransferFrom,
-    /// allows for loan to buy flows
-    /// @dev anyone could use this method to add collateral to anyone else's vault
-    /// we think this is acceptable and it is useful so that a periphery contract
-    /// can modify the tx.origin's vault
-    function addCollateralWithCallback(IPaprController.Collateral calldata collateral, bytes calldata data) public {
-        if (collateral.addr.ownerOf(collateral.id) == address(this)) {
-            revert();
-        }
-        _addCollateralToVault(msg.sender, collateral);
-        IPostCollateralCallback(msg.sender).postCollateralCallback(collateral, data);
-        if (collateral.addr.ownerOf(collateral.id) != address(this)) {
-            revert();
-        }
     }
 
     function removeCollateral(
