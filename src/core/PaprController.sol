@@ -263,28 +263,6 @@ contract PaprController is
         }
     }
 
-    function _handleExcess(uint256 excess, uint256 neededToSaveVault, uint256 debtCached, Auction calldata auction)
-        internal
-        returns (uint256 remaining)
-    {
-        uint256 fee = excess * liquidationPenaltyBips / 1e4;
-        uint256 credit = excess - fee;
-        uint256 totalOwed = credit + neededToSaveVault;
-
-        PaprToken(address(perpetual)).burn(address(this), fee);
-
-        if (totalOwed > debtCached) {
-            // we owe them more papr than they have in debt
-            // so we pay down debt and send them the rest
-            _reduceDebt(auction.nftOwner, auction.auctionAssetContract, address(this), debtCached);
-            perpetual.transfer(auction.nftOwner, totalOwed - debtCached);
-        } else {
-            // reduce vault debt
-            _reduceDebt(auction.nftOwner, auction.auctionAssetContract, address(this), totalOwed);
-            remaining = debtCached - totalOwed;
-        }
-    }
-
     function startLiquidationAuction(
         address account,
         IPaprController.Collateral calldata collateral,
@@ -434,5 +412,27 @@ contract PaprController is
     function _reduceDebtWithoutBurn(address account, ERC721 asset, uint256 amount) internal {
         _vaultInfo[account][asset].debt = uint200(_vaultInfo[account][asset].debt - amount);
         emit ReduceDebt(account, asset, amount);
+    }
+
+    function _handleExcess(uint256 excess, uint256 neededToSaveVault, uint256 debtCached, Auction calldata auction)
+        internal
+        returns (uint256 remaining)
+    {
+        uint256 fee = excess * liquidationPenaltyBips / 1e4;
+        uint256 credit = excess - fee;
+        uint256 totalOwed = credit + neededToSaveVault;
+
+        PaprToken(address(perpetual)).burn(address(this), fee);
+
+        if (totalOwed > debtCached) {
+            // we owe them more papr than they have in debt
+            // so we pay down debt and send them the rest
+            _reduceDebt(auction.nftOwner, auction.auctionAssetContract, address(this), debtCached);
+            perpetual.transfer(auction.nftOwner, totalOwed - debtCached);
+        } else {
+            // reduce vault debt
+            _reduceDebt(auction.nftOwner, auction.auctionAssetContract, address(this), totalOwed);
+            remaining = debtCached - totalOwed;
+        }
     }
 }
