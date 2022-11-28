@@ -17,7 +17,7 @@ abstract contract MintableERC721 is ERC721 {
 contract MintNFTAndBorrowMax is Base {
     MintableERC721 nft = MintableERC721(0x8232c5Fd480C2a74d2f25d3362f262fF3511CE49);
     // check next Id here https://goerli.etherscan.io/token/0x8232c5Fd480C2a74d2f25d3362f262fF3511CE49
-    uint256 tokenId = 22;
+    uint256 tokenId = 38;
     uint256 oraclePrice = 3e20;
 
     function run() public {
