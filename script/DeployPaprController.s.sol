@@ -19,12 +19,12 @@ contract DeployPaprController is Base {
         vm.startBroadcast();
 
         controller = new PaprController(
-            "Test Loans",
-            "TL",
+            "hero",
+            "HERO",
             5e17,
             2e18,
             0.8e18,
-            underlying,
+            underlying, // swap for phUSDC
             deployer
         );
         controller.claimOwnership();

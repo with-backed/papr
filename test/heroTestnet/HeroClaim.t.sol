@@ -50,7 +50,7 @@ contract HeroClaimTest is Test {
             // fuzzer sometimes give same address twice
             vm.assume(!claimContract.claimed(account));
 
-            // give the claim contract the assets it needs to 
+            // give the claim contract the assets it needs to
             // fill the claim
             _mintAllClaims(account, claim);
 

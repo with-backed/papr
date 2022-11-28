@@ -8,8 +8,8 @@ import {CreatorGuarded} from "src/core/base/CreatorGuarded.sol";
 contract PaprToken is ERC20 {
     address immutable creator;
 
-    constructor(string memory strategy, string memory symbol, string memory underlyingSymbol)
-        ERC20(string.concat("pAPR ", strategy), string.concat("pAPR", symbol, "_", underlyingSymbol), 18)
+    constructor(string memory name, string memory symbol, string memory underlyingSymbol)
+        ERC20(string.concat("papr ", name), string.concat("papr", symbol), 18)
     {
         creator = msg.sender;
     }
