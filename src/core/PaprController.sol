@@ -349,10 +349,6 @@ contract PaprController is
         return maxLoanUnderlying / target;
     }
 
-    function vaultTotalCollateralValue(address account, ERC721 asset, uint256 price) public view returns (uint256) {
-        return _vaultInfo[account][asset].count * price;
-    }
-
     function vaultInfo(address account, ERC721 asset) public view returns (IPaprController.VaultInfo memory) {
         return _vaultInfo[account][asset];
     }
