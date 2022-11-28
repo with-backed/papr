@@ -48,8 +48,8 @@ contract BasePaprControllerTest is MainnetForking, UniswapForking, OracleTest {
         );
 
         strategy.claimOwnership();
-        IPaprController.SetAllowedCollateralArg[] memory args = new IPaprController.SetAllowedCollateralArg[](1);
-        args[0] = IPaprController.SetAllowedCollateralArg(address(nft), true);
+        IPaprController.CollateralAllowedConfig[] memory args = new IPaprController.CollateralAllowedConfig[](1);
+        args[0] = IPaprController.CollateralAllowedConfig(address(nft), true);
         strategy.setAllowedCollateral(args);
         nft.mint(borrower, collateralId);
         vm.prank(borrower);

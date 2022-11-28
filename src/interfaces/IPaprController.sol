@@ -31,8 +31,8 @@ interface IPaprController {
         ERC20 underlying;
     }
 
-    struct SetAllowedCollateralArg {
-        address addr;
+    struct CollateralAllowedConfig {
+        address collateral;
         bool allowed;
     }
 

@@ -17,8 +17,8 @@ contract OwnerTest is MainnetForking, UniswapForking {
     }
 
     function testSetAllowedCollateralFailsIfNotOwner() public {
-        IPaprController.SetAllowedCollateralArg[] memory args = new IPaprController.SetAllowedCollateralArg[](1);
-        args[0] = IPaprController.SetAllowedCollateralArg(address(nft), true);
+        IPaprController.CollateralAllowedConfig[] memory args = new IPaprController.CollateralAllowedConfig[](1);
+        args[0] = IPaprController.CollateralAllowedConfig(address(nft), true);
 
         vm.startPrank(address(1));
         vm.expectRevert("Ownable: caller is not the owner");
@@ -26,8 +26,8 @@ contract OwnerTest is MainnetForking, UniswapForking {
     }
 
     function testSetAllowedCollateralWorksIfOwner() public {
-        IPaprController.SetAllowedCollateralArg[] memory args = new IPaprController.SetAllowedCollateralArg[](1);
-        args[0] = IPaprController.SetAllowedCollateralArg(address(nft), true);
+        IPaprController.CollateralAllowedConfig[] memory args = new IPaprController.CollateralAllowedConfig[](1);
+        args[0] = IPaprController.CollateralAllowedConfig(address(nft), true);
 
         strategy.setAllowedCollateral(args);
 
