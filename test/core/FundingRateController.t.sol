@@ -17,8 +17,7 @@ contract FundingRateControllerTest is Test {
     uint256 indexMarkRatioMin;
 
     function setUp() public {
-        fundingRateController =
-            new FundingRateController(underlying, perpetual, indexMarkRatioMax, indexMarkRatioMin);
+        fundingRateController = new FundingRateController(underlying, perpetual, indexMarkRatioMax, indexMarkRatioMin);
     }
 
     function updateNormalizationEmitsCorrectly() public {

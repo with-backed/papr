@@ -29,7 +29,7 @@ contract PaprController is
 
     bool public immutable token0IsUnderlying;
     uint256 public maxLTV;
-    
+
     // auction configs
     uint256 public liquidationAuctionMinSpacing = 2 days;
     uint256 public perPeriodAuctionDecayWAD = 0.7e18;
@@ -41,14 +41,14 @@ contract PaprController is
     mapping(address => mapping(ERC721 => IPaprController.VaultInfo)) private _vaultInfo;
     // nft address => tokenId => account
     mapping(ERC721 => mapping(uint256 => address)) public collateralOwner;
+    // nft address => whether this controller allows as collateral
     mapping(address => bool) public isAllowed;
 
     event IncreaseDebt(address indexed account, ERC721 indexed collateralAddress, uint256 amount);
     event AddCollateral(address indexed account, IPaprController.Collateral collateral);
     event ReduceDebt(address indexed account, ERC721 indexed collateralAddress, uint256 amount);
     event RemoveCollateral(address indexed account, IPaprController.Collateral collateral);
-
-    event ChangeCollateralAllowed(IPaprController.SetAllowedCollateralArg arg);
+    event AllowCollateral(address indexed collateral, bool isAllowed);
 
     constructor(
         string memory name,
@@ -334,10 +334,13 @@ contract PaprController is
         return _vaultInfo[account][asset];
     }
 
-    function setAllowedCollateral(IPaprController.SetAllowedCollateralArg[] calldata args) public onlyOwner {
-        for (uint256 i = 0; i < args.length;) {
-            isAllowed[args[i].addr] = args[i].allowed;
-            emit ChangeCollateralAllowed(args[i]);
+    function setAllowedCollateral(IPaprController.CollateralAllowedConfig[] calldata collateralConfigs)
+        external
+        onlyOwner
+    {
+        for (uint256 i = 0; i < collateralConfigs.length;) {
+            isAllowed[collateralConfigs[i].collateral] = collateralConfigs[i].allowed;
+            emit AllowCollateral(collateralConfigs[i].collateral, collateralConfigs[i].allowed);
             unchecked {
                 ++i;
             }
