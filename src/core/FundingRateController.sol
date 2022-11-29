@@ -3,18 +3,9 @@ pragma solidity ^0.8.13;
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
-import {IUniswapV3Factory} from "v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import {IUniswapV3Pool} from "v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-import {SafeCast} from "v3-core/contracts/libraries/SafeCast.sol";
-import {TickMath} from "fullrange/libraries/TickMath.sol";
 
-import {PaprToken} from "./PaprToken.sol";
-import {Multicall} from "src/core/base/Multicall.sol";
-import {IPostCollateralCallback} from "src/interfaces/IPostCollateralCallback.sol";
-import {IPaprController} from "src/interfaces/IPostCollateralCallback.sol";
 import {OracleLibrary} from "src/libraries/OracleLibrary.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {BoringOwnable} from "@boringsolidity/BoringOwnable.sol";
 
 contract FundingRateController {
     event UpdateTarget(uint256 newTarget);

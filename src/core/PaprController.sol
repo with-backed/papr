@@ -14,10 +14,7 @@ import {PaprToken} from "./PaprToken.sol";
 import {FundingRateController} from "./FundingRateController.sol";
 import {Multicall} from "src/core/base/Multicall.sol";
 import {ReservoirOracleUnderwriter} from "src/core/ReservoirOracleUnderwriter.sol";
-import {IPostCollateralCallback} from "src/interfaces/IPostCollateralCallback.sol";
 import {IPaprController} from "src/interfaces/IPaprController.sol";
-import {OracleLibrary} from "src/libraries/OracleLibrary.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {BoringOwnable} from "@boringsolidity/BoringOwnable.sol";
 
 contract PaprController is
@@ -184,22 +181,6 @@ contract PaprController is
         collateral.addr.transferFrom(msg.sender, address(this), collateral.id);
     }
 
-    /// Alternative to using safeTransferFrom,
-    /// allows for loan to buy flows
-    /// @dev anyone could use this method to add collateral to anyone else's vault
-    /// we think this is acceptable and it is useful so that a periphery contract
-    /// can modify the tx.origin's vault
-    function addCollateralWithCallback(IPaprController.Collateral calldata collateral, bytes calldata data) public {
-        if (collateral.addr.ownerOf(collateral.id) == address(this)) {
-            revert();
-        }
-        _addCollateralToVault(msg.sender, collateral);
-        IPostCollateralCallback(msg.sender).postCollateralCallback(collateral, data);
-        if (collateral.addr.ownerOf(collateral.id) != address(this)) {
-            revert();
-        }
-    }
-
     function removeCollateral(
         address sendTo,
         IPaprController.Collateral calldata collateral,
@@ -282,28 +263,6 @@ contract PaprController is
         }
     }
 
-    function _handleExcess(uint256 excess, uint256 neededToSaveVault, uint256 debtCached, Auction calldata auction)
-        internal
-        returns (uint256 remaining)
-    {
-        uint256 fee = excess * liquidationPenaltyBips / 1e4;
-        uint256 credit = excess - fee;
-        uint256 totalOwed = credit + neededToSaveVault;
-
-        PaprToken(address(perpetual)).burn(address(this), fee);
-
-        if (totalOwed > debtCached) {
-            // we owe them more papr than they have in debt
-            // so we pay down debt and send them the rest
-            _reduceDebt(auction.nftOwner, auction.auctionAssetContract, address(this), debtCached);
-            perpetual.transfer(auction.nftOwner, totalOwed - debtCached);
-        } else {
-            // reduce vault debt
-            _reduceDebt(auction.nftOwner, auction.auctionAssetContract, address(this), totalOwed);
-            remaining = debtCached - totalOwed;
-        }
-    }
-
     function startLiquidationAuction(
         address account,
         IPaprController.Collateral calldata collateral,
@@ -366,10 +325,6 @@ contract PaprController is
     function maxDebt(uint256 totalCollateraValue) public view returns (uint256) {
         uint256 maxLoanUnderlying = totalCollateraValue * maxLTV;
         return maxLoanUnderlying / target;
-    }
-
-    function vaultTotalCollateralValue(address account, ERC721 asset, uint256 price) public view returns (uint256) {
-        return _vaultInfo[account][asset].count * price;
     }
 
     function vaultInfo(address account, ERC721 asset) public view returns (IPaprController.VaultInfo memory) {
@@ -457,5 +412,27 @@ contract PaprController is
     function _reduceDebtWithoutBurn(address account, ERC721 asset, uint256 amount) internal {
         _vaultInfo[account][asset].debt = uint200(_vaultInfo[account][asset].debt - amount);
         emit ReduceDebt(account, asset, amount);
+    }
+
+    function _handleExcess(uint256 excess, uint256 neededToSaveVault, uint256 debtCached, Auction calldata auction)
+        internal
+        returns (uint256 remaining)
+    {
+        uint256 fee = excess * liquidationPenaltyBips / 1e4;
+        uint256 credit = excess - fee;
+        uint256 totalOwed = credit + neededToSaveVault;
+
+        PaprToken(address(perpetual)).burn(address(this), fee);
+
+        if (totalOwed > debtCached) {
+            // we owe them more papr than they have in debt
+            // so we pay down debt and send them the rest
+            _reduceDebt(auction.nftOwner, auction.auctionAssetContract, address(this), debtCached);
+            perpetual.transfer(auction.nftOwner, totalOwed - debtCached);
+        } else {
+            // reduce vault debt
+            _reduceDebt(auction.nftOwner, auction.auctionAssetContract, address(this), totalOwed);
+            remaining = debtCached - totalOwed;
+        }
     }
 }
