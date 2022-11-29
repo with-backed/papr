@@ -13,7 +13,6 @@ contract FundingRateController {
     uint256 public immutable start;
     ERC20 public immutable underlying;
     ERC20 public immutable perpetual;
-    uint256 public maxLTV;
     uint256 public PERIOD = 4 weeks;
     // for oracle
     IUniswapV3Pool public pool;
@@ -30,14 +29,11 @@ contract FundingRateController {
     constructor(
         ERC20 _underlying,
         ERC20 _perpetual,
-        uint256 _maxLTV,
         uint256 _targetMarkRatioMax,
         uint256 _targetMarkRatioMin
     ) {
         underlying = _underlying;
         perpetual = _perpetual;
-
-        maxLTV = _maxLTV;
 
         start = block.timestamp;
 

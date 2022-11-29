@@ -28,6 +28,9 @@ contract PaprController is
     using SafeCast for uint256;
 
     bool public immutable token0IsUnderlying;
+    uint256 public maxLTV;
+    
+    // auction configs
     uint256 public liquidationAuctionMinSpacing = 2 days;
     uint256 public perPeriodAuctionDecayWAD = 0.7e18;
     uint256 public auctionDecayPeriod = 1 days;
@@ -50,7 +53,7 @@ contract PaprController is
     constructor(
         string memory name,
         string memory symbol,
-        uint256 maxLTV,
+        uint256 _maxLTV,
         uint256 indexMarkRatioMax,
         uint256 indexMarkRatioMin,
         ERC20 underlying,
@@ -60,12 +63,12 @@ contract PaprController is
         FundingRateController(
             underlying,
             new PaprToken(name, symbol, underlying.symbol()),
-            maxLTV,
             indexMarkRatioMax,
             indexMarkRatioMin
         )
         ReservoirOracleUnderwriter(oracleSigner, address(underlying))
     {
+        maxLTV = _maxLTV;
         IUniswapV3Factory factory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
 
         pool = IUniswapV3Pool(factory.createPool(address(underlying), address(perpetual), 10000));
