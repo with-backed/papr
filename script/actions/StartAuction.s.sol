@@ -13,8 +13,8 @@ contract StartAuction is Base {
         vm.startBroadcast();
         controller.startLiquidationAuction(
             deployer,
-            IPaprController.Collateral({id: 38, addr: ERC721(0x8232c5Fd480C2a74d2f25d3362f262fF3511CE49)}),
-            _getOracleInfoForCollateral(0x8232c5Fd480C2a74d2f25d3362f262fF3511CE49, 1e18)
+            IPaprController.Collateral({id: 40, addr: ERC721(0x8232c5Fd480C2a74d2f25d3362f262fF3511CE49)}),
+            _getOracleInfoForCollateral(0x8232c5Fd480C2a74d2f25d3362f262fF3511CE49, 0.1e18)
         );
     }
 }

@@ -11,7 +11,7 @@ import {IPaprController} from "src/interfaces/IPaprController.sol";
 import {OracleSigUtils} from "test/OracleSigUtils.sol";
 
 contract OracleTest is Test {
-    uint256 oraclePrice = 3e18;
+    uint256 oraclePrice = 3e6;
 
     uint256 internal oraclePrivateKey = 0xA11CE;
     address oracleAddress = vm.addr(oraclePrivateKey);

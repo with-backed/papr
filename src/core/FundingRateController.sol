@@ -36,7 +36,7 @@ contract FundingRateController {
         targetMarkRatioMin = _targetMarkRatioMin;
     }
 
-    function updateNormalization() public returns (uint256 newTarget) {
+    function updateTarget() public returns (uint256 newTarget) {
         uint128 previousTarget = target;
         if (lastUpdated == block.timestamp) {
             return previousTarget;

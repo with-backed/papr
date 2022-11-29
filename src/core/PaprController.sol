@@ -271,7 +271,7 @@ contract PaprController is
         IPaprController.Collateral calldata collateral,
         ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
     ) public returns (INFTEDA.Auction memory auction) {
-        uint256 norm = updateNormalization();
+        uint256 _target = updateTarget();
 
         IPaprController.VaultInfo storage info = _vaultInfo[account][collateral.addr];
 
@@ -282,7 +282,7 @@ contract PaprController is
 
         uint256 oraclePrice =
             underwritePriceForCollateral(collateral.addr, ReservoirOracleUnderwriter.PriceKind.TWAP, oracleInfo);
-        if (info.debt < maxDebt(oraclePrice * info.count)) {
+        if (info.debt < _maxDebt(oraclePrice * info.count, _target)) {
             revert IPaprController.NotLiquidatable();
         }
 
@@ -306,7 +306,7 @@ contract PaprController is
                 secondsInPeriod: auctionDecayPeriod,
                 // start price is frozen price * auctionStartPriceMultiplier,
                 // converted to perpetual value at the current contract price
-                startPrice: (oraclePrice * auctionStartPriceMultiplier) * FixedPointMathLib.WAD / norm,
+                startPrice: (oraclePrice * auctionStartPriceMultiplier) * FixedPointMathLib.WAD / _target,
                 paymentAsset: perpetual
             })
         );
@@ -326,8 +326,7 @@ contract PaprController is
     }
 
     function maxDebt(uint256 totalCollateraValue) public view returns (uint256) {
-        uint256 maxLoanUnderlying = totalCollateraValue * maxLTV;
-        return maxLoanUnderlying / target;
+        return _maxDebt(totalCollateraValue, newTarget());
     }
 
     function vaultInfo(address account, ERC721 asset) public view returns (IPaprController.VaultInfo memory) {
@@ -379,7 +378,7 @@ contract PaprController is
         uint256 amount,
         ReservoirOracleUnderwriter.OracleInfo memory oracleInfo
     ) internal {
-        updateNormalization();
+        uint256 _target = updateTarget();
 
         uint256 newDebt = _vaultInfo[account][asset].debt + amount;
         uint256 oraclePrice =
@@ -387,7 +386,7 @@ contract PaprController is
 
         // TODO do we need to check if oraclePrice is 0?
 
-        uint256 max = maxDebt(_vaultInfo[account][asset].count * oraclePrice);
+        uint256 max = _maxDebt(_vaultInfo[account][asset].count * oraclePrice, _target);
         if (newDebt > max) {
             revert IPaprController.ExceedsMaxDebt(newDebt, max);
         }
@@ -440,5 +439,10 @@ contract PaprController is
             _reduceDebt(auction.nftOwner, auction.auctionAssetContract, address(this), totalOwed);
             remaining = debtCached - totalOwed;
         }
+    }
+
+    function _maxDebt(uint256 totalCollateraValue, uint256 _target) public view returns (uint256) {
+        uint256 maxLoanUnderlying = totalCollateraValue * maxLTV;
+        return maxLoanUnderlying / _target;
     }
 }

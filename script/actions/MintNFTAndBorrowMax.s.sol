@@ -17,7 +17,7 @@ abstract contract MintableERC721 is ERC721 {
 contract MintNFTAndBorrowMax is Base {
     MintableERC721 nft = MintableERC721(0x8232c5Fd480C2a74d2f25d3362f262fF3511CE49);
     // check next Id here https://goerli.etherscan.io/token/0x8232c5Fd480C2a74d2f25d3362f262fF3511CE49
-    uint256 tokenId = 38;
+    uint256 tokenId = 41;
     uint256 oraclePrice = 3e20;
 
     function run() public {
@@ -32,12 +32,11 @@ contract MintNFTAndBorrowMax is Base {
     function _openMaxLoanAndSwap(address borrower) internal {
         IPaprController.OnERC721ReceivedArgs memory safeTransferReceivedArgs = IPaprController.OnERC721ReceivedArgs({
             mintDebtOrProceedsTo: borrower,
-            minOut: 1,
-            debt: controller.maxDebt(oraclePrice) - 10,
+            minOut: 0,
+            debt: controller.maxDebt(oraclePrice) - 100,
             sqrtPriceLimitX96: _maxSqrtPriceLimit(true),
             oracleInfo: _getOracleInfoForCollateral(address(nft), oraclePrice)
         });
-        vm.startBroadcast();
         nft.safeTransferFrom(borrower, address(controller), tokenId, abi.encode(safeTransferReceivedArgs));
     }
 
