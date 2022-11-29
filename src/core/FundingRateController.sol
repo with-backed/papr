@@ -26,12 +26,7 @@ contract FundingRateController {
     uint72 public lastUpdated;
     int56 lastCumulativeTick;
 
-    constructor(
-        ERC20 _underlying,
-        ERC20 _perpetual,
-        uint256 _targetMarkRatioMax,
-        uint256 _targetMarkRatioMin
-    ) {
+    constructor(ERC20 _underlying, ERC20 _perpetual, uint256 _targetMarkRatioMax, uint256 _targetMarkRatioMin) {
         underlying = _underlying;
         perpetual = _perpetual;
 

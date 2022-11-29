@@ -29,7 +29,7 @@ contract PaprController is
 
     bool public immutable token0IsUnderlying;
     uint256 public maxLTV;
-    
+
     // auction configs
     uint256 public liquidationAuctionMinSpacing = 2 days;
     uint256 public perPeriodAuctionDecayWAD = 0.7e18;
