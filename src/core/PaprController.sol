@@ -59,7 +59,7 @@ contract PaprController is
         ERC20 underlying,
         address oracleSigner
     )
-        NFTEDAStarterIncentive(1e18)
+        NFTEDAStarterIncentive(1e17)
         FundingRateController(
             underlying,
             new PaprToken(name, symbol, underlying.symbol()),
