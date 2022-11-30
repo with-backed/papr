@@ -23,10 +23,11 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         priceKind = ReservoirOracleUnderwriter.PriceKind.TWAP;
         oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
         auction = strategy.startLiquidationAuction(borrower, collateral, oracleInfo);
+        emit log_uint(strategy.auctionCurrentPrice(auction));
         nft.mint(purchaser, collateralId + 1);
         nft.mint(purchaser, collateralId + 2);
         nft.mint(purchaser, collateralId + 3);
-        safeTransferReceivedArgs.debt = strategy.maxDebt(oraclePrice);
+        safeTransferReceivedArgs.debt = strategy.maxDebt(oraclePrice) - 10;
         safeTransferReceivedArgs.mintDebtOrProceedsTo = purchaser;
         safeTransferReceivedArgs.minOut = 0;
         vm.startPrank(purchaser);
@@ -50,6 +51,10 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         uint256 expectedPayout = credit - (info.debt - neededToSave);
         uint256 beforeBalance = strategy.perpetual().balanceOf(borrower);
         strategy.perpetual().approve(address(strategy), auction.startPrice);
+        assertGt(strategy.auctionCurrentPrice(auction), 0);
+        emit log_uint(strategy.auctionCurrentPrice(auction));
+        vm.expectEmit(true, true, false, true);
+        emit Transfer(address(purchaser), address(strategy), strategy.auctionCurrentPrice(auction));
         vm.expectEmit(true, true, false, true);
         emit Transfer(address(strategy), address(0), penalty);
         vm.expectEmit(true, false, false, true);

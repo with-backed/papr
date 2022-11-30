@@ -7,7 +7,7 @@ import "forge-std/Test.sol";
 import {FundingRateController} from "src/core/FundingRateController.sol";
 
 contract FundingRateControllerTest is Test {
-    event UpdateNormalization(uint256 newNorm);
+    event UpdateTarget(uint256 newNorm);
 
     FundingRateController fundingRateController;
 
@@ -20,7 +20,7 @@ contract FundingRateControllerTest is Test {
         fundingRateController = new FundingRateController(underlying, perpetual, indexMarkRatioMax, indexMarkRatioMin);
     }
 
-    function updateNormalizationEmitsCorrectly() public {
+    function updateTargetEmitsCorrectly() public {
         vm.warp(block.timestamp + 1);
         /// TODO need to mock a uniswap pool/oracle
     }
