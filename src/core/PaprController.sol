@@ -189,6 +189,8 @@ contract PaprController is
         IPaprController.Collateral calldata collateral,
         ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
     ) external {
+        uint256 newTarget = updateTarget();
+
         if (collateralOwner[collateral.addr][collateral.id] != msg.sender) {
             revert IPaprController.OnlyCollateralOwner();
         }
@@ -208,7 +210,7 @@ contract PaprController is
         uint256 debt = _vaultInfo[msg.sender][collateral.addr].debt;
         uint256 oraclePrice =
             underwritePriceForCollateral(collateral.addr, ReservoirOracleUnderwriter.PriceKind.LOWER, oracleInfo);
-        uint256 max = maxDebt(oraclePrice * newCount);
+        uint256 max = _maxDebt(oraclePrice * newCount, newTarget);
 
         if (debt > max) {
             revert IPaprController.ExceedsMaxDebt(debt, max);
@@ -246,7 +248,7 @@ contract PaprController is
         bool isLastCollateral = collateralValueCached == 0;
 
         uint256 debtCached = _vaultInfo[auction.nftOwner][auction.auctionAssetContract].debt;
-        uint256 maxDebtCached = isLastCollateral ? debtCached : maxDebt(collateralValueCached);
+        uint256 maxDebtCached = isLastCollateral ? debtCached : _maxDebt(collateralValueCached, updateTarget());
         /// anything above what is needed to bring this vault under maxDebt is considered excess
         uint256 neededToSaveVault = maxDebtCached > debtCached ? 0 : debtCached - maxDebtCached;
         uint256 price = _purchaseNFT(auction, maxPrice, sendTo);
@@ -326,6 +328,10 @@ contract PaprController is
     }
 
     function maxDebt(uint256 totalCollateraValue) public view returns (uint256) {
+        if (lastUpdated == block.timestamp) {
+            return _maxDebt(totalCollateraValue, target);
+        }
+        
         return _maxDebt(totalCollateraValue, newTarget());
     }
 
