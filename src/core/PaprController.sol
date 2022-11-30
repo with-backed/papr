@@ -331,7 +331,7 @@ contract PaprController is
         if (lastUpdated == block.timestamp) {
             return _maxDebt(totalCollateraValue, target);
         }
-        
+
         return _maxDebt(totalCollateraValue, newTarget());
     }
 
@@ -447,7 +447,7 @@ contract PaprController is
         }
     }
 
-    function _maxDebt(uint256 totalCollateraValue, uint256 _target) public view returns (uint256) {
+    function _maxDebt(uint256 totalCollateraValue, uint256 _target) internal view returns (uint256) {
         uint256 maxLoanUnderlying = totalCollateraValue * maxLTV;
         return maxLoanUnderlying / _target;
     }
