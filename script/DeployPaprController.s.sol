@@ -6,7 +6,7 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 import {ERC721} from "solmate/tokens/ERC721.sol";
 
 import {IPaprController} from "src/interfaces/IPaprController.sol";
-import {PaprController} from "src/core/PaprController.sol";
+import {PaprController} from "src/PaprController.sol";
 import "openzeppelin-contracts/utils/Strings.sol";
 import {Base} from "script/actions/Base.s.sol";
 

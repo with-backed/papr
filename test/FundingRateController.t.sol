@@ -4,7 +4,7 @@ pragma solidity ^0.8.13;
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import "forge-std/Test.sol";
 
-import {FundingRateController} from "src/core/FundingRateController.sol";
+import {FundingRateController} from "src/FundingRateController.sol";
 
 contract FundingRateControllerTest is Test {
     event UpdateTarget(uint256 newNorm);

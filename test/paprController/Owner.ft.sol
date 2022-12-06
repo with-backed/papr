@@ -1,6 +1,6 @@
 import "forge-std/Test.sol";
 
-import {PaprController} from "src/core/PaprController.sol";
+import {PaprController} from "src/PaprController.sol";
 import {IPaprController} from "src/interfaces/IPaprController.sol";
 import {TestERC721} from "test/mocks/TestERC721.sol";
 import {TestERC20} from "test/mocks/TestERC20.sol";

@@ -4,10 +4,10 @@ pragma solidity ^0.8.13;
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {ERC721} from "solmate/tokens/ERC721.sol";
 
-import {BasePaprControllerTest} from "test/core/paprController/BasePaprController.ft.sol";
-import {PaprController} from "src/core/PaprController.sol";
+import {BasePaprControllerTest} from "test/paprController/BasePaprController.ft.sol";
+import {PaprController} from "src/PaprController.sol";
 import {IPaprController} from "src/interfaces/IPaprController.sol";
-import {ReservoirOracleUnderwriter} from "src/core/ReservoirOracleUnderwriter.sol";
+import {ReservoirOracleUnderwriter} from "src/ReservoirOracleUnderwriter.sol";
 import {TestERC721} from "test/mocks/TestERC721.sol";
 
 contract AddCollateralTest is BasePaprControllerTest {

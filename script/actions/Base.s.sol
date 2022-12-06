@@ -2,9 +2,9 @@
 pragma solidity ^0.8.13;
 
 import "forge-std/Script.sol";
-import {ReservoirOracleUnderwriter, ReservoirOracle} from "src/core/ReservoirOracleUnderwriter.sol";
 
-import {PaprController} from "src/core/PaprController.sol";
+import {ReservoirOracleUnderwriter, ReservoirOracle} from "src/ReservoirOracleUnderwriter.sol";
+import {PaprController} from "src/PaprController.sol";
 import {OracleSigUtils} from "test/OracleSigUtils.sol";
 
 contract Base is Script {

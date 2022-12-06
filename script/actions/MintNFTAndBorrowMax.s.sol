@@ -3,11 +3,11 @@ pragma solidity ^0.8.13;
 
 import "forge-std/Script.sol";
 import {ERC721} from "solmate/tokens/ERC721.sol";
-import {ReservoirOracleUnderwriter, ReservoirOracle} from "src/core/ReservoirOracleUnderwriter.sol";
 import {TickMath} from "fullrange/libraries/TickMath.sol";
 
+import {ReservoirOracleUnderwriter, ReservoirOracle} from "src/ReservoirOracleUnderwriter.sol";
 import {IPaprController} from "src/interfaces/IPaprController.sol";
-import {PaprController} from "src/core/PaprController.sol";
+import {PaprController} from "src/PaprController.sol";
 import {Base} from "script/actions/Base.s.sol";
 
 abstract contract MintableERC721 is ERC721 {

@@ -6,10 +6,10 @@ import "forge-std/Test.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {TickMath} from "fullrange/libraries/TickMath.sol";
 
-import {PaprController} from "src/core/PaprController.sol";
-import {ReservoirOracleUnderwriter} from "src/core/ReservoirOracleUnderwriter.sol";
+import {PaprController} from "src/PaprController.sol";
+import {ReservoirOracleUnderwriter} from "src/ReservoirOracleUnderwriter.sol";
 import {IPaprController} from "src/interfaces/IPaprController.sol";
-import {ReservoirOracleUnderwriter} from "src/core/ReservoirOracleUnderwriter.sol";
+import {ReservoirOracleUnderwriter} from "src/ReservoirOracleUnderwriter.sol";
 import {TestERC721} from "test/mocks/TestERC721.sol";
 import {TestERC20} from "test/mocks/TestERC20.sol";
 import {MainnetForking} from "test/base/MainnetForking.sol";

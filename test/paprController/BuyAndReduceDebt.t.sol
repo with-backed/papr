@@ -3,9 +3,9 @@ pragma solidity ^0.8.13;
 
 import {TickMath} from "fullrange/libraries/TickMath.sol";
 
-import {BasePaprControllerTest} from "test/core/paprController/BasePaprController.ft.sol";
+import {BasePaprControllerTest} from "test/paprController/BasePaprController.ft.sol";
 import {IPaprController} from "src/interfaces/IPaprController.sol";
-import {PaprController} from "src/core/PaprController.sol";
+import {PaprController} from "src/PaprController.sol";
 
 contract BuyAndReduceDebt is BasePaprControllerTest {
     function testBuyAndReduceDebtReducesDebt() public {
