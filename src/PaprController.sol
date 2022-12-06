@@ -62,7 +62,7 @@ contract PaprController is
         NFTEDAStarterIncentive(1e17)
         FundingRateController(
             underlying,
-            new PaprToken(name, symbol, underlying.symbol()),
+            new PaprToken(name, symbol),
             indexMarkRatioMax,
             indexMarkRatioMin
         )
@@ -120,7 +120,6 @@ contract PaprController is
         return ERC721TokenReceiver.onERC721Received.selector;
     }
 
-    /// TODO consider passing token0IsUnderlying to save an SLOAD
     function mintAndSellDebt(
         ERC721 collateralAsset,
         uint256 debt,
