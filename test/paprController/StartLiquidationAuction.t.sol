@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {ReservoirOracleUnderwriter} from "src/core/ReservoirOracleUnderwriter.sol";
+import {ReservoirOracleUnderwriter} from "src/ReservoirOracleUnderwriter.sol";
 
-import {BasePaprControllerTest} from "test/core/paprController/BasePaprController.ft.sol";
+import {BasePaprControllerTest} from "test/paprController/BasePaprController.ft.sol";
 import {IPaprController} from "src/interfaces/IPaprController.sol";
 
 contract StartLiquidationAuctionTest is BasePaprControllerTest {

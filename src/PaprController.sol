@@ -12,8 +12,8 @@ import {INFTEDA, NFTEDAStarterIncentive} from "NFTEDA/extensions/NFTEDAStarterIn
 
 import {PaprToken} from "./PaprToken.sol";
 import {FundingRateController} from "./FundingRateController.sol";
-import {Multicall} from "src/core/base/Multicall.sol";
-import {ReservoirOracleUnderwriter} from "src/core/ReservoirOracleUnderwriter.sol";
+import {Multicall} from "src/base/Multicall.sol";
+import {ReservoirOracleUnderwriter} from "src/ReservoirOracleUnderwriter.sol";
 import {IPaprController} from "src/interfaces/IPaprController.sol";
 import {BoringOwnable} from "@boringsolidity/BoringOwnable.sol";
 

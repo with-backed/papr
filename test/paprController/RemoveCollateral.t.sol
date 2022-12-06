@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {BasePaprControllerTest} from "test/core/paprController/BasePaprController.ft.sol";
+import {BasePaprControllerTest} from "test/paprController/BasePaprController.ft.sol";
 import {IPaprController} from "src/interfaces/IPaprController.sol";
-import {PaprController} from "src/core/PaprController.sol";
+import {PaprController} from "src/PaprController.sol";
 
 contract RemoveCollateralTest is BasePaprControllerTest {
     event RemoveCollateral(address indexed account, IPaprController.Collateral collateral);

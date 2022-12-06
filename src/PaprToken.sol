@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
 
-import {CreatorGuarded} from "src/core/base/CreatorGuarded.sol";
+import {CreatorGuarded} from "src/base/CreatorGuarded.sol";
 
 contract PaprToken is ERC20 {
     address immutable creator;
