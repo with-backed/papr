@@ -13,14 +13,12 @@ contract FundingRateController {
     uint256 public immutable start;
     ERC20 public immutable underlying;
     ERC20 public immutable perpetual;
+    // TODO: method to update for oracle
     uint256 public PERIOD = 4 weeks;
-    // for oracle
+    // TODO: method to update for oracle
     IUniswapV3Pool public pool;
-    // TODO having these in storage is expensive vs. constants
-    // + users might want some guarentees. We should probably lock the max/min or
-    // lock the period. Really only need to pull one lever?
-    uint256 targetMarkRatioMax;
-    uint256 targetMarkRatioMin;
+    uint256 immutable targetMarkRatioMax;
+    uint256 immutable targetMarkRatioMin;
     // single slot, write together
     uint128 public target;
     uint72 public lastUpdated;
