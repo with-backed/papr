@@ -314,19 +314,6 @@ contract PaprController is
         );
     }
 
-    // normalization value at liquidation
-    // i.e. the debt token:underlying internal contract exchange rate (normalization)
-    // at which this vault will be liquidated
-    function liquidationPrice(address account, ERC721 asset, uint256 collateralPrice) public view returns (uint256) {
-        uint256 debt = _vaultInfo[account][asset].debt;
-        if (debt == 0) {
-            revert IPaprController.AccountHasNoDebt();
-        } else {
-            uint256 maxLoanUnderlying = _vaultInfo[account][asset].count * collateralPrice * maxLTV;
-            return maxLoanUnderlying / debt;
-        }
-    }
-
     function maxDebt(uint256 totalCollateraValue) public view returns (uint256) {
         if (lastUpdated == block.timestamp) {
             return _maxDebt(totalCollateraValue, target);
