@@ -28,7 +28,7 @@ contract PaprController is
     using SafeCast for uint256;
 
     bool public immutable token0IsUnderlying;
-    uint256 public maxLTV;
+    uint256 public immutable maxLTV;
 
     // auction configs
     uint256 public liquidationAuctionMinSpacing = 2 days;
