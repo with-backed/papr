@@ -60,12 +60,7 @@ contract PaprController is
         address oracleSigner
     )
         NFTEDAStarterIncentive(1e17)
-        FundingRateController(
-            underlying,
-            new PaprToken(name, symbol),
-            indexMarkRatioMax,
-            indexMarkRatioMin
-        )
+        FundingRateController(underlying, new PaprToken(name, symbol), indexMarkRatioMax, indexMarkRatioMin)
         ReservoirOracleUnderwriter(oracleSigner, address(underlying))
     {
         maxLTV = _maxLTV;
