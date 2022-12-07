@@ -4,6 +4,7 @@ pragma solidity ^0.8.13;
 import "forge-std/Script.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {INonfungiblePositionManager} from "test/mocks/uniswap/INonfungiblePositionManager.sol";
+import {IUniswapV3Pool} from "v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
 import {PaprController} from "src/PaprController.sol";
 import {TestERC20} from "test/mocks/TestERC20.sol";
@@ -40,9 +41,11 @@ contract UniswapLP is Base {
         underlying.approve(address(positionManager), amount);
         TestERC20(address(underlying)).mint(deployer, amount);
 
+        IUniswapV3Pool pool = IUniswapV3Pool(controller.pool());
+
         INonfungiblePositionManager.MintParams memory mintParams = INonfungiblePositionManager.MintParams(
-            controller.pool().token0(),
-            controller.pool().token1(),
+            pool.token0(),
+            pool.token1(),
             feeTier,
             tickLower,
             tickUpper,
