@@ -18,7 +18,7 @@ contract PurchaseAuctionNFT is Base {
             perPeriodDecayPercentWad: 700000000000000000,
             secondsInPeriod: 86400,
             startPrice: 2999999994047916656,
-            paymentAsset: controller.perpetual()
+            paymentAsset: controller.papr()
         });
         uint256 price = controller.auctionCurrentPrice(auction);
         oraclePriceKind = ReservoirOracleUnderwriter.PriceKind.TWAP;

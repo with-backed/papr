@@ -66,7 +66,7 @@ contract PaprController is
         maxLTV = _maxLTV;
         IUniswapV3Factory factory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
 
-        setPool(IUniswapV3Pool(factory.createPool(address(underlying), address(perpetual), 10000)));
+        setPool(IUniswapV3Pool(factory.createPool(address(underlying), address(papr), 10000)));
         token0IsUnderlying = pool.token0() == address(underlying);
         uint256 underlyingONE = 10 ** underlying.decimals();
 
@@ -299,9 +299,9 @@ contract PaprController is
                 perPeriodDecayPercentWad: perPeriodAuctionDecayWAD,
                 secondsInPeriod: auctionDecayPeriod,
                 // start price is frozen price * auctionStartPriceMultiplier,
-                // converted to perpetual value at the current contract price
+                // converted to papr value at the current contract price
                 startPrice: (oraclePrice * auctionStartPriceMultiplier) * FixedPointMathLib.WAD / _target,
-                paymentAsset: perpetual
+                paymentAsset: papr
             })
         );
     }
@@ -405,7 +405,7 @@ contract PaprController is
 
         // TODO safeCast
         _vaultInfo[account][asset].debt = uint200(newDebt);
-        PaprToken(address(perpetual)).mint(mintTo, amount);
+        PaprToken(address(papr)).mint(mintTo, amount);
 
         emit IncreaseDebt(account, asset, amount);
     }
@@ -423,7 +423,7 @@ contract PaprController is
 
     function _reduceDebt(address account, ERC721 asset, address burnFrom, uint256 amount) internal {
         _reduceDebtWithoutBurn(account, asset, amount);
-        PaprToken(address(perpetual)).burn(burnFrom, amount);
+        PaprToken(address(papr)).burn(burnFrom, amount);
     }
 
     function _reduceDebtWithoutBurn(address account, ERC721 asset, uint256 amount) internal {
@@ -439,13 +439,13 @@ contract PaprController is
         uint256 credit = excess - fee;
         uint256 totalOwed = credit + neededToSaveVault;
 
-        PaprToken(address(perpetual)).burn(address(this), fee);
+        PaprToken(address(papr)).burn(address(this), fee);
 
         if (totalOwed > debtCached) {
             // we owe them more papr than they have in debt
             // so we pay down debt and send them the rest
             _reduceDebt(auction.nftOwner, auction.auctionAssetContract, address(this), debtCached);
-            perpetual.transfer(auction.nftOwner, totalOwed - debtCached);
+            papr.transfer(auction.nftOwner, totalOwed - debtCached);
         } else {
             // reduce vault debt
             _reduceDebt(auction.nftOwner, auction.auctionAssetContract, address(this), totalOwed);

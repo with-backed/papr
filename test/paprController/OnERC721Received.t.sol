@@ -12,7 +12,7 @@ contract OnERC721ReceivedTest is BasePaprControllerTest {
         uint160 priceLimit = _maxSqrtPriceLimit(true);
         safeTransferReceivedArgs.sqrtPriceLimitX96 = priceLimit;
         uint256 expectedOut = quoter.quoteExactInputSingle({
-            tokenIn: address(strategy.perpetual()),
+            tokenIn: address(strategy.papr()),
             tokenOut: address(underlying),
             fee: 10000,
             amountIn: debt,
@@ -36,7 +36,7 @@ contract OnERC721ReceivedTest is BasePaprControllerTest {
         uint160 priceLimit = _maxSqrtPriceLimit(true);
         safeTransferReceivedArgs.sqrtPriceLimitX96 = priceLimit;
         uint256 expectedOut = quoter.quoteExactInputSingle({
-            tokenIn: address(strategy.perpetual()),
+            tokenIn: address(strategy.papr()),
             tokenOut: address(underlying),
             fee: 10000,
             amountIn: debt,

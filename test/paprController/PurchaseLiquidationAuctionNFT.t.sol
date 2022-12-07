@@ -48,8 +48,8 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         uint256 penalty = excess * strategy.liquidationPenaltyBips() / 1e4;
         uint256 credit = excess - penalty;
         uint256 expectedPayout = credit - (info.debt - neededToSave);
-        uint256 beforeBalance = strategy.perpetual().balanceOf(borrower);
-        strategy.perpetual().approve(address(strategy), auction.startPrice);
+        uint256 beforeBalance = strategy.papr().balanceOf(borrower);
+        strategy.papr().approve(address(strategy), auction.startPrice);
         assertGt(strategy.auctionCurrentPrice(auction), 0);
         vm.expectEmit(true, true, false, true);
         emit Transfer(address(purchaser), address(strategy), strategy.auctionCurrentPrice(auction));
@@ -60,7 +60,7 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         vm.expectEmit(true, true, false, true);
         emit Transfer(address(strategy), address(0), info.debt);
         strategy.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
-        uint256 afterBalance = strategy.perpetual().balanceOf(borrower);
+        uint256 afterBalance = strategy.papr().balanceOf(borrower);
         assertGt(afterBalance, beforeBalance);
         assertEq(afterBalance - beforeBalance, expectedPayout);
         info = strategy.vaultInfo(borrower, collateral.addr);
@@ -71,8 +71,8 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         // https://www.wolframalpha.com/input?i=solve+1.5+%3D+8.999+*+0.3+%5E+%28x+%2F+86400%29
         vm.warp(block.timestamp + 128575);
         oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
-        uint256 beforeBalance = strategy.perpetual().balanceOf(borrower);
-        strategy.perpetual().approve(address(strategy), auction.startPrice);
+        uint256 beforeBalance = strategy.papr().balanceOf(borrower);
+        strategy.papr().approve(address(strategy), auction.startPrice);
         uint256 price = strategy.auctionCurrentPrice(auction);
         uint256 penalty = price * strategy.liquidationPenaltyBips() / 1e4;
         vm.expectEmit(true, true, false, true);
@@ -86,7 +86,7 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         vm.expectEmit(true, false, false, true);
         emit ReduceDebt(borrower, collateral.addr, info.debt - (price - penalty));
         strategy.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
-        uint256 afterBalance = strategy.perpetual().balanceOf(borrower);
+        uint256 afterBalance = strategy.papr().balanceOf(borrower);
         assertEq(afterBalance, beforeBalance);
         info = strategy.vaultInfo(borrower, collateral.addr);
         assertEq(info.debt, 0);
@@ -113,8 +113,8 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         uint256 penalty = excess * strategy.liquidationPenaltyBips() / 1e4;
         uint256 credit = excess - penalty;
         uint256 expectedPayout = credit - (info.debt - neededToSave);
-        uint256 beforeBalance = strategy.perpetual().balanceOf(borrower);
-        strategy.perpetual().approve(address(strategy), auction.startPrice);
+        uint256 beforeBalance = strategy.papr().balanceOf(borrower);
+        strategy.papr().approve(address(strategy), auction.startPrice);
         vm.expectEmit(true, true, false, true);
         emit Transfer(address(strategy), address(0), penalty);
         vm.expectEmit(true, false, false, true);
@@ -122,7 +122,7 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         vm.expectEmit(true, true, false, true);
         emit Transfer(address(strategy), address(0), info.debt);
         strategy.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
-        uint256 afterBalance = strategy.perpetual().balanceOf(borrower);
+        uint256 afterBalance = strategy.papr().balanceOf(borrower);
         assertGt(afterBalance, beforeBalance);
         assertEq(afterBalance - beforeBalance, expectedPayout);
         info = strategy.vaultInfo(borrower, collateral.addr);
@@ -145,8 +145,8 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         vm.warp(block.timestamp + 128575);
         oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
         IPaprController.VaultInfo memory beforeInfo = strategy.vaultInfo(borrower, collateral.addr);
-        uint256 beforeBalance = strategy.perpetual().balanceOf(borrower);
-        strategy.perpetual().approve(address(strategy), auction.startPrice);
+        uint256 beforeBalance = strategy.papr().balanceOf(borrower);
+        strategy.papr().approve(address(strategy), auction.startPrice);
         uint256 neededToSave = beforeInfo.debt - strategy.maxDebt(oraclePrice * beforeInfo.count);
         uint256 excess = strategy.auctionCurrentPrice(auction) - neededToSave;
         uint256 penalty = excess * strategy.liquidationPenaltyBips() / 1e4;
@@ -158,7 +158,7 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         vm.expectEmit(true, true, false, true);
         emit Transfer(address(strategy), address(0), credit);
         strategy.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
-        uint256 afterBalance = strategy.perpetual().balanceOf(borrower);
+        uint256 afterBalance = strategy.papr().balanceOf(borrower);
         assertEq(afterBalance, beforeBalance);
         IPaprController.VaultInfo memory info = strategy.vaultInfo(borrower, collateral.addr);
         assertEq(info.debt, beforeInfo.debt - credit);
@@ -183,7 +183,7 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         uint256 price = strategy.auctionCurrentPrice(auction);
         // there will no excess
         assertGt(neededToSave, price);
-        strategy.perpetual().approve(address(strategy), auction.startPrice);
+        strategy.papr().approve(address(strategy), auction.startPrice);
         vm.expectEmit(true, false, false, true);
         emit ReduceDebt(borrower, collateral.addr, price);
         vm.expectEmit(true, true, false, true);

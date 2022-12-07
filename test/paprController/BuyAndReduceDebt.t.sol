@@ -38,7 +38,7 @@ contract BuyAndReduceDebt is BasePaprControllerTest {
         uint160 priceLimit = _maxSqrtPriceLimit({sellingPAPR: false});
         uint256 out = quoter.quoteExactInputSingle({
             tokenIn: address(underlying),
-            tokenOut: address(strategy.perpetual()),
+            tokenOut: address(strategy.papr()),
             fee: 10000,
             amountIn: underlyingOut,
             sqrtPriceLimitX96: priceLimit
