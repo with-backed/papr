@@ -12,7 +12,7 @@ contract FundingRateController {
 
     uint256 public immutable start;
     ERC20 public immutable underlying;
-    ERC20 public immutable perpetual;
+    ERC20 public immutable papr;
     // TODO: method to update for oracle
     uint256 public fundingPeriod = 4 weeks;
     // TODO: method to update for oracle
@@ -24,9 +24,9 @@ contract FundingRateController {
     uint72 public lastUpdated;
     int56 lastCumulativeTick;
 
-    constructor(ERC20 _underlying, ERC20 _perpetual, uint256 _targetMarkRatioMax, uint256 _targetMarkRatioMin) {
+    constructor(ERC20 _underlying, ERC20 _papr, uint256 _targetMarkRatioMax, uint256 _targetMarkRatioMin) {
         underlying = _underlying;
-        perpetual = _perpetual;
+        papr = _papr;
 
         start = block.timestamp;
 
@@ -77,12 +77,11 @@ contract FundingRateController {
     function _markTwapSinceLastUpdate(int56 latestCumulativeTick) internal view returns (uint256) {
         uint256 delta = block.timestamp - lastUpdated;
         if (delta == 0) {
-            return
-                OracleLibrary.getQuoteAtTick(int24(latestCumulativeTick), 1e18, address(perpetual), address(underlying));
+            return OracleLibrary.getQuoteAtTick(int24(latestCumulativeTick), 1e18, address(papr), address(underlying));
         } else {
             int24 twapTick =
                 OracleLibrary.timeWeightedAverageTick(lastCumulativeTick, latestCumulativeTick, int56(uint56(delta)));
-            return OracleLibrary.getQuoteAtTick(twapTick, 1e18, address(perpetual), address(underlying));
+            return OracleLibrary.getQuoteAtTick(twapTick, 1e18, address(papr), address(underlying));
         }
     }
 

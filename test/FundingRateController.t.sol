@@ -12,12 +12,12 @@ contract FundingRateControllerTest is Test {
     FundingRateController fundingRateController;
 
     ERC20 underlying;
-    ERC20 perpetual;
+    ERC20 papr;
     uint256 indexMarkRatioMax;
     uint256 indexMarkRatioMin;
 
     function setUp() public {
-        fundingRateController = new FundingRateController(underlying, perpetual, indexMarkRatioMax, indexMarkRatioMin);
+        fundingRateController = new FundingRateController(underlying, papr, indexMarkRatioMax, indexMarkRatioMin);
     }
 
     function updateTargetEmitsCorrectly() public {
