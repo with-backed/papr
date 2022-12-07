@@ -3,12 +3,15 @@ pragma solidity ^0.8.13;
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
-import {IUniswapV3Pool} from "v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
 import {OracleLibrary} from "src/libraries/OracleLibrary.sol";
+import {UniswapHelpers} from "src/libraries/UniswapHelpers.sol";
 
 contract FundingRateController {
     event UpdateTarget(uint256 newTarget);
+    event SetPool(address indexed pool);
+
+    error PoolTokensDoNotMatch();
 
     uint256 public immutable start;
     ERC20 public immutable underlying;
@@ -16,7 +19,7 @@ contract FundingRateController {
     // TODO: method to update for oracle
     uint256 public fundingPeriod = 4 weeks;
     // TODO: method to update for oracle
-    IUniswapV3Pool public pool;
+    address public pool;
     uint256 immutable targetMarkRatioMax;
     uint256 immutable targetMarkRatioMin;
     // single slot, write together
@@ -62,12 +65,22 @@ contract FundingRateController {
         return _multiplier(OracleLibrary.latestCumulativeTick(pool), target);
     }
 
-    function _init(uint256 _target) internal {
+    function _init(uint256 _target, uint160 initSqrtRatio) internal {
+        address _pool = UniswapHelpers.deployAndInitPool(address(underlying), address(papr), 10000, initSqrtRatio);
+        _setPool(_pool);
+
         lastUpdated = uint72(block.timestamp);
         target = uint128(_target);
         lastCumulativeTick = OracleLibrary.latestCumulativeTick(pool);
 
         emit UpdateTarget(_target);
+    }
+
+    function _setPool(address _pool) internal {
+        if (pool != address(0) && !UniswapHelpers.poolsHaveSameTokens(pool, _pool)) revert PoolTokensDoNotMatch();
+        pool = _pool;
+
+        emit SetPool(_pool);
     }
 
     function _newTarget(int56 latestCumulativeTick, uint256 cachedTarget) internal view returns (uint256) {

@@ -12,14 +12,14 @@ contract OnERC721ReceivedTest is BasePaprControllerTest {
         uint160 priceLimit = _maxSqrtPriceLimit(true);
         safeTransferReceivedArgs.sqrtPriceLimitX96 = priceLimit;
         uint256 expectedOut = quoter.quoteExactInputSingle({
-            tokenIn: address(strategy.papr()),
+            tokenIn: address(controller.papr()),
             tokenOut: address(underlying),
             fee: 10000,
             amountIn: debt,
             sqrtPriceLimitX96: priceLimit
         });
-        nft.safeTransferFrom(borrower, address(strategy), collateralId, abi.encode(safeTransferReceivedArgs));
-        IPaprController.VaultInfo memory vaultInfo = strategy.vaultInfo(borrower, collateral.addr);
+        nft.safeTransferFrom(borrower, address(controller), collateralId, abi.encode(safeTransferReceivedArgs));
+        IPaprController.VaultInfo memory vaultInfo = controller.vaultInfo(borrower, collateral.addr);
         assertEq(vaultInfo.count, 1);
         assertEq(vaultInfo.debt, debt);
         assertEq(expectedOut, underlying.balanceOf(borrower));
@@ -36,14 +36,14 @@ contract OnERC721ReceivedTest is BasePaprControllerTest {
         uint160 priceLimit = _maxSqrtPriceLimit(true);
         safeTransferReceivedArgs.sqrtPriceLimitX96 = priceLimit;
         uint256 expectedOut = quoter.quoteExactInputSingle({
-            tokenIn: address(strategy.papr()),
+            tokenIn: address(controller.papr()),
             tokenOut: address(underlying),
             fee: 10000,
             amountIn: debt,
             sqrtPriceLimitX96: priceLimit
         });
-        nft.safeTransferFrom(borrower, address(strategy), collateralId, abi.encode(safeTransferReceivedArgs));
-        IPaprController.VaultInfo memory vaultInfo = strategy.vaultInfo(borrower, collateral.addr);
+        nft.safeTransferFrom(borrower, address(controller), collateralId, abi.encode(safeTransferReceivedArgs));
+        IPaprController.VaultInfo memory vaultInfo = controller.vaultInfo(borrower, collateral.addr);
         assertEq(vaultInfo.count, 1);
         assertEq(vaultInfo.debt, debt);
         assertEq(expectedOut, underlying.balanceOf(borrower));

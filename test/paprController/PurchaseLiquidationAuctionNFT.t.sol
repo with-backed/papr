@@ -22,17 +22,17 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         safeTransferReceivedArgs.oracleInfo = oracleInfo;
         priceKind = ReservoirOracleUnderwriter.PriceKind.TWAP;
         oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
-        auction = strategy.startLiquidationAuction(borrower, collateral, oracleInfo);
+        auction = controller.startLiquidationAuction(borrower, collateral, oracleInfo);
         nft.mint(purchaser, collateralId + 1);
         nft.mint(purchaser, collateralId + 2);
         nft.mint(purchaser, collateralId + 3);
-        safeTransferReceivedArgs.debt = strategy.maxDebt(oraclePrice) - 10;
+        safeTransferReceivedArgs.debt = controller.maxDebt(oraclePrice) - 10;
         safeTransferReceivedArgs.mintDebtOrProceedsTo = purchaser;
         safeTransferReceivedArgs.minOut = 0;
         vm.startPrank(purchaser);
-        nft.safeTransferFrom(purchaser, address(strategy), collateralId + 1, abi.encode(safeTransferReceivedArgs));
-        nft.safeTransferFrom(purchaser, address(strategy), collateralId + 2, abi.encode(safeTransferReceivedArgs));
-        nft.safeTransferFrom(purchaser, address(strategy), collateralId + 3, abi.encode(safeTransferReceivedArgs));
+        nft.safeTransferFrom(purchaser, address(controller), collateralId + 1, abi.encode(safeTransferReceivedArgs));
+        nft.safeTransferFrom(purchaser, address(controller), collateralId + 2, abi.encode(safeTransferReceivedArgs));
+        nft.safeTransferFrom(purchaser, address(controller), collateralId + 3, abi.encode(safeTransferReceivedArgs));
         // purchaser now has 4.4... papr
     }
 
@@ -42,28 +42,28 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         /// https://www.wolframalpha.com/input?i=solve+4+%3D+8.999+*+0.3+%5E+%28x+%2F+86400%29
         vm.warp(block.timestamp + 58187);
         oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
-        IPaprController.VaultInfo memory info = strategy.vaultInfo(borrower, collateral.addr);
+        IPaprController.VaultInfo memory info = controller.vaultInfo(borrower, collateral.addr);
         uint256 neededToSave = 0;
-        uint256 excess = strategy.auctionCurrentPrice(auction) - neededToSave;
-        uint256 penalty = excess * strategy.liquidationPenaltyBips() / 1e4;
+        uint256 excess = controller.auctionCurrentPrice(auction) - neededToSave;
+        uint256 penalty = excess * controller.liquidationPenaltyBips() / 1e4;
         uint256 credit = excess - penalty;
         uint256 expectedPayout = credit - (info.debt - neededToSave);
-        uint256 beforeBalance = strategy.papr().balanceOf(borrower);
-        strategy.papr().approve(address(strategy), auction.startPrice);
-        assertGt(strategy.auctionCurrentPrice(auction), 0);
+        uint256 beforeBalance = controller.papr().balanceOf(borrower);
+        controller.papr().approve(address(controller), auction.startPrice);
+        assertGt(controller.auctionCurrentPrice(auction), 0);
         vm.expectEmit(true, true, false, true);
-        emit Transfer(address(purchaser), address(strategy), strategy.auctionCurrentPrice(auction));
+        emit Transfer(address(purchaser), address(controller), controller.auctionCurrentPrice(auction));
         vm.expectEmit(true, true, false, true);
-        emit Transfer(address(strategy), address(0), penalty);
+        emit Transfer(address(controller), address(0), penalty);
         vm.expectEmit(true, false, false, true);
         emit ReduceDebt(borrower, collateral.addr, info.debt);
         vm.expectEmit(true, true, false, true);
-        emit Transfer(address(strategy), address(0), info.debt);
-        strategy.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
-        uint256 afterBalance = strategy.papr().balanceOf(borrower);
+        emit Transfer(address(controller), address(0), info.debt);
+        controller.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
+        uint256 afterBalance = controller.papr().balanceOf(borrower);
         assertGt(afterBalance, beforeBalance);
         assertEq(afterBalance - beforeBalance, expectedPayout);
-        info = strategy.vaultInfo(borrower, collateral.addr);
+        info = controller.vaultInfo(borrower, collateral.addr);
         assertEq(info.debt, 0);
     }
 
@@ -71,24 +71,24 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         // https://www.wolframalpha.com/input?i=solve+1.5+%3D+8.999+*+0.3+%5E+%28x+%2F+86400%29
         vm.warp(block.timestamp + 128575);
         oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
-        uint256 beforeBalance = strategy.papr().balanceOf(borrower);
-        strategy.papr().approve(address(strategy), auction.startPrice);
-        uint256 price = strategy.auctionCurrentPrice(auction);
-        uint256 penalty = price * strategy.liquidationPenaltyBips() / 1e4;
+        uint256 beforeBalance = controller.papr().balanceOf(borrower);
+        controller.papr().approve(address(controller), auction.startPrice);
+        uint256 price = controller.auctionCurrentPrice(auction);
+        uint256 penalty = price * controller.liquidationPenaltyBips() / 1e4;
         vm.expectEmit(true, true, false, true);
-        emit Transfer(address(strategy), address(0), penalty);
+        emit Transfer(address(controller), address(0), penalty);
         vm.expectEmit(true, false, false, true);
         emit ReduceDebt(borrower, collateral.addr, price - penalty);
         vm.expectEmit(true, true, false, true);
-        emit Transfer(address(strategy), address(0), price - penalty);
-        IPaprController.VaultInfo memory info = strategy.vaultInfo(borrower, collateral.addr);
+        emit Transfer(address(controller), address(0), price - penalty);
+        IPaprController.VaultInfo memory info = controller.vaultInfo(borrower, collateral.addr);
         // burning debt not covered by auction
         vm.expectEmit(true, false, false, true);
         emit ReduceDebt(borrower, collateral.addr, info.debt - (price - penalty));
-        strategy.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
-        uint256 afterBalance = strategy.papr().balanceOf(borrower);
+        controller.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
+        uint256 afterBalance = controller.papr().balanceOf(borrower);
         assertEq(afterBalance, beforeBalance);
-        info = strategy.vaultInfo(borrower, collateral.addr);
+        info = controller.vaultInfo(borrower, collateral.addr);
         assertEq(info.debt, 0);
     }
 
@@ -98,34 +98,34 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         nft.mint(borrower, tokenId);
         vm.stopPrank();
         vm.startPrank(borrower);
-        nft.approve(address(strategy), tokenId);
+        nft.approve(address(controller), tokenId);
         collateral.id = tokenId;
-        strategy.addCollateral(collateral);
+        controller.addCollateral(collateral);
         vm.stopPrank();
         vm.startPrank(purchaser);
 
         /// https://www.wolframalpha.com/input?i=solve+4+%3D+8.999+*+0.3+%5E+%28x+%2F+86400%29
         vm.warp(block.timestamp + 58187);
         oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
-        IPaprController.VaultInfo memory info = strategy.vaultInfo(borrower, collateral.addr);
-        uint256 neededToSave = info.debt - strategy.maxDebt(oraclePrice);
-        uint256 excess = strategy.auctionCurrentPrice(auction) - neededToSave;
-        uint256 penalty = excess * strategy.liquidationPenaltyBips() / 1e4;
+        IPaprController.VaultInfo memory info = controller.vaultInfo(borrower, collateral.addr);
+        uint256 neededToSave = info.debt - controller.maxDebt(oraclePrice);
+        uint256 excess = controller.auctionCurrentPrice(auction) - neededToSave;
+        uint256 penalty = excess * controller.liquidationPenaltyBips() / 1e4;
         uint256 credit = excess - penalty;
         uint256 expectedPayout = credit - (info.debt - neededToSave);
-        uint256 beforeBalance = strategy.papr().balanceOf(borrower);
-        strategy.papr().approve(address(strategy), auction.startPrice);
+        uint256 beforeBalance = controller.papr().balanceOf(borrower);
+        controller.papr().approve(address(controller), auction.startPrice);
         vm.expectEmit(true, true, false, true);
-        emit Transfer(address(strategy), address(0), penalty);
+        emit Transfer(address(controller), address(0), penalty);
         vm.expectEmit(true, false, false, true);
         emit ReduceDebt(borrower, collateral.addr, info.debt);
         vm.expectEmit(true, true, false, true);
-        emit Transfer(address(strategy), address(0), info.debt);
-        strategy.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
-        uint256 afterBalance = strategy.papr().balanceOf(borrower);
+        emit Transfer(address(controller), address(0), info.debt);
+        controller.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
+        uint256 afterBalance = controller.papr().balanceOf(borrower);
         assertGt(afterBalance, beforeBalance);
         assertEq(afterBalance - beforeBalance, expectedPayout);
-        info = strategy.vaultInfo(borrower, collateral.addr);
+        info = controller.vaultInfo(borrower, collateral.addr);
         assertEq(info.debt, 0);
     }
 
@@ -135,32 +135,32 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         nft.mint(borrower, tokenId);
         vm.stopPrank();
         vm.startPrank(borrower);
-        nft.approve(address(strategy), tokenId);
+        nft.approve(address(controller), tokenId);
         collateral.id = tokenId;
-        strategy.addCollateral(collateral);
+        controller.addCollateral(collateral);
         vm.stopPrank();
         vm.startPrank(purchaser);
 
         // https://www.wolframalpha.com/input?i=solve+1.5+%3D+8.999+*+0.3+%5E+%28x+%2F+86400%29
         vm.warp(block.timestamp + 128575);
         oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
-        IPaprController.VaultInfo memory beforeInfo = strategy.vaultInfo(borrower, collateral.addr);
-        uint256 beforeBalance = strategy.papr().balanceOf(borrower);
-        strategy.papr().approve(address(strategy), auction.startPrice);
-        uint256 neededToSave = beforeInfo.debt - strategy.maxDebt(oraclePrice * beforeInfo.count);
-        uint256 excess = strategy.auctionCurrentPrice(auction) - neededToSave;
-        uint256 penalty = excess * strategy.liquidationPenaltyBips() / 1e4;
+        IPaprController.VaultInfo memory beforeInfo = controller.vaultInfo(borrower, collateral.addr);
+        uint256 beforeBalance = controller.papr().balanceOf(borrower);
+        controller.papr().approve(address(controller), auction.startPrice);
+        uint256 neededToSave = beforeInfo.debt - controller.maxDebt(oraclePrice * beforeInfo.count);
+        uint256 excess = controller.auctionCurrentPrice(auction) - neededToSave;
+        uint256 penalty = excess * controller.liquidationPenaltyBips() / 1e4;
         uint256 credit = excess - penalty + neededToSave;
         vm.expectEmit(true, true, false, true);
-        emit Transfer(address(strategy), address(0), penalty);
+        emit Transfer(address(controller), address(0), penalty);
         vm.expectEmit(true, false, false, true);
         emit ReduceDebt(borrower, collateral.addr, credit);
         vm.expectEmit(true, true, false, true);
-        emit Transfer(address(strategy), address(0), credit);
-        strategy.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
-        uint256 afterBalance = strategy.papr().balanceOf(borrower);
+        emit Transfer(address(controller), address(0), credit);
+        controller.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
+        uint256 afterBalance = controller.papr().balanceOf(borrower);
         assertEq(afterBalance, beforeBalance);
-        IPaprController.VaultInfo memory info = strategy.vaultInfo(borrower, collateral.addr);
+        IPaprController.VaultInfo memory info = controller.vaultInfo(borrower, collateral.addr);
         assertEq(info.debt, beforeInfo.debt - credit);
     }
 
@@ -170,26 +170,26 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         uint256 tokenId = collateralId + 5;
         nft.mint(borrower, tokenId);
         vm.startPrank(borrower);
-        nft.approve(address(strategy), tokenId);
+        nft.approve(address(controller), tokenId);
         collateral.id = tokenId;
-        strategy.addCollateral(collateral);
+        controller.addCollateral(collateral);
         vm.stopPrank();
         vm.startPrank(purchaser);
 
         vm.warp(block.timestamp + 2 weeks);
         oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
-        IPaprController.VaultInfo memory beforeInfo = strategy.vaultInfo(borrower, collateral.addr);
-        uint256 neededToSave = beforeInfo.debt - strategy.maxDebt(oraclePrice * beforeInfo.count);
-        uint256 price = strategy.auctionCurrentPrice(auction);
+        IPaprController.VaultInfo memory beforeInfo = controller.vaultInfo(borrower, collateral.addr);
+        uint256 neededToSave = beforeInfo.debt - controller.maxDebt(oraclePrice * beforeInfo.count);
+        uint256 price = controller.auctionCurrentPrice(auction);
         // there will no excess
         assertGt(neededToSave, price);
-        strategy.papr().approve(address(strategy), auction.startPrice);
+        controller.papr().approve(address(controller), auction.startPrice);
         vm.expectEmit(true, false, false, true);
         emit ReduceDebt(borrower, collateral.addr, price);
         vm.expectEmit(true, true, false, true);
-        emit Transfer(address(strategy), address(0), price);
-        strategy.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
-        IPaprController.VaultInfo memory afterInfo = strategy.vaultInfo(borrower, collateral.addr);
+        emit Transfer(address(controller), address(0), price);
+        controller.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
+        IPaprController.VaultInfo memory afterInfo = controller.vaultInfo(borrower, collateral.addr);
         assertEq(beforeInfo.debt - afterInfo.debt, price);
     }
 

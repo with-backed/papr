@@ -7,7 +7,7 @@ env:
 
 jobs:
   check:
-    strategy:
+    controller:
       fail-fast: true
 
     name: Foundry project

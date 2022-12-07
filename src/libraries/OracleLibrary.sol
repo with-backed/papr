@@ -30,6 +30,7 @@ library OracleLibrary {
         }
     }
 
+    // adapted from https://github.com/Uniswap/v3-periphery/blob/main/contracts/libraries/OracleLibrary.sol#L30-L40
     function timeWeightedAverageTick(int56 startTick, int56 endTick, int56 twapDuration)
         internal
         view
@@ -51,10 +52,11 @@ library OracleLibrary {
         }
     }
 
-    function latestCumulativeTick(IUniswapV3Pool pool) internal view returns (int56) {
+    // adapted from https://github.com/Uniswap/v3-periphery/blob/main/contracts/libraries/OracleLibrary.sol#L21-L28
+    function latestCumulativeTick(address pool) internal view returns (int56) {
         uint32[] memory secondAgos = new uint32[](1);
         secondAgos[0] = 0;
-        (int56[] memory tickCumulatives,) = pool.observe(secondAgos);
+        (int56[] memory tickCumulatives,) = IUniswapV3Pool(pool).observe(secondAgos);
         return tickCumulatives[0];
     }
 }

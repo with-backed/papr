@@ -4,10 +4,6 @@ pragma solidity ^0.8.13;
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {ERC721, ERC721TokenReceiver} from "solmate/tokens/ERC721.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
-import {IUniswapV3Factory} from "v3-core/contracts/interfaces/IUniswapV3Factory.sol";
-import {IUniswapV3Pool} from "v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-import {SafeCast} from "v3-core/contracts/libraries/SafeCast.sol";
-import {TickMath} from "fullrange/libraries/TickMath.sol";
 import {INFTEDA, NFTEDAStarterIncentive} from "NFTEDA/extensions/NFTEDAStarterIncentive.sol";
 import {Ownable2Step} from "openzeppelin-contracts/access/Ownable2Step.sol";
 
@@ -16,6 +12,7 @@ import {FundingRateController} from "./FundingRateController.sol";
 import {Multicall} from "src/base/Multicall.sol";
 import {ReservoirOracleUnderwriter} from "src/ReservoirOracleUnderwriter.sol";
 import {IPaprController} from "src/interfaces/IPaprController.sol";
+import {UniswapHelpers} from "src/libraries/UniswapHelpers.sol";
 
 contract PaprController is
     FundingRateController,
@@ -25,8 +22,6 @@ contract PaprController is
     ReservoirOracleUnderwriter,
     NFTEDAStarterIncentive
 {
-    using SafeCast for uint256;
-
     bool public immutable token0IsUnderlying;
     uint256 public immutable maxLTV;
 
@@ -64,24 +59,18 @@ contract PaprController is
         ReservoirOracleUnderwriter(oracleSigner, address(underlying))
     {
         maxLTV = _maxLTV;
-        IUniswapV3Factory factory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
-
-        setPool(IUniswapV3Pool(factory.createPool(address(underlying), address(papr), 10000)));
-        token0IsUnderlying = pool.token0() == address(underlying);
+        token0IsUnderlying = address(underlying) < address(papr); // _pool.token0() == address(underlying);
         uint256 underlyingONE = 10 ** underlying.decimals();
+        uint160 sqrtRatio;
 
         // initialize the pool at 1:1
-        pool.initialize(
-            TickMath.getSqrtRatioAtTick(
-                TickMath.getTickAtSqrtRatio(
-                    uint160(
-                        token0IsUnderlying ? (((10 ** 18) << 96) / underlyingONE) : ((underlyingONE << 96) / (10 ** 18))
-                    )
-                ) / 2
-            )
-        );
+        if (token0IsUnderlying) {
+            sqrtRatio = UniswapHelpers.oneToOneSqrtRatio(underlyingONE, 10 ** 18);
+        } else {
+            sqrtRatio = UniswapHelpers.oneToOneSqrtRatio(10 ** 18, underlyingONE);
+        }
 
-        _init(underlyingONE);
+        _init(underlyingONE, sqrtRatio);
     }
 
     function onERC721Received(address from, address, uint256 _id, bytes calldata data)
@@ -306,27 +295,8 @@ contract PaprController is
         );
     }
 
-    event SetPool(IUniswapV3Pool indexed pool);
-
-    /// @param passedToken0 The minimum out amount the user wanted
-    /// @param expectedToken0 The actual out amount the user received
-    error WrongToken0(address passedToken0, address expectedToken0);
-    /// @param passedToken1 The minimum out amount the user wanted
-    /// @param expectedToken1 The actual out amount the user received
-    error WrongToken1(address passedToken1, address expectedToken1);
-
-    function setPool(IUniswapV3Pool _pool) public onlyOwner {
-        if (address(pool) != address(0)) {
-            address passedToken0 = _pool.token0();
-            address token0 = pool.token0();
-            address passedToken1 = _pool.token1();
-            address token1 = pool.token1();
-            if (passedToken0 != token0) revert WrongToken0(passedToken0, token0);
-            if (passedToken1 != token1) revert WrongToken1(passedToken1, token1);
-        }
-        pool = _pool;
-
-        emit SetPool(_pool);
+    function setPool(address _pool) public onlyOwner {
+        _setPool(_pool);
     }
 
     function setAllowedCollateral(IPaprController.CollateralAllowedConfig[] calldata collateralConfigs)
@@ -366,17 +336,7 @@ contract PaprController is
         uint160 sqrtPriceLimitX96,
         bytes memory data
     ) internal returns (uint256 out) {
-        (int256 amount0, int256 amount1) = pool.swap(
-            recipient,
-            zeroForOne,
-            amountSpecified.toInt256(),
-            sqrtPriceLimitX96 == 0
-                ? (zeroForOne ? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1)
-                : sqrtPriceLimitX96,
-            data
-        );
-
-        out = uint256(-(zeroForOne ? amount1 : amount0));
+        out = UniswapHelpers.swap(pool, recipient, zeroForOne, amountSpecified, sqrtPriceLimitX96, data);
 
         if (out < minOut) {
             revert IPaprController.TooLittleOut(out, minOut);

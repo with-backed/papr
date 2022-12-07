@@ -13,30 +13,30 @@ import {TestERC721} from "test/mocks/TestERC721.sol";
 contract AddCollateralTest is BasePaprControllerTest {
     function testAddCollateral() public {
         vm.startPrank(borrower);
-        nft.approve(address(strategy), collateralId);
-        strategy.addCollateral(collateral);
-        strategy.increaseDebt(borrower, collateral.addr, strategy.maxDebt(oraclePrice), oracleInfo);
+        nft.approve(address(controller), collateralId);
+        controller.addCollateral(collateral);
+        controller.increaseDebt(borrower, collateral.addr, controller.maxDebt(oraclePrice), oracleInfo);
     }
 
     function testAddCollateralFailsIfInvalidCollateral() public {
         TestERC721 invalidNFT = new TestERC721();
         vm.startPrank(borrower);
-        nft.approve(address(strategy), collateralId);
+        nft.approve(address(controller), collateralId);
         vm.expectRevert(IPaprController.InvalidCollateral.selector);
-        strategy.addCollateral(IPaprController.Collateral(ERC721(address(1)), 1));
+        controller.addCollateral(IPaprController.Collateral(ERC721(address(1)), 1));
     }
 
     function testAddCollateralMulticall() public {
         nft.mint(borrower, collateralId + 1);
         vm.startPrank(borrower);
-        nft.setApprovalForAll(address(strategy), true);
+        nft.setApprovalForAll(address(controller), true);
         bytes[] memory data = new bytes[](2);
         data[0] = abi.encodeWithSelector(
-            strategy.addCollateral.selector, IPaprController.Collateral(nft, collateralId), oracleInfo
+            controller.addCollateral.selector, IPaprController.Collateral(nft, collateralId), oracleInfo
         );
         data[1] = abi.encodeWithSelector(
-            strategy.addCollateral.selector, IPaprController.Collateral(nft, collateralId + 1), oracleInfo
+            controller.addCollateral.selector, IPaprController.Collateral(nft, collateralId + 1), oracleInfo
         );
-        strategy.multicall(data);
+        controller.multicall(data);
     }
 }
