@@ -9,19 +9,19 @@ import {IUniswapV3Pool} from "v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {SafeCast} from "v3-core/contracts/libraries/SafeCast.sol";
 import {TickMath} from "fullrange/libraries/TickMath.sol";
 import {INFTEDA, NFTEDAStarterIncentive} from "NFTEDA/extensions/NFTEDAStarterIncentive.sol";
+import {Ownable2Step} from "openzeppelin-contracts/access/Ownable2Step.sol";
 
 import {PaprToken} from "./PaprToken.sol";
 import {FundingRateController} from "./FundingRateController.sol";
 import {Multicall} from "src/base/Multicall.sol";
 import {ReservoirOracleUnderwriter} from "src/ReservoirOracleUnderwriter.sol";
 import {IPaprController} from "src/interfaces/IPaprController.sol";
-import {BoringOwnable} from "@boringsolidity/BoringOwnable.sol";
 
 contract PaprController is
     FundingRateController,
     ERC721TokenReceiver,
     Multicall,
-    BoringOwnable,
+    Ownable2Step,
     ReservoirOracleUnderwriter,
     NFTEDAStarterIncentive
 {
@@ -66,7 +66,7 @@ contract PaprController is
         maxLTV = _maxLTV;
         IUniswapV3Factory factory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
 
-        pool = IUniswapV3Pool(factory.createPool(address(underlying), address(perpetual), 10000));
+        setPool(IUniswapV3Pool(factory.createPool(address(underlying), address(perpetual), 10000)));
         token0IsUnderlying = pool.token0() == address(underlying);
         uint256 underlyingONE = 10 ** underlying.decimals();
 
@@ -80,8 +80,6 @@ contract PaprController is
                 ) / 2
             )
         );
-
-        transferOwnership(msg.sender, false, false);
 
         _init(underlyingONE);
     }
@@ -308,6 +306,46 @@ contract PaprController is
         );
     }
 
+    event SetPool(IUniswapV3Pool indexed pool);
+
+    /// @param passedToken0 The minimum out amount the user wanted
+    /// @param expectedToken0 The actual out amount the user received
+    error WrongToken0(address passedToken0, address expectedToken0);
+    /// @param passedToken1 The minimum out amount the user wanted
+    /// @param expectedToken1 The actual out amount the user received
+    error WrongToken1(address passedToken1, address expectedToken1);
+
+    function setPool(IUniswapV3Pool _pool) public onlyOwner {
+        if (address(pool) != address(0)) {
+            address passedToken0 = _pool.token0();
+            address token0 = pool.token0();
+            address passedToken1 = _pool.token1();
+            address token1 = pool.token1();
+            if (passedToken0 != token0) revert WrongToken0(passedToken0, token0);
+            if (passedToken1 != token1) revert WrongToken1(passedToken1, token1);
+        }
+        pool = _pool;
+
+        emit SetPool(_pool);
+    }
+
+    function setAllowedCollateral(IPaprController.CollateralAllowedConfig[] calldata collateralConfigs)
+        external
+        onlyOwner
+    {
+        for (uint256 i = 0; i < collateralConfigs.length;) {
+            if (collateralConfigs[i].collateral == address(0)) revert IPaprController.InvalidCollateral();
+
+            isAllowed[collateralConfigs[i].collateral] = collateralConfigs[i].allowed;
+            emit AllowCollateral(collateralConfigs[i].collateral, collateralConfigs[i].allowed);
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    /// TODO admin functions: update auction configs, move papr from liquidation fee, update reservoir oracle configs
+
     function maxDebt(uint256 totalCollateraValue) public view returns (uint256) {
         if (lastUpdated == block.timestamp) {
             return _maxDebt(totalCollateraValue, target);
@@ -318,19 +356,6 @@ contract PaprController is
 
     function vaultInfo(address account, ERC721 asset) public view returns (IPaprController.VaultInfo memory) {
         return _vaultInfo[account][asset];
-    }
-
-    function setAllowedCollateral(IPaprController.CollateralAllowedConfig[] calldata collateralConfigs)
-        external
-        onlyOwner
-    {
-        for (uint256 i = 0; i < collateralConfigs.length;) {
-            isAllowed[collateralConfigs[i].collateral] = collateralConfigs[i].allowed;
-            emit AllowCollateral(collateralConfigs[i].collateral, collateralConfigs[i].allowed);
-            unchecked {
-                ++i;
-            }
-        }
     }
 
     function _swap(

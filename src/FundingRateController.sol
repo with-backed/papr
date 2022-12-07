@@ -14,7 +14,7 @@ contract FundingRateController {
     ERC20 public immutable underlying;
     ERC20 public immutable perpetual;
     // TODO: method to update for oracle
-    uint256 public PERIOD = 4 weeks;
+    uint256 public fundingPeriod = 4 weeks;
     // TODO: method to update for oracle
     IUniswapV3Pool public pool;
     uint256 immutable targetMarkRatioMax;
@@ -34,20 +34,20 @@ contract FundingRateController {
         targetMarkRatioMin = _targetMarkRatioMin;
     }
 
-    function updateTarget() public returns (uint256 newTarget) {
+    function updateTarget() public returns (uint256 nTarget) {
         uint128 previousTarget = target;
         if (lastUpdated == block.timestamp) {
             return previousTarget;
         }
 
         int56 latestCumulativeTick = OracleLibrary.latestCumulativeTick(pool);
-        newTarget = _newTarget(latestCumulativeTick, previousTarget);
+        nTarget = _newTarget(latestCumulativeTick, previousTarget);
 
-        target = uint128(newTarget);
+        target = uint128(nTarget);
         lastUpdated = uint72(block.timestamp);
         lastCumulativeTick = latestCumulativeTick;
 
-        emit UpdateTarget(newTarget);
+        emit UpdateTarget(nTarget);
     }
 
     function newTarget() public view returns (uint256) {
@@ -90,7 +90,7 @@ contract FundingRateController {
     function _multiplier(int56 latestCumulativeTick, uint256 cachedTarget) internal view returns (uint256) {
         uint256 m = _markTwapSinceLastUpdate(latestCumulativeTick);
         uint256 period = block.timestamp - lastUpdated;
-        uint256 periodRatio = FixedPointMathLib.divWadDown(period, PERIOD);
+        uint256 periodRatio = FixedPointMathLib.divWadDown(period, fundingPeriod);
         uint256 targetMarkRatio;
         if (m == 0) {
             targetMarkRatio = targetMarkRatioMax;

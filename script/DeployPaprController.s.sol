@@ -27,7 +27,6 @@ contract DeployPaprController is Base {
             underlying, // swap for phUSDC
             deployer
         );
-        controller.claimOwnership();
 
         IPaprController.CollateralAllowedConfig[] memory args = new IPaprController.CollateralAllowedConfig[](3);
         args[0] = IPaprController.CollateralAllowedConfig({

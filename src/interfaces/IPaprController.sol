@@ -25,12 +25,6 @@ interface IPaprController {
         ReservoirOracleUnderwriter.OracleInfo oracleInfo;
     }
 
-    struct StrategyDefinition {
-        uint256 targetAPR;
-        uint256 maxLTV;
-        ERC20 underlying;
-    }
-
     struct CollateralAllowedConfig {
         address collateral;
         bool allowed;

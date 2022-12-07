@@ -33,21 +33,21 @@ library OracleLibrary {
     function timeWeightedAverageTick(int56 startTick, int56 endTick, int56 twapDuration)
         internal
         view
-        returns (int24 timeWeightedAverageTick)
+        returns (int24 twat)
     {
         require(twapDuration != 0, "BP");
 
         unchecked {
             int56 delta = endTick - startTick;
 
-            timeWeightedAverageTick = int24(delta / twapDuration);
+            twat = int24(delta / twapDuration);
 
             // Always round to negative infinity
             if (delta < 0 && (delta % (twapDuration) != 0)) {
-                timeWeightedAverageTick--;
+                twat--;
             }
 
-            return timeWeightedAverageTick;
+            twat;
         }
     }
 
