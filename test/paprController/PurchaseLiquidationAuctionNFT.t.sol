@@ -23,7 +23,6 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         priceKind = ReservoirOracleUnderwriter.PriceKind.TWAP;
         oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
         auction = strategy.startLiquidationAuction(borrower, collateral, oracleInfo);
-        emit log_uint(strategy.auctionCurrentPrice(auction));
         nft.mint(purchaser, collateralId + 1);
         nft.mint(purchaser, collateralId + 2);
         nft.mint(purchaser, collateralId + 3);
@@ -52,7 +51,6 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         uint256 beforeBalance = strategy.perpetual().balanceOf(borrower);
         strategy.perpetual().approve(address(strategy), auction.startPrice);
         assertGt(strategy.auctionCurrentPrice(auction), 0);
-        emit log_uint(strategy.auctionCurrentPrice(auction));
         vm.expectEmit(true, true, false, true);
         emit Transfer(address(purchaser), address(strategy), strategy.auctionCurrentPrice(auction));
         vm.expectEmit(true, true, false, true);

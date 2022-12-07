@@ -47,7 +47,6 @@ contract BasePaprControllerTest is MainnetForking, UniswapForking, OracleTest {
             oracleAddress
         );
 
-        strategy.claimOwnership();
         IPaprController.CollateralAllowedConfig[] memory args = new IPaprController.CollateralAllowedConfig[](1);
         args[0] = IPaprController.CollateralAllowedConfig(address(nft), true);
         strategy.setAllowedCollateral(args);
