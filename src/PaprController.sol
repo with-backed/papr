@@ -91,7 +91,7 @@ contract PaprController is
                 request.debt,
                 request.minOut,
                 request.sqrtPriceLimitX96,
-                abi.encode(from, collateral.addr, address(this), request.oracleInfo)
+                abi.encode(from, collateral.addr, request.oracleInfo)
             );
         } else if (request.debt > 0) {
             _increaseDebt(
@@ -102,61 +102,87 @@ contract PaprController is
         return ERC721TokenReceiver.onERC721Received.selector;
     }
 
+    struct SwapParams {
+        uint256 amount;
+        uint256 minOut;
+        uint160 sqrtPriceLimitX96;
+        address swapFeeTo;
+        uint256 swapFeeBips;
+    }
+
     function mintAndSellDebt(
-        ERC721 collateralAsset,
-        uint256 debt,
-        uint256 minOut,
-        uint160 sqrtPriceLimitX96,
         address proceedsTo,
+        ERC721 collateralAsset,
+        SwapParams calldata params,
         ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
-    ) public returns (uint256) {
-        return _swap(
-            proceedsTo,
+    ) public returns (uint256 amountOut) {
+        bool hasFee = params.swapFeeBips != 0;
+
+        (amountOut, ) = _swap(
+            hasFee ? address(this) : proceedsTo,
             !token0IsUnderlying,
-            debt,
-            minOut,
-            sqrtPriceLimitX96,
-            abi.encode(msg.sender, collateralAsset, address(this), oracleInfo)
+            params.amount,
+            params.minOut,
+            params.sqrtPriceLimitX96,
+            abi.encode(msg.sender, collateralAsset, oracleInfo)
         );
+
+        if (hasFee) {
+            uint256 fee = amountOut * params.swapFeeBips / 1e4;
+            underlying.transfer(params.swapFeeTo, fee);
+            underlying.transfer(proceedsTo, amountOut - fee);
+        }
     }
 
     function buyAndReduceDebt(
         address account,
         ERC721 collateralAsset,
-        uint256 underlyingAmount,
-        uint256 minOut,
-        uint160 sqrtPriceLimitX96,
-        address proceedsTo
-    ) public returns (uint256 out) {
-        ReservoirOracleUnderwriter.OracleInfo memory dummyInfo;
-        out = _swap(
-            proceedsTo,
+        SwapParams calldata params    
+    ) public returns (uint256) {
+        bool hasFee = params.swapFeeBips != 0;
+
+        (uint256 amountOut, uint256 amountIn) = _swap(
+            account,
             token0IsUnderlying,
-            underlyingAmount,
-            minOut,
-            sqrtPriceLimitX96,
-            abi.encode(account, collateralAsset, msg.sender, dummyInfo)
+            params.amount,
+            params.minOut,
+            params.sqrtPriceLimitX96,
+            abi.encode(msg.sender)
         );
-        reduceDebt(account, collateralAsset, uint96(out));
+
+        if (hasFee) {
+            underlying.transfer(params.swapFeeTo, amountIn * params.swapFeeBips / 1e4);
+        }
+        
+        reduceDebt(account, collateralAsset, uint96(amountOut));
+
+        return amountOut;
     }
 
     function uniswapV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata _data) external {
-        require(amount0Delta > 0 || amount1Delta > 0); // swaps entirely within 0-liquidity regions are not supported
-
         if (msg.sender != address(pool)) {
             revert("wrong caller");
         }
 
-        (address account, ERC721 asset, address payer, ReservoirOracleUnderwriter.OracleInfo memory oracleInfo) =
-            abi.decode(_data, (address, ERC721, address, ReservoirOracleUnderwriter.OracleInfo));
-
-        //determine the amount that needs to be repaid as part of the flashswap
-        uint256 amountToPay = amount0Delta > 0 ? uint256(amount0Delta) : uint256(amount1Delta);
-
-        if (payer == address(this)) {
-            _increaseDebt(account, asset, msg.sender, amountToPay, oracleInfo);
+        bool isUnderlyingIn;
+        uint256 amountToPay;
+        if (amount0Delta > 0) {
+            amountToPay = uint256(amount0Delta);
+            isUnderlyingIn = token0IsUnderlying;
         } else {
+            require(amount1Delta > 0); // swaps entirely within 0-liquidity regions are not supported
+
+            amountToPay = uint256(amount1Delta);
+            isUnderlyingIn = !(token0IsUnderlying);
+        }
+
+        if (isUnderlyingIn) {
+            address payer = abi.decode(_data, (address));
             underlying.transferFrom(payer, msg.sender, amountToPay);
+        } else {
+            (address account, ERC721 asset, ReservoirOracleUnderwriter.OracleInfo memory oracleInfo) =
+            abi.decode(_data, (address, ERC721, ReservoirOracleUnderwriter.OracleInfo));
+            _increaseDebt(account, asset, msg.sender, amountToPay, oracleInfo);
         }
     }
 
@@ -335,11 +361,11 @@ contract PaprController is
         uint256 minOut,
         uint160 sqrtPriceLimitX96,
         bytes memory data
-    ) internal returns (uint256 out) {
-        out = UniswapHelpers.swap(pool, recipient, zeroForOne, amountSpecified, sqrtPriceLimitX96, data);
+    ) internal returns (uint256 amountOut, uint256 amountIn) {
+        (amountOut, amountIn) = UniswapHelpers.swap(pool, recipient, zeroForOne, amountSpecified, sqrtPriceLimitX96, data);
 
-        if (out < minOut) {
-            revert IPaprController.TooLittleOut(out, minOut);
+        if (amountOut < minOut) {
+            revert IPaprController.TooLittleOut(amountOut, minOut);
         }
     }
 
