@@ -25,13 +25,14 @@ contract BuyAndReduceDebt is BasePaprControllerTest {
         IPaprController.VaultInfo memory vaultInfo = controller.vaultInfo(borrower, collateral.addr);
         assertEq(vaultInfo.debt, debt);
         assertEq(underlyingOut, underlying.balanceOf(borrower));
-        underlying.approve(address(controller), underlyingOut);
+        uint256 fee;
+        underlying.approve(address(controller), underlyingOut + underlyingOut * fee / 1e4);
         swapParams = PaprController.SwapParams({
             amount: underlyingOut,
             minOut: 1,
             sqrtPriceLimitX96: _maxSqrtPriceLimit({sellingPAPR: false}),
-            swapFeeTo: address(0),
-            swapFeeBips: 0
+            swapFeeTo: address(5),
+            swapFeeBips: fee
         });
         uint256 debtPaid = controller.buyAndReduceDebt(
             borrower, collateral.addr, swapParams
@@ -39,6 +40,7 @@ contract BuyAndReduceDebt is BasePaprControllerTest {
         assertGt(debtPaid, 0);
         vaultInfo = controller.vaultInfo(borrower, collateral.addr);
         assertEq(vaultInfo.debt, debt - debtPaid);
+        assertEq(underlying.balanceOf(swapParams.swapFeeTo), fee);
     }
 
     function testBuyAndReduceDebtRevertsIfMinOutTooLittle() public {
