@@ -18,7 +18,6 @@ contract FundingRateController {
     ERC20 public immutable papr;
     // TODO: method to update for oracle
     uint256 public fundingPeriod = 4 weeks;
-    // TODO: method to update for oracle
     address public pool;
     uint256 immutable targetMarkRatioMax;
     uint256 immutable targetMarkRatioMin;

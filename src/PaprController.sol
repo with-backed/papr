@@ -59,7 +59,7 @@ contract PaprController is
         ReservoirOracleUnderwriter(oracleSigner, address(underlying))
     {
         maxLTV = _maxLTV;
-        token0IsUnderlying = address(underlying) < address(papr); // _pool.token0() == address(underlying);
+        token0IsUnderlying = address(underlying) < address(papr);
         uint256 underlyingONE = 10 ** underlying.decimals();
         uint160 sqrtRatio;
 
