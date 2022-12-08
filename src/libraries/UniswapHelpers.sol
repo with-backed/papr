@@ -19,7 +19,7 @@ library UniswapHelpers {
         uint256 amountSpecified,
         uint160 sqrtPriceLimitX96,
         bytes memory data
-    ) internal returns (uint256 out) {
+    ) internal returns (uint256 amountOut, uint256 amountIn) {
         (int256 amount0, int256 amount1) = IUniswapV3Pool(pool).swap(
             recipient,
             zeroForOne,
@@ -30,7 +30,13 @@ library UniswapHelpers {
             data
         );
 
-        out = uint256(-(zeroForOne ? amount1 : amount0));
+        if (zeroForOne) {
+            amountOut = uint256(-amount1);
+            amoutIn = uint256(amount0);
+        } else {
+            amountOut = uint256(-amount0);
+            amoutIn = uint256(amount1);
+        }
     }
 
     function poolsHaveSameTokens(address pool1, address pool2) internal view returns (bool) {

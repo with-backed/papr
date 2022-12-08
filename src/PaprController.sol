@@ -108,16 +108,26 @@ contract PaprController is
         uint256 minOut,
         uint160 sqrtPriceLimitX96,
         address proceedsTo,
+        address feeTo,
+        uint256 feeBips,
         ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
     ) public returns (uint256) {
-        return _swap(
-            proceedsTo,
+        bool hasFee = feeBips > 0;  
+
+        
+        
+        uint256 out = _swap(
+            hasFee ? address(this) : proceedsTo,
             !token0IsUnderlying,
             debt,
             minOut,
             sqrtPriceLimitX96,
             abi.encode(msg.sender, collateralAsset, address(this), oracleInfo)
         );
+
+        if (hasFee) {
+            uint256 fee = out;
+        }
     }
 
     function buyAndReduceDebt(
