@@ -32,10 +32,10 @@ library UniswapHelpers {
 
         if (zeroForOne) {
             amountOut = uint256(-amount1);
-            amoutIn = uint256(amount0);
+            amountIn = uint256(amount0);
         } else {
             amountOut = uint256(-amount0);
-            amoutIn = uint256(amount1);
+            amountIn = uint256(amount1);
         }
     }
 

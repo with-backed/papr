@@ -111,13 +111,11 @@ contract PaprController is
         address feeTo,
         uint256 feeBips,
         ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
-    ) public returns (uint256) {
-        bool hasFee = feeBips > 0;  
+    ) public returns (uint256 amountOut) {
+        // bool hasFee = feeBips == 0;  
 
-        
-        
-        uint256 out = _swap(
-            hasFee ? address(this) : proceedsTo,
+        (amountOut, ) = _swap(
+            feeBips == 0 ? proceedsTo : address(this),
             !token0IsUnderlying,
             debt,
             minOut,
@@ -125,8 +123,12 @@ contract PaprController is
             abi.encode(msg.sender, collateralAsset, address(this), oracleInfo)
         );
 
-        if (hasFee) {
-            uint256 fee = out;
+        if (feeBips != 0) {
+            {
+            uint256 fee = amountOut * feeBips / 1e4;
+            underlying.transfer(feeTo, fee);
+            underlying.transfer(proceedsTo, amountOut - fee);
+            }
         }
     }
 
@@ -139,7 +141,7 @@ contract PaprController is
         address proceedsTo
     ) public returns (uint256 out) {
         ReservoirOracleUnderwriter.OracleInfo memory dummyInfo;
-        out = _swap(
+        (out,) = _swap(
             proceedsTo,
             token0IsUnderlying,
             underlyingAmount,
@@ -345,11 +347,11 @@ contract PaprController is
         uint256 minOut,
         uint160 sqrtPriceLimitX96,
         bytes memory data
-    ) internal returns (uint256 out) {
-        out = UniswapHelpers.swap(pool, recipient, zeroForOne, amountSpecified, sqrtPriceLimitX96, data);
+    ) internal returns (uint256 amountOut, uint256 amountIn) {
+        (amountOut, amountIn) = UniswapHelpers.swap(pool, recipient, zeroForOne, amountSpecified, sqrtPriceLimitX96, data);
 
-        if (out < minOut) {
-            revert IPaprController.TooLittleOut(out, minOut);
+        if (amountOut < minOut) {
+            revert IPaprController.TooLittleOut(amountOut, minOut);
         }
     }
 
