@@ -12,6 +12,7 @@ contract FundingRateController {
     event SetPool(address indexed pool);
 
     error PoolTokensDoNotMatch();
+    error AlreadyInitialized();
 
     ERC20 public immutable underlying;
     ERC20 public immutable papr;
@@ -74,8 +75,6 @@ contract FundingRateController {
         (, int24 latestTwapTick) = _latestTwapTickAndTickCumulative();
         return _multiplier(latestTwapTick, target);
     }
-
-    error AlreadyInitialized();
 
     function _init(uint256 _target, uint160 initSqrtRatio) internal {
         if (lastUpdated != 0) revert AlreadyInitialized();
