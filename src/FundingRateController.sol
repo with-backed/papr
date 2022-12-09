@@ -53,6 +53,9 @@ contract FundingRateController {
     }
 
     function newTarget() public view returns (uint256) {
+        if (lastUpdated == block.timestamp) {
+            return target;
+        }
         return _newTarget(OracleLibrary.latestCumulativeTick(pool), target);
     }
 
@@ -60,11 +63,11 @@ contract FundingRateController {
         return _markTwapSinceLastUpdate(OracleLibrary.latestCumulativeTick(pool));
     }
 
-    function multiplier() public view returns (uint256) {
-        return _multiplier(OracleLibrary.latestCumulativeTick(pool), target);
-    }
+    error AlreadyInitialized();
 
     function _init(uint256 _target, uint160 initSqrtRatio) internal {
+        if (lastUpdated != 0) revert AlreadyInitialized();
+
         address _pool = UniswapHelpers.deployAndInitPool(address(underlying), address(papr), 10000, initSqrtRatio);
         _setPool(_pool);
 
@@ -87,17 +90,15 @@ contract FundingRateController {
     }
 
     function _markTwapSinceLastUpdate(int56 latestCumulativeTick) internal view returns (uint256) {
-        uint256 delta = block.timestamp - lastUpdated;
-        if (delta == 0) {
-            return OracleLibrary.getQuoteAtTick(int24(latestCumulativeTick), 1e18, address(papr), address(underlying));
-        } else {
-            int24 twapTick =
-                OracleLibrary.timeWeightedAverageTick(lastCumulativeTick, latestCumulativeTick, int56(uint56(delta)));
-            return OracleLibrary.getQuoteAtTick(twapTick, 1e18, address(papr), address(underlying));
-        }
+        int24 twapTick = OracleLibrary.timeWeightedAverageTick(
+            lastCumulativeTick, latestCumulativeTick, int56(uint56(block.timestamp - lastUpdated))
+        );
+        return OracleLibrary.getQuoteAtTick(twapTick, 1e18, address(papr), address(underlying));
     }
 
     // computing funding rate for the past period
+    // > 1e18 means positive funding rate
+    // < 1e18 means negative funding rate
     function _multiplier(int56 latestCumulativeTick, uint256 cachedTarget) internal view returns (uint256) {
         uint256 m = _markTwapSinceLastUpdate(latestCumulativeTick);
         uint256 period = block.timestamp - lastUpdated;
