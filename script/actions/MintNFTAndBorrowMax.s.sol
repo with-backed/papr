@@ -30,11 +30,23 @@ contract MintNFTAndBorrowMax is Base {
     }
 
     function _openMaxLoanAndSwap(address borrower) internal {
+        // IPaprController.OnERC721ReceivedArgs memory safeTransferReceivedArgs = IPaprController.OnERC721ReceivedArgs({
+        //     mintDebtOrProceedsTo: borrower,
+        //     minOut: 0,
+        //     debt: controller.maxDebt(oraclePrice) - 100,
+        //     sqrtPriceLimitX96: _maxSqrtPriceLimit(true),
+        //     oracleInfo: _getOracleInfoForCollateral(address(nft), oraclePrice)
+        // });
         IPaprController.OnERC721ReceivedArgs memory safeTransferReceivedArgs = IPaprController.OnERC721ReceivedArgs({
-            mintDebtOrProceedsTo: borrower,
-            minOut: 0,
+            proceedsTo: borrower,
             debt: controller.maxDebt(oraclePrice) - 100,
-            sqrtPriceLimitX96: _maxSqrtPriceLimit(true),
+            swapParams: IPaprController.SwapParams({
+                amount: controller.maxDebt(oraclePrice) - 100,
+                minOut: 1,
+                sqrtPriceLimitX96: _maxSqrtPriceLimit(true),
+                swapFeeTo: address(0),
+                swapFeeBips: 0
+            }),
             oracleInfo: _getOracleInfoForCollateral(address(nft), oraclePrice)
         });
         nft.safeTransferFrom(borrower, address(controller), tokenId, abi.encode(safeTransferReceivedArgs));

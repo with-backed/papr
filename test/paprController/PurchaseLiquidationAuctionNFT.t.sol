@@ -27,8 +27,8 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         nft.mint(purchaser, collateralId + 2);
         nft.mint(purchaser, collateralId + 3);
         safeTransferReceivedArgs.debt = controller.maxDebt(oraclePrice) - 10;
-        safeTransferReceivedArgs.mintDebtOrProceedsTo = purchaser;
-        safeTransferReceivedArgs.minOut = 0;
+        safeTransferReceivedArgs.proceedsTo = purchaser;
+        safeTransferReceivedArgs.swapParams.minOut = 0;
         vm.startPrank(purchaser);
         nft.safeTransferFrom(purchaser, address(controller), collateralId + 1, abi.encode(safeTransferReceivedArgs));
         nft.safeTransferFrom(purchaser, address(controller), collateralId + 2, abi.encode(safeTransferReceivedArgs));

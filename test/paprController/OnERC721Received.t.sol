@@ -8,9 +8,9 @@ import {PaprController} from "src/PaprController.sol";
 contract OnERC721ReceivedTest is BasePaprControllerTest {
     function testAddDebtAndSwap() public {
         vm.startPrank(borrower);
-        safeTransferReceivedArgs.minOut = 1;
+        safeTransferReceivedArgs.swapParams.minOut = 1;
         uint160 priceLimit = _maxSqrtPriceLimit(true);
-        safeTransferReceivedArgs.sqrtPriceLimitX96 = priceLimit;
+        safeTransferReceivedArgs.swapParams.sqrtPriceLimitX96 = priceLimit;
         uint256 expectedOut = quoter.quoteExactInputSingle({
             tokenIn: address(controller.papr()),
             tokenOut: address(underlying),
@@ -32,9 +32,9 @@ contract OnERC721ReceivedTest is BasePaprControllerTest {
         oracleInfo = _getOracleInfoForCollateral(nft, underlying);
         safeTransferReceivedArgs.oracleInfo = oracleInfo;
         vm.startPrank(borrower);
-        safeTransferReceivedArgs.minOut = 1;
+        safeTransferReceivedArgs.swapParams.minOut = 1;
         uint160 priceLimit = _maxSqrtPriceLimit(true);
-        safeTransferReceivedArgs.sqrtPriceLimitX96 = priceLimit;
+        safeTransferReceivedArgs.swapParams.sqrtPriceLimitX96 = priceLimit;
         uint256 expectedOut = quoter.quoteExactInputSingle({
             tokenIn: address(controller.papr()),
             tokenOut: address(underlying),
