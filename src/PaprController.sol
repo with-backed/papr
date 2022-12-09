@@ -99,16 +99,6 @@ contract PaprController is
         IPaprController.SwapParams calldata params,
         ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
     ) public returns (uint256 amountOut) {
-        return _mintAndSellDebt(msg.sender, proceedsTo, collateralAsset, params, oracleInfo);
-    }
-
-    function _mintAndSellDebt(
-        address account,
-        address proceedsTo,
-        ERC721 collateralAsset,
-        IPaprController.SwapParams memory params,
-        ReservoirOracleUnderwriter.OracleInfo memory oracleInfo
-    ) internal returns (uint256 amountOut) {
         bool hasFee = params.swapFeeBips != 0;
 
         (amountOut,) = _swap(
@@ -117,7 +107,7 @@ contract PaprController is
             params.amount,
             params.minOut,
             params.sqrtPriceLimitX96,
-            abi.encode(account, collateralAsset, oracleInfo)
+            abi.encode(msg.sender, collateralAsset, oracleInfo)
         );
 
         if (hasFee) {
@@ -339,6 +329,33 @@ contract PaprController is
 
     function vaultInfo(address account, ERC721 asset) public view returns (IPaprController.VaultInfo memory) {
         return _vaultInfo[account][asset];
+    }
+
+    /// same as mintAndSellDebt but takes args in memory
+    /// to work with onERC721Received
+    function _mintAndSellDebt(
+        address account,
+        address proceedsTo,
+        ERC721 collateralAsset,
+        IPaprController.SwapParams memory params,
+        ReservoirOracleUnderwriter.OracleInfo memory oracleInfo
+    ) internal returns (uint256 amountOut) {
+        bool hasFee = params.swapFeeBips != 0;
+
+        (amountOut,) = _swap(
+            hasFee ? address(this) : proceedsTo,
+            !token0IsUnderlying,
+            params.amount,
+            params.minOut,
+            params.sqrtPriceLimitX96,
+            abi.encode(account, collateralAsset, oracleInfo)
+        );
+
+        if (hasFee) {
+            uint256 fee = amountOut * params.swapFeeBips / 1e4;
+            underlying.transfer(params.swapFeeTo, fee);
+            underlying.transfer(proceedsTo, amountOut - fee);
+        }
     }
 
     function _swap(
