@@ -13,6 +13,8 @@ contract FundingRateController {
 
     error PoolTokensDoNotMatch();
     error AlreadyInitialized();
+    error FundingPeriodTooShort();
+    error FundingPeriodTooLong();
 
     ERC20 public immutable underlying;
     ERC20 public immutable papr;
@@ -94,6 +96,12 @@ contract FundingRateController {
         pool = _pool;
 
         emit SetPool(_pool);
+    }
+
+    function _setFundingPeriod(uint256 _fundingPeriod) internal {
+        if (_fundingPeriod < 7 days) revert FundingPeriodTooShort();
+        if (_fundingPeriod > 90 days) revert FundingPeriodTooLong();
+        fundingPeriod = _fundingPeriod;
     }
 
     function _newTarget(int24 latestTwapTick, uint256 cachedTarget) internal view returns (uint256) {

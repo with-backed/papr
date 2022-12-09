@@ -22,7 +22,7 @@ contract FundingRateControllerTest is Test {
     function setUp() public {
         fundingRateController = new MockFundingRateController(underlying, papr, indexMarkRatioMax, indexMarkRatioMin);
         fundingRateController.init(1e18, 0);
-        fundingRateController.setPool(address(new MinimalObservablePool()));
+        fundingRateController.setPool(address(new MinimalObservablePool(underlying, papr)));
     }
 
     function testFuzzUpdateTarget(int56 newTickCumulative, uint24 secondsPassed) public {
@@ -38,5 +38,9 @@ contract FundingRateControllerTest is Test {
         MinimalObservablePool(fundingRateController.pool()).setTickComulatives(_tickCumulatives);
         fundingRateController.updateTarget();
         fundingRateController.newTarget();
+    }
+
+    function testSetFundingPeriodEmitsCorrectly() public {
+
     }
 }

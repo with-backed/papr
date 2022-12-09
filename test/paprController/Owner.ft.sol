@@ -77,4 +77,12 @@ contract OwnerTest is MainnetForking, UniswapForking {
         vm.expectRevert("Ownable: caller is not the owner");
         controller.setPool(address(1));
     }
+
+    function testSetFundingPeriodRevertsIfNotOwner() public {
+        vm.startPrank(address(1));
+        vm.expectRevert("Ownable: caller is not the owner");
+        controller.setFundingPeriod(1);
+    }
+
+    function testSetFundingPeriodUpdatesFundindPeriod() public {}
 }
