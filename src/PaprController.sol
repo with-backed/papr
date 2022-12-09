@@ -84,47 +84,40 @@ contract PaprController is
 
         _addCollateralToVault(from, collateral);
 
-        if (request.minOut > 0) {
-            _swap(
-                request.mintDebtOrProceedsTo,
-                !token0IsUnderlying,
-                request.debt,
-                request.minOut,
-                request.sqrtPriceLimitX96,
-                abi.encode(from, collateral.addr, request.oracleInfo)
-            );
+        if (request.swapParams.minOut > 0) {
+            _mintAndSellDebt(from, request.proceedsTo, ERC721(msg.sender), request.swapParams, request.oracleInfo);
         } else if (request.debt > 0) {
-            _increaseDebt(
-                from, collateral.addr, request.mintDebtOrProceedsTo, uint256(request.debt), request.oracleInfo
-            );
+            _increaseDebt(from, collateral.addr, request.proceedsTo, request.debt, request.oracleInfo);
         }
 
         return ERC721TokenReceiver.onERC721Received.selector;
     }
 
-    struct SwapParams {
-        uint256 amount;
-        uint256 minOut;
-        uint160 sqrtPriceLimitX96;
-        address swapFeeTo;
-        uint256 swapFeeBips;
-    }
-
     function mintAndSellDebt(
         address proceedsTo,
         ERC721 collateralAsset,
-        SwapParams calldata params,
+        IPaprController.SwapParams calldata params,
         ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
     ) public returns (uint256 amountOut) {
+        return _mintAndSellDebt(msg.sender, proceedsTo, collateralAsset, params, oracleInfo);
+    }
+
+    function _mintAndSellDebt(
+        address account,
+        address proceedsTo,
+        ERC721 collateralAsset,
+        IPaprController.SwapParams memory params,
+        ReservoirOracleUnderwriter.OracleInfo memory oracleInfo
+    ) internal returns (uint256 amountOut) {
         bool hasFee = params.swapFeeBips != 0;
 
-        (amountOut, ) = _swap(
+        (amountOut,) = _swap(
             hasFee ? address(this) : proceedsTo,
             !token0IsUnderlying,
             params.amount,
             params.minOut,
             params.sqrtPriceLimitX96,
-            abi.encode(msg.sender, collateralAsset, oracleInfo)
+            abi.encode(account, collateralAsset, oracleInfo)
         );
 
         if (hasFee) {
@@ -134,26 +127,20 @@ contract PaprController is
         }
     }
 
-    function buyAndReduceDebt(
-        address account,
-        ERC721 collateralAsset,
-        SwapParams calldata params    
-    ) public returns (uint256) {
+    function buyAndReduceDebt(address account, ERC721 collateralAsset, IPaprController.SwapParams calldata params)
+        public
+        returns (uint256)
+    {
         bool hasFee = params.swapFeeBips != 0;
 
         (uint256 amountOut, uint256 amountIn) = _swap(
-            account,
-            token0IsUnderlying,
-            params.amount,
-            params.minOut,
-            params.sqrtPriceLimitX96,
-            abi.encode(msg.sender)
+            account, token0IsUnderlying, params.amount, params.minOut, params.sqrtPriceLimitX96, abi.encode(msg.sender)
         );
 
         if (hasFee) {
             underlying.transfer(params.swapFeeTo, amountIn * params.swapFeeBips / 1e4);
         }
-        
+
         reduceDebt(account, collateralAsset, uint96(amountOut));
 
         return amountOut;
@@ -181,7 +168,7 @@ contract PaprController is
             underlying.transferFrom(payer, msg.sender, amountToPay);
         } else {
             (address account, ERC721 asset, ReservoirOracleUnderwriter.OracleInfo memory oracleInfo) =
-            abi.decode(_data, (address, ERC721, ReservoirOracleUnderwriter.OracleInfo));
+                abi.decode(_data, (address, ERC721, ReservoirOracleUnderwriter.OracleInfo));
             _increaseDebt(account, asset, msg.sender, amountToPay, oracleInfo);
         }
     }
@@ -362,7 +349,8 @@ contract PaprController is
         uint160 sqrtPriceLimitX96,
         bytes memory data
     ) internal returns (uint256 amountOut, uint256 amountIn) {
-        (amountOut, amountIn) = UniswapHelpers.swap(pool, recipient, zeroForOne, amountSpecified, sqrtPriceLimitX96, data);
+        (amountOut, amountIn) =
+            UniswapHelpers.swap(pool, recipient, zeroForOne, amountSpecified, sqrtPriceLimitX96, data);
 
         if (amountOut < minOut) {
             revert IPaprController.TooLittleOut(amountOut, minOut);

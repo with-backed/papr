@@ -12,31 +12,27 @@ contract BuyAndReduceDebt is BasePaprControllerTest {
         vm.startPrank(borrower);
         nft.approve(address(controller), collateralId);
         controller.addCollateral(IPaprController.Collateral(nft, collateralId));
-        PaprController.SwapParams memory swapParams = PaprController.SwapParams({
+        IPaprController.SwapParams memory swapParams = IPaprController.SwapParams({
             amount: debt,
             minOut: 982507,
             sqrtPriceLimitX96: _maxSqrtPriceLimit({sellingPAPR: true}),
             swapFeeTo: address(0),
             swapFeeBips: 0
         });
-        uint256 underlyingOut = controller.mintAndSellDebt(
-            borrower, collateral.addr, swapParams, oracleInfo
-        );
+        uint256 underlyingOut = controller.mintAndSellDebt(borrower, collateral.addr, swapParams, oracleInfo);
         IPaprController.VaultInfo memory vaultInfo = controller.vaultInfo(borrower, collateral.addr);
         assertEq(vaultInfo.debt, debt);
         assertEq(underlyingOut, underlying.balanceOf(borrower));
         uint256 fee;
         underlying.approve(address(controller), underlyingOut + underlyingOut * fee / 1e4);
-        swapParams = PaprController.SwapParams({
+        swapParams = IPaprController.SwapParams({
             amount: underlyingOut,
             minOut: 1,
             sqrtPriceLimitX96: _maxSqrtPriceLimit({sellingPAPR: false}),
             swapFeeTo: address(5),
             swapFeeBips: fee
         });
-        uint256 debtPaid = controller.buyAndReduceDebt(
-            borrower, collateral.addr, swapParams
-        );
+        uint256 debtPaid = controller.buyAndReduceDebt(borrower, collateral.addr, swapParams);
         assertGt(debtPaid, 0);
         vaultInfo = controller.vaultInfo(borrower, collateral.addr);
         assertEq(vaultInfo.debt, debt - debtPaid);
@@ -47,16 +43,14 @@ contract BuyAndReduceDebt is BasePaprControllerTest {
         vm.startPrank(borrower);
         nft.approve(address(controller), collateralId);
         controller.addCollateral(collateral);
-        PaprController.SwapParams memory swapParams = PaprController.SwapParams({
+        IPaprController.SwapParams memory swapParams = IPaprController.SwapParams({
             amount: debt,
             minOut: 982507,
             sqrtPriceLimitX96: _maxSqrtPriceLimit({sellingPAPR: true}),
             swapFeeTo: address(0),
             swapFeeBips: 0
         });
-        uint256 underlyingOut = controller.mintAndSellDebt(
-            borrower, collateral.addr, swapParams, oracleInfo
-        );
+        uint256 underlyingOut = controller.mintAndSellDebt(borrower, collateral.addr, swapParams, oracleInfo);
         underlying.approve(address(controller), underlyingOut);
         uint160 priceLimit = _maxSqrtPriceLimit({sellingPAPR: false});
         uint256 out = quoter.quoteExactInputSingle({
@@ -67,15 +61,13 @@ contract BuyAndReduceDebt is BasePaprControllerTest {
             sqrtPriceLimitX96: priceLimit
         });
         vm.expectRevert(abi.encodeWithSelector(IPaprController.TooLittleOut.selector, out, out + 1));
-        swapParams = PaprController.SwapParams({
+        swapParams = IPaprController.SwapParams({
             amount: underlyingOut,
             minOut: out + 1,
             sqrtPriceLimitX96: priceLimit,
             swapFeeTo: address(0),
             swapFeeBips: 0
         });
-        uint256 debtPaid = controller.buyAndReduceDebt(
-            borrower, collateral.addr, swapParams
-        );
+        uint256 debtPaid = controller.buyAndReduceDebt(borrower, collateral.addr, swapParams);
     }
 }

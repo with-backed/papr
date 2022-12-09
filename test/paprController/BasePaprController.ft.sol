@@ -103,18 +103,23 @@ contract BasePaprControllerTest is MainnetForking, UniswapForking, OracleTest {
 
     function _populateOnReceivedArgs() internal {
         safeTransferReceivedArgs = IPaprController.OnERC721ReceivedArgs({
-            mintDebtOrProceedsTo: borrower,
-            minOut: minOut,
+            proceedsTo: borrower,
             debt: debt,
-            sqrtPriceLimitX96: _viableSqrtPriceLimit({sellingPAPR: true}),
+            swapParams: IPaprController.SwapParams({
+                amount: debt,
+                minOut: minOut,
+                sqrtPriceLimitX96: _viableSqrtPriceLimit({sellingPAPR: true}),
+                swapFeeTo: address(0),
+                swapFeeBips: 0
+            }),
             oracleInfo: oracleInfo
         });
     }
 
     function _openMaxLoanAndSwap() internal {
-        safeTransferReceivedArgs.debt = controller.maxDebt(oraclePrice) - 2;
-        safeTransferReceivedArgs.minOut = 1;
-        safeTransferReceivedArgs.sqrtPriceLimitX96 = _maxSqrtPriceLimit(true);
+        safeTransferReceivedArgs.swapParams.amount = controller.maxDebt(oraclePrice) - 2;
+        safeTransferReceivedArgs.swapParams.minOut = 1;
+        safeTransferReceivedArgs.swapParams.sqrtPriceLimitX96 = _maxSqrtPriceLimit(true);
         vm.prank(borrower);
         nft.safeTransferFrom(borrower, address(controller), collateralId, abi.encode(safeTransferReceivedArgs));
     }

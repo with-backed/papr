@@ -12,16 +12,14 @@ contract MintAndSellDebt is BasePaprControllerTest {
         vm.startPrank(borrower);
         nft.approve(address(controller), collateralId);
         controller.addCollateral(collateral);
-        PaprController.SwapParams memory swapParams = PaprController.SwapParams({
+        IPaprController.SwapParams memory swapParams = IPaprController.SwapParams({
             amount: debt,
             minOut: 982507,
             sqrtPriceLimitX96: _maxSqrtPriceLimit({sellingPAPR: true}),
             swapFeeTo: address(5),
             swapFeeBips: 100
         });
-        uint256 underlyingOut = controller.mintAndSellDebt(
-            borrower, collateral.addr, swapParams, oracleInfo
-        );
+        uint256 underlyingOut = controller.mintAndSellDebt(borrower, collateral.addr, swapParams, oracleInfo);
         uint256 fee = underlyingOut * swapParams.swapFeeBips / 1e4;
         assertEq(underlying.balanceOf(swapParams.swapFeeTo), fee);
         assertEq(underlying.balanceOf(borrower), underlyingOut - fee);

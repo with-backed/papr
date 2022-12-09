@@ -17,11 +17,19 @@ interface IPaprController {
         uint200 debt;
     }
 
-    struct OnERC721ReceivedArgs {
-        address mintDebtOrProceedsTo;
+    struct SwapParams {
+        uint256 amount;
         uint256 minOut;
-        uint256 debt;
         uint160 sqrtPriceLimitX96;
+        address swapFeeTo;
+        uint256 swapFeeBips;
+    }
+
+    struct OnERC721ReceivedArgs {
+        address proceedsTo;
+        /// @dev debt is ignore in favor of `swapParams.amount` of minOut > 0
+        uint256 debt;
+        SwapParams swapParams;
         ReservoirOracleUnderwriter.OracleInfo oracleInfo;
     }
 
