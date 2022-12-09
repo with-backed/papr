@@ -7,6 +7,7 @@ import "forge-std/Test.sol";
 import {MockFundingRateController} from "test/mocks/MockFundingRateController.sol";
 import {MinimalObservablePool} from "test/mocks/uniswap/MinimalObservablePool.sol";
 import {TestERC20} from "test/mocks/TestERC20.sol";
+import {TickMath} from "fullrange/libraries/TickMath.sol";
 
 contract FundingRateControllerTest is Test {
     // event UpdateTarget(uint256 newNorm);
@@ -24,22 +25,18 @@ contract FundingRateControllerTest is Test {
         fundingRateController.setPool(address(new MinimalObservablePool()));
     }
 
-    function testUpdateTarget(int56[2] calldata tickCumulatives) public {
-        int56[] memory _tickCumulatives = new int56[](tickCumulatives.length);
-        for (uint i = 0; i < tickCumulatives.length; i++) {
-            // vm.assume(tickCumulatives[i] != 0);
-            // if (i > 0) vm.assume(tickCumulatives[i] != tickCumulatives[i - 1]);
-            _tickCumulatives[i] = tickCumulatives[i];
-        }
+    function testFuzzUpdateTarget(int56 newTickCumulative, uint24 secondsPassed) public {
+        // breaks if it has been more than > uint24.max (half a year) since updateTarget last called
+        vm.warp(block.timestamp + secondsPassed);
+        vm.assume(secondsPassed != 0);
+        /// last cumulative tick is 0, set in setup
+        /// each seconds tickCumulative can change by no more than max tick and no less than min
+        vm.assume((newTickCumulative / int256(int24(secondsPassed))) < TickMath.MAX_TICK);
+        vm.assume((newTickCumulative / int256(int24(secondsPassed))) > TickMath.MIN_TICK);
+        int56[] memory _tickCumulatives = new int56[](1);
+        _tickCumulatives[0] = newTickCumulative;
         MinimalObservablePool(fundingRateController.pool()).setTickComulatives(_tickCumulatives);
-        // fundingRateController.setTickComulatives(tick);
         fundingRateController.updateTarget();
         fundingRateController.newTarget();
-
     }
-
-    // function updateTargetEmitsCorrectly() public {
-    //     vm.warp(block.timestamp + 1);
-    //     /// TODO need to mock a uniswap pool/oracle
-    // }
 }

@@ -90,8 +90,9 @@ contract FundingRateController {
     }
 
     function _markTwapSinceLastUpdate(int56 latestCumulativeTick) internal view returns (uint256) {
-        int24 twapTick =
-            OracleLibrary.timeWeightedAverageTick(lastCumulativeTick, latestCumulativeTick, int56(uint56(block.timestamp - lastUpdated)));
+        int24 twapTick = OracleLibrary.timeWeightedAverageTick(
+            lastCumulativeTick, latestCumulativeTick, int56(uint56(block.timestamp - lastUpdated))
+        );
         return OracleLibrary.getQuoteAtTick(twapTick, 1e18, address(papr), address(underlying));
     }
 
