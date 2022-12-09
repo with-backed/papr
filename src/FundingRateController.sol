@@ -63,7 +63,11 @@ contract FundingRateController {
         return _markTwapSinceLastUpdate(OracleLibrary.latestCumulativeTick(pool));
     }
 
+    error AlreadyInitialized();
+
     function _init(uint256 _target, uint160 initSqrtRatio) internal {
+        if (lastUpdated != 0) revert AlreadyInitialized();
+
         address _pool = UniswapHelpers.deployAndInitPool(address(underlying), address(papr), 10000, initSqrtRatio);
         _setPool(_pool);
 
