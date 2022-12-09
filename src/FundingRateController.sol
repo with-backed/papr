@@ -53,6 +53,9 @@ contract FundingRateController {
     }
 
     function newTarget() public view returns (uint256) {
+        // if (lastUpdated == block.timestamp) {
+        //     return previousTarget;
+        // }
         return _newTarget(OracleLibrary.latestCumulativeTick(pool), target);
     }
 
