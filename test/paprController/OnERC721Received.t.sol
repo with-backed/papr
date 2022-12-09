@@ -23,8 +23,6 @@ contract OnERC721ReceivedTest is BasePaprControllerTest {
         assertEq(vaultInfo.count, 1);
         assertEq(vaultInfo.debt, debt);
         assertEq(expectedOut, underlying.balanceOf(borrower));
-        controller.updateTarget();
-        controller.newTarget();
     }
 
     /// mainly a gas bench mark test
