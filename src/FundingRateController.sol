@@ -13,7 +13,6 @@ contract FundingRateController {
 
     error PoolTokensDoNotMatch();
 
-    uint256 public immutable start;
     ERC20 public immutable underlying;
     ERC20 public immutable papr;
     // TODO: method to update for oracle
@@ -23,14 +22,13 @@ contract FundingRateController {
     uint256 immutable targetMarkRatioMin;
     // single slot, write together
     uint128 public target;
-    uint72 public lastUpdated;
     int56 lastCumulativeTick;
+    uint48 public lastUpdated;
+    int24 lastTwapTick;
 
     constructor(ERC20 _underlying, ERC20 _papr, uint256 _targetMarkRatioMax, uint256 _targetMarkRatioMin) {
         underlying = _underlying;
         papr = _papr;
-
-        start = block.timestamp;
 
         targetMarkRatioMax = _targetMarkRatioMax;
         targetMarkRatioMin = _targetMarkRatioMin;
@@ -42,12 +40,13 @@ contract FundingRateController {
             return previousTarget;
         }
 
-        int56 latestCumulativeTick = OracleLibrary.latestCumulativeTick(pool);
-        nTarget = _newTarget(latestCumulativeTick, previousTarget);
+        (int56 latestCumulativeTick, int24 latestTwapTick) = _latestTwapTickAndTickCumulative();
+        nTarget = _newTarget(latestTwapTick, previousTarget);
 
         target = uint128(nTarget);
-        lastUpdated = uint72(block.timestamp);
+        lastUpdated = uint48(block.timestamp);
         lastCumulativeTick = latestCumulativeTick;
+        lastTwapTick = latestTwapTick;
 
         emit UpdateTarget(nTarget);
     }
@@ -56,11 +55,24 @@ contract FundingRateController {
         if (lastUpdated == block.timestamp) {
             return target;
         }
-        return _newTarget(OracleLibrary.latestCumulativeTick(pool), target);
+        (, int24 latestTwapTick) = _latestTwapTickAndTickCumulative();
+        return _newTarget(latestTwapTick, target);
     }
 
-    function markTwapSinceLastUpdate() public view returns (uint256) {
-        return _markTwapSinceLastUpdate(OracleLibrary.latestCumulativeTick(pool));
+    function mark() public view returns (uint256) {
+        if (lastUpdated == block.timestamp) {
+            return _mark(lastTwapTick);
+        }
+        (, int24 latestTwapTick) = _latestTwapTickAndTickCumulative();
+        return _mark(latestTwapTick);
+    }
+
+    function multiplier() public view returns (uint256) {
+        if (lastUpdated == block.timestamp) {
+            return _multiplier(lastTwapTick, target);
+        }
+        (, int24 latestTwapTick) = _latestTwapTickAndTickCumulative();
+        return _multiplier(latestTwapTick, target);
     }
 
     error AlreadyInitialized();
@@ -71,7 +83,7 @@ contract FundingRateController {
         address _pool = UniswapHelpers.deployAndInitPool(address(underlying), address(papr), 10000, initSqrtRatio);
         _setPool(_pool);
 
-        lastUpdated = uint72(block.timestamp);
+        lastUpdated = uint48(block.timestamp);
         target = uint128(_target);
         lastCumulativeTick = OracleLibrary.latestCumulativeTick(pool);
 
@@ -85,22 +97,27 @@ contract FundingRateController {
         emit SetPool(_pool);
     }
 
-    function _newTarget(int56 latestCumulativeTick, uint256 cachedTarget) internal view returns (uint256) {
-        return FixedPointMathLib.mulWadDown(target, _multiplier(latestCumulativeTick, cachedTarget));
+    function _newTarget(int24 latestTwapTick, uint256 cachedTarget) internal view returns (uint256) {
+        return FixedPointMathLib.mulWadDown(target, _multiplier(latestTwapTick, cachedTarget));
     }
 
-    function _markTwapSinceLastUpdate(int56 latestCumulativeTick) internal view returns (uint256) {
-        int24 twapTick = OracleLibrary.timeWeightedAverageTick(
-            lastCumulativeTick, latestCumulativeTick, int56(uint56(block.timestamp - lastUpdated))
-        );
+    function _mark(int24 twapTick) internal view returns (uint256) {
         return OracleLibrary.getQuoteAtTick(twapTick, 1e18, address(papr), address(underlying));
+    }
+
+    /// @dev reverts if block.timestamp - lastUpdated == 0
+    function _latestTwapTickAndTickCumulative() internal view returns (int56 tickCumulative, int24 twapTick) {
+        tickCumulative = OracleLibrary.latestCumulativeTick(pool);
+        twapTick = OracleLibrary.timeWeightedAverageTick(
+            lastCumulativeTick, tickCumulative, int56(uint56(block.timestamp - lastUpdated))
+        );
     }
 
     // computing funding rate for the past period
     // > 1e18 means positive funding rate
     // < 1e18 means negative funding rate
-    function _multiplier(int56 latestCumulativeTick, uint256 cachedTarget) internal view returns (uint256) {
-        uint256 m = _markTwapSinceLastUpdate(latestCumulativeTick);
+    function _multiplier(int24 latestTwapTick, uint256 cachedTarget) internal view returns (uint256) {
+        uint256 m = _mark(latestTwapTick);
         uint256 period = block.timestamp - lastUpdated;
         uint256 periodRatio = FixedPointMathLib.divWadDown(period, fundingPeriod);
         uint256 targetMarkRatio;

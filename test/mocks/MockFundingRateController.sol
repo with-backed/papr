@@ -15,7 +15,7 @@ contract MockFundingRateController is FundingRateController {
     }
 
     function init(uint256 _target, int56 initCumulativeTick) external {
-        lastUpdated = uint72(block.timestamp);
+        lastUpdated = uint48(block.timestamp);
         target = uint128(_target);
         lastCumulativeTick = initCumulativeTick;
     }
