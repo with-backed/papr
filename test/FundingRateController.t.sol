@@ -78,9 +78,16 @@ contract FundingRateControllerTest is Test {
         fundingRateController.setPool(address(p));
     }
 
-    function testSetPoolUpdatesPoolCorrectly() public {
+    function testSetPoolUpdatesPool() public {
         MinimalObservablePool p = new MinimalObservablePool(underlying, papr);
         fundingRateController.setPool(address(p));
         assertEq(address(p), fundingRateController.pool());
+    }
+
+    function testSetPoolEmitsSetPool() public {
+        MinimalObservablePool p = new MinimalObservablePool(underlying, papr);
+        vm.expectEmit(true, false, false, false);
+        emit SetPool(address(p));
+        fundingRateController.setPool(address(p));
     }
 }
