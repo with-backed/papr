@@ -6,18 +6,12 @@ import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 
 import {OracleLibrary} from "src/libraries/OracleLibrary.sol";
 import {UniswapHelpers} from "src/libraries/UniswapHelpers.sol";
+import {IFundingRateController} from "src/interfaces/IFundingRateController.sol";
 
-contract FundingRateController {
-    event UpdateTarget(uint256 newTarget);
-    event SetPool(address indexed pool);
-
-    error PoolTokensDoNotMatch();
-    error AlreadyInitialized();
-
+contract FundingRateController is IFundingRateController {
     ERC20 public immutable underlying;
     ERC20 public immutable papr;
-    // TODO: method to update for oracle
-    uint256 public fundingPeriod = 4 weeks;
+    uint256 public fundingPeriod;
     address public pool;
     uint256 immutable targetMarkRatioMax;
     uint256 immutable targetMarkRatioMin;
@@ -33,6 +27,8 @@ contract FundingRateController {
 
         targetMarkRatioMax = _targetMarkRatioMax;
         targetMarkRatioMin = _targetMarkRatioMin;
+
+        _setFundingPeriod(4 weeks);
     }
 
     function updateTarget() public returns (uint256 nTarget) {
@@ -94,6 +90,15 @@ contract FundingRateController {
         pool = _pool;
 
         emit SetPool(_pool);
+    }
+
+    function _setFundingPeriod(uint256 _fundingPeriod) internal {
+        if (_fundingPeriod < 7 days) revert FundingPeriodTooShort();
+        if (_fundingPeriod > 90 days) revert FundingPeriodTooLong();
+
+        fundingPeriod = _fundingPeriod;
+
+        emit SetFundingPeriod(_fundingPeriod);
     }
 
     function _newTarget(int24 latestTwapTick, uint256 cachedTarget) internal view returns (uint256) {

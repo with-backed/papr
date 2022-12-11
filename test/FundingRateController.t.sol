@@ -8,9 +8,12 @@ import {MockFundingRateController} from "test/mocks/MockFundingRateController.so
 import {MinimalObservablePool} from "test/mocks/uniswap/MinimalObservablePool.sol";
 import {TestERC20} from "test/mocks/TestERC20.sol";
 import {TickMath} from "fullrange/libraries/TickMath.sol";
+import {IFundingRateController} from "src/interfaces/IFundingRateController.sol";
 
 contract FundingRateControllerTest is Test {
-    // event UpdateTarget(uint256 newNorm);
+    event UpdateTarget(uint256 newTarget);
+    event SetPool(address indexed pool);
+    event SetFundingPeriod(uint256 fundingPeriod);
 
     MockFundingRateController fundingRateController;
 
@@ -22,7 +25,7 @@ contract FundingRateControllerTest is Test {
     function setUp() public {
         fundingRateController = new MockFundingRateController(underlying, papr, indexMarkRatioMax, indexMarkRatioMin);
         fundingRateController.init(1e18, 0);
-        fundingRateController.setPool(address(new MinimalObservablePool()));
+        fundingRateController.setPool(address(new MinimalObservablePool(underlying, papr)));
     }
 
     function testFuzzUpdateTarget(int56 newTickCumulative, uint24 secondsPassed) public {
@@ -38,5 +41,53 @@ contract FundingRateControllerTest is Test {
         MinimalObservablePool(fundingRateController.pool()).setTickComulatives(_tickCumulatives);
         fundingRateController.updateTarget();
         fundingRateController.newTarget();
+    }
+
+    function testSetFundingPeriodEmitsCorrectly() public {
+        vm.expectEmit(false, false, false, true);
+        emit SetFundingPeriod(5 weeks);
+        fundingRateController.setFundingPeriod(5 weeks);
+    }
+
+    function testSetFundingPeriodUpdatesFundindPeriod() public {
+        fundingRateController.setFundingPeriod(40 days);
+        assertEq(40 days, fundingRateController.fundingPeriod());
+    }
+
+    function testSetFundingPeriodRevertsIfPeriodTooShort() public {
+        vm.expectRevert(IFundingRateController.FundingPeriodTooShort.selector);
+        fundingRateController.setFundingPeriod(5 days);
+    }
+
+    function testSetFundingPeriodRevertsIfPeriodTooLong() public {
+        vm.expectRevert(IFundingRateController.FundingPeriodTooLong.selector);
+        fundingRateController.setFundingPeriod(91 days);
+    }
+
+    function testSetPoolRevertsIfWrongToken0() public {
+        address token0 = address(1);
+        MinimalObservablePool p = new MinimalObservablePool(ERC20(token0), papr);
+        vm.expectRevert(IFundingRateController.PoolTokensDoNotMatch.selector);
+        fundingRateController.setPool(address(p));
+    }
+
+    function testSetPoolRevertsIfWrongToken1() public {
+        address token1 = address(type(uint160).max);
+        MinimalObservablePool p = new MinimalObservablePool(ERC20(token1), papr);
+        vm.expectRevert(IFundingRateController.PoolTokensDoNotMatch.selector);
+        fundingRateController.setPool(address(p));
+    }
+
+    function testSetPoolUpdatesPool() public {
+        MinimalObservablePool p = new MinimalObservablePool(underlying, papr);
+        fundingRateController.setPool(address(p));
+        assertEq(address(p), fundingRateController.pool());
+    }
+
+    function testSetPoolEmitsSetPool() public {
+        MinimalObservablePool p = new MinimalObservablePool(underlying, papr);
+        vm.expectEmit(true, false, false, false);
+        emit SetPool(address(p));
+        fundingRateController.setPool(address(p));
     }
 }

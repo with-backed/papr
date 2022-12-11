@@ -11,7 +11,11 @@ contract MockFundingRateController is FundingRateController {
     {}
 
     function setPool(address _pool) external {
-        pool = _pool;
+        _setPool(_pool);
+    }
+
+    function setFundingPeriod(uint256 _fundingPeriod) external {
+        _setFundingPeriod(_fundingPeriod);
     }
 
     function init(uint256 _target, int56 initCumulativeTick) external {

@@ -302,6 +302,10 @@ contract PaprController is
         _setPool(_pool);
     }
 
+    function setFundingPeriod(uint256 _fundingPeriod) public onlyOwner {
+        _setFundingPeriod(_fundingPeriod);
+    }
+
     function setAllowedCollateral(IPaprController.CollateralAllowedConfig[] calldata collateralConfigs)
         external
         onlyOwner

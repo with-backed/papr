@@ -1,9 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
+import {ERC20} from "solmate/tokens/ERC20.sol";
+
 contract MinimalObservablePool {
     int56[] tickCumulatives;
+    ERC20 public token0;
+    ERC20 public token1;
 
+    constructor(ERC20 tokenA, ERC20 tokenB) {
+        (token0, token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
+    }
+
+    // we only ever are calling observe with [0] so reasonably _tickCumulatives should never
+    // be > length 1
     function setTickComulatives(int56[] calldata _tickCumulatives) external {
         tickCumulatives = _tickCumulatives;
     }
