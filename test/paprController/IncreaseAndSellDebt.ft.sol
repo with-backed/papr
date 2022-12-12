@@ -7,7 +7,7 @@ import {BasePaprControllerTest} from "test/paprController/BasePaprController.ft.
 import {IPaprController} from "src/interfaces/IPaprController.sol";
 import {PaprController} from "src/PaprController.sol";
 
-contract increaseDebtAndSell is BasePaprControllerTest {
+contract IncreaseDebtAndSellTest is BasePaprControllerTest {
     function testincreaseDebtAndSell() public {
         vm.startPrank(borrower);
         nft.approve(address(controller), collateralId);
