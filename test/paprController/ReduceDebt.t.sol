@@ -11,11 +11,7 @@ import {ERC721} from "solmate/tokens/ERC721.sol";
 import {PaprToken} from "src/PaprToken.sol";
 
 contract ReduceDebtTest is BasePaprControllerTest {
-    event ReduceDebt(
-        address indexed account,
-        ERC721 indexed collateralAddress,
-        uint256 amount
-    );
+    event ReduceDebt(address indexed account, ERC721 indexed collateralAddress, uint256 amount);
 
     function testFuzzReduceDebt(uint256 debtToReduce) public {
         vm.assume(debtToReduce <= debt);
@@ -24,10 +20,7 @@ contract ReduceDebtTest is BasePaprControllerTest {
 
         controller.addCollateral(collateral);
         controller.increaseDebt(borrower, collateral.addr, debt, oracleInfo);
-        IPaprController.VaultInfo memory vaultInfo = controller.vaultInfo(
-            borrower,
-            collateral.addr
-        );
+        IPaprController.VaultInfo memory vaultInfo = controller.vaultInfo(borrower, collateral.addr);
         assertEq(vaultInfo.debt, debt);
         assertEq(debt, debtToken.balanceOf(borrower));
 
@@ -41,22 +34,16 @@ contract ReduceDebtTest is BasePaprControllerTest {
         vm.stopPrank();
     }
 
-    function testFuzzReduceDebtRevertsIfReducingMoreThanBalance(
-        uint200 debtToReduce,
-        uint256 borrowerPaprBalance
-    ) public {
-        vm.assume(
-            debtToReduce > borrowerPaprBalance && borrowerPaprBalance < debt
-        );
+    function testFuzzReduceDebtRevertsIfReducingMoreThanBalance(uint200 debtToReduce, uint256 borrowerPaprBalance)
+        public
+    {
+        vm.assume(debtToReduce > borrowerPaprBalance && borrowerPaprBalance < debt);
         vm.startPrank(borrower);
         nft.approve(address(controller), collateralId);
 
         controller.addCollateral(collateral);
         controller.increaseDebt(borrower, collateral.addr, debt, oracleInfo);
-        IPaprController.VaultInfo memory vaultInfo = controller.vaultInfo(
-            borrower,
-            collateral.addr
-        );
+        IPaprController.VaultInfo memory vaultInfo = controller.vaultInfo(borrower, collateral.addr);
         assertEq(vaultInfo.debt, debt);
         assertEq(debt, debtToken.balanceOf(borrower));
 
@@ -68,19 +55,14 @@ contract ReduceDebtTest is BasePaprControllerTest {
         vm.stopPrank();
     }
 
-    function testFuzzReduceDebtRevertsIfReducingMoreThanVaultDebt(
-        uint200 debtToReduce
-    ) public {
+    function testFuzzReduceDebtRevertsIfReducingMoreThanVaultDebt(uint200 debtToReduce) public {
         vm.assume(debtToReduce > debt);
         vm.startPrank(borrower);
         nft.approve(address(controller), collateralId);
 
         controller.addCollateral(collateral);
         controller.increaseDebt(borrower, collateral.addr, debt, oracleInfo);
-        IPaprController.VaultInfo memory vaultInfo = controller.vaultInfo(
-            borrower,
-            collateral.addr
-        );
+        IPaprController.VaultInfo memory vaultInfo = controller.vaultInfo(borrower, collateral.addr);
         assertEq(vaultInfo.debt, debt);
         assertEq(debt, debtToken.balanceOf(borrower));
         vm.stopPrank();

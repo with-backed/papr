@@ -9,11 +9,7 @@ import {PaprController} from "src/PaprController.sol";
 import {ERC721} from "solmate/tokens/ERC721.sol";
 
 contract IncreaseDebtTest is BasePaprControllerTest {
-    event IncreaseDebt(
-        address indexed account,
-        ERC721 indexed collateralAddress,
-        uint256 amount
-    );
+    event IncreaseDebt(address indexed account, ERC721 indexed collateralAddress, uint256 amount);
 
     function testFuzzIncreaseDebt(uint256 debt) public {
         vm.assume(debt < controller.maxDebt(oraclePrice));
@@ -36,20 +32,12 @@ contract IncreaseDebtTest is BasePaprControllerTest {
 
         uint256 maxDebt = controller.maxDebt(oraclePrice);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IPaprController.ExceedsMaxDebt.selector,
-                debt,
-                maxDebt
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IPaprController.ExceedsMaxDebt.selector, debt, maxDebt));
         controller.increaseDebt(borrower, collateral.addr, debt, oracleInfo);
     }
 
-    function testFuzzIncreaseDebtRevertsIfDebtGreaterThanMaxUint200(
-        uint256 debt
-    ) public {
-        vm.assume(debt > (2**200) - 1);
+    function testFuzzIncreaseDebtRevertsIfDebtGreaterThanMaxUint200(uint256 debt) public {
+        vm.assume(debt > (2 ** 200) - 1);
         vm.startPrank(borrower);
         nft.approve(address(controller), collateralId);
         controller.addCollateral(collateral);
