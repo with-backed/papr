@@ -25,12 +25,12 @@ contract ReduceDebtTest is BasePaprControllerTest {
         assertEq(debt, debtToken.balanceOf(borrower));
 
         vm.expectEmit(true, true, true, true);
-        emit ReduceDebt(borrower, collateral.addr, debt);
-        controller.reduceDebt(borrower, collateral.addr, debt);
+        emit ReduceDebt(borrower, collateral.addr, debtToReduce);
+        controller.reduceDebt(borrower, collateral.addr, debtToReduce);
         vaultInfo = controller.vaultInfo(borrower, collateral.addr);
 
-        assertEq(vaultInfo.debt, 0);
-        assertEq(0, debtToken.balanceOf(borrower));
+        assertEq(vaultInfo.debt, debt - debtToReduce);
+        assertEq(debt - debtToReduce, debtToken.balanceOf(borrower));
         vm.stopPrank();
     }
 
