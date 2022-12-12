@@ -21,6 +21,7 @@ import {INonfungiblePositionManager} from "test/mocks/uniswap/INonfungiblePositi
 contract BasePaprControllerTest is MainnetForking, UniswapForking, OracleTest {
     TestERC721 nft = new TestERC721();
     TestERC20 underlying = new TestERC20();
+    ERC20 debtToken;
     PaprController controller;
 
     uint256 collateralId = 1;
@@ -47,6 +48,7 @@ contract BasePaprControllerTest is MainnetForking, UniswapForking, OracleTest {
             underlying,
             oracleAddress
         );
+        debtToken = ERC20(controller.papr());
 
         IPaprController.CollateralAllowedConfig[] memory args = new IPaprController.CollateralAllowedConfig[](1);
         args[0] = IPaprController.CollateralAllowedConfig(address(nft), true);
@@ -78,8 +80,8 @@ contract BasePaprControllerTest is MainnetForking, UniswapForking, OracleTest {
             tickLower -= 400;
         }
         // make ticks align to correct spacing
-        tickLower = tickLower / 200 * 200;
-        tickUpper = tickUpper / 200 * 200;
+        tickLower = (tickLower / 200) * 200;
+        tickUpper = (tickUpper / 200) * 200;
 
         underlying.approve(address(positionManager), amount);
         underlying.mint(address(this), amount);
@@ -116,12 +118,24 @@ contract BasePaprControllerTest is MainnetForking, UniswapForking, OracleTest {
         });
     }
 
-    function _openMaxLoanAndSwap() internal {
-        safeTransferReceivedArgs.swapParams.amount = controller.maxDebt(oraclePrice) - 2;
+    function _openMaxLoan() internal returns (uint256) {
+        IPaprController.SwapParams memory emptySwap;
+        uint256 debtAmount = controller.maxDebt(oraclePrice) - 2;
+        safeTransferReceivedArgs.debt = debtAmount;
+        safeTransferReceivedArgs.swapParams = emptySwap;
+        vm.prank(borrower);
+        nft.safeTransferFrom(borrower, address(controller), collateralId, abi.encode(safeTransferReceivedArgs));
+        return debtAmount;
+    }
+
+    function _openMaxLoanAndSwap() internal returns (uint256) {
+        uint256 debtAmount = controller.maxDebt(oraclePrice) - 2;
+        safeTransferReceivedArgs.swapParams.amount = debtAmount;
         safeTransferReceivedArgs.swapParams.minOut = 1;
         safeTransferReceivedArgs.swapParams.sqrtPriceLimitX96 = _maxSqrtPriceLimit(true);
         vm.prank(borrower);
         nft.safeTransferFrom(borrower, address(controller), collateralId, abi.encode(safeTransferReceivedArgs));
+        return debtAmount;
     }
 
     function _makeMaxLoanLiquidatable() internal {
