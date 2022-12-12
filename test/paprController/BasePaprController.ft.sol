@@ -118,12 +118,24 @@ contract BasePaprControllerTest is MainnetForking, UniswapForking, OracleTest {
         });
     }
 
-    function _openMaxLoanAndSwap() internal {
-        safeTransferReceivedArgs.swapParams.amount = controller.maxDebt(oraclePrice) - 2;
+    function _openMaxLoan() internal returns (uint256) {
+        IPaprController.SwapParams memory emptySwap;
+        uint256 debtAmount = controller.maxDebt(oraclePrice) - 2;
+        safeTransferReceivedArgs.debt = debtAmount;
+        safeTransferReceivedArgs.swapParams = emptySwap;
+        vm.prank(borrower);
+        nft.safeTransferFrom(borrower, address(controller), collateralId, abi.encode(safeTransferReceivedArgs));
+        return debtAmount;
+    }
+
+    function _openMaxLoanAndSwap() internal returns (uint256) {
+        uint256 debtAmount = controller.maxDebt(oraclePrice) - 2;
+        safeTransferReceivedArgs.swapParams.amount = debtAmount;
         safeTransferReceivedArgs.swapParams.minOut = 1;
         safeTransferReceivedArgs.swapParams.sqrtPriceLimitX96 = _maxSqrtPriceLimit(true);
         vm.prank(borrower);
         nft.safeTransferFrom(borrower, address(controller), collateralId, abi.encode(safeTransferReceivedArgs));
+        return debtAmount;
     }
 
     function _makeMaxLoanLiquidatable() internal {

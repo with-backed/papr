@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
+import {stdError} from "forge-std/Test.sol";
 import {TickMath} from "fullrange/libraries/TickMath.sol";
 
 import {BasePaprControllerTest} from "test/paprController/BasePaprController.ft.sol";
@@ -14,63 +15,45 @@ contract ReduceDebtTest is BasePaprControllerTest {
     event ReduceDebt(address indexed account, ERC721 indexed collateralAddress, uint256 amount);
 
     function testFuzzReduceDebt(uint256 debtToReduce) public {
+        uint256 debt = _openMaxLoan();
         vm.assume(debtToReduce <= debt);
-        vm.startPrank(borrower);
-        nft.approve(address(controller), collateralId);
 
-        controller.addCollateral(collateral);
-        controller.increaseDebt(borrower, collateral.addr, debt, oracleInfo);
-        IPaprController.VaultInfo memory vaultInfo = controller.vaultInfo(borrower, collateral.addr);
-        assertEq(vaultInfo.debt, debt);
-        assertEq(debt, debtToken.balanceOf(borrower));
-
-        vm.expectEmit(true, true, true, true);
-        emit ReduceDebt(borrower, collateral.addr, debtToReduce);
+        vm.prank(borrower);
         controller.reduceDebt(borrower, collateral.addr, debtToReduce);
-        vaultInfo = controller.vaultInfo(borrower, collateral.addr);
+
+        IPaprController.VaultInfo memory vaultInfo = controller.vaultInfo(borrower, collateral.addr);
 
         assertEq(vaultInfo.debt, debt - debtToReduce);
         assertEq(debt - debtToReduce, debtToken.balanceOf(borrower));
         vm.stopPrank();
     }
 
-    function testFuzzReduceDebtRevertsIfReducingMoreThanBalance(uint200 debtToReduce, uint256 borrowerPaprBalance)
-        public
-    {
-        vm.assume(debtToReduce > borrowerPaprBalance && borrowerPaprBalance < debt);
+    function testReduceDebtEmitsReduceDebtEvent() public {
+        uint256 debtAmount = _openMaxLoan();
         vm.startPrank(borrower);
-        nft.approve(address(controller), collateralId);
+        vm.expectEmit(true, true, true, true);
+        emit ReduceDebt(borrower, collateral.addr, debtAmount);
+        controller.reduceDebt(borrower, collateral.addr, debtAmount);
+    }
 
-        controller.addCollateral(collateral);
-        controller.increaseDebt(borrower, collateral.addr, debt, oracleInfo);
-        IPaprController.VaultInfo memory vaultInfo = controller.vaultInfo(borrower, collateral.addr);
-        assertEq(vaultInfo.debt, debt);
-        assertEq(debt, debtToken.balanceOf(borrower));
+    function testReduceDebtRevertsIfReducingMoreThanBalance() public {
+        uint256 debt = _openMaxLoan();
+        vm.startPrank(borrower);
+        debtToken.transfer(address(0), 1);
 
-        // set borrowers papr balance equal to borrowerPaprBalance
-        debtToken.transfer(address(0), debt - borrowerPaprBalance);
-
-        vm.expectRevert();
-        controller.reduceDebt(borrower, collateral.addr, debtToReduce);
+        vm.expectRevert(stdError.arithmeticError);
+        controller.reduceDebt(borrower, collateral.addr, debt);
         vm.stopPrank();
     }
 
     function testFuzzReduceDebtRevertsIfReducingMoreThanVaultDebt(uint200 debtToReduce) public {
+        uint256 debt = _openMaxLoan();
         vm.assume(debtToReduce > debt);
-        vm.startPrank(borrower);
-        nft.approve(address(controller), collateralId);
-
-        controller.addCollateral(collateral);
-        controller.increaseDebt(borrower, collateral.addr, debt, oracleInfo);
-        IPaprController.VaultInfo memory vaultInfo = controller.vaultInfo(borrower, collateral.addr);
-        assertEq(vaultInfo.debt, debt);
-        assertEq(debt, debtToken.balanceOf(borrower));
-        vm.stopPrank();
 
         vm.prank(address(controller));
         PaprToken(address(debtToken)).mint(borrower, debtToReduce - debt);
 
-        vm.expectRevert();
+        vm.expectRevert(stdError.arithmeticError);
         controller.reduceDebt(borrower, collateral.addr, debtToReduce);
         vm.stopPrank();
     }
