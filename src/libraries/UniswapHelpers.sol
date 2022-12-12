@@ -10,6 +10,10 @@ import {SafeCast} from "v3-core/contracts/libraries/SafeCast.sol";
 library UniswapHelpers {
     using SafeCast for uint256;
 
+    /// @param minOut The minimum out amount the user wanted
+    /// @param actualOut The actual out amount the user received
+    error TooLittleOut(uint256 minOut, uint256 actualOut);
+
     IUniswapV3Factory constant FACTORY = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
 
     function swap(
@@ -17,6 +21,7 @@ library UniswapHelpers {
         address recipient,
         bool zeroForOne,
         uint256 amountSpecified,
+        uint256 minOut,
         uint160 sqrtPriceLimitX96,
         bytes memory data
     ) internal returns (uint256 amountOut, uint256 amountIn) {
@@ -36,6 +41,10 @@ library UniswapHelpers {
         } else {
             amountOut = uint256(-amount0);
             amountIn = uint256(amount1);
+        }
+
+        if (amountOut < minOut) {
+            revert TooLittleOut(amountOut, minOut);
         }
     }
 

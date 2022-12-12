@@ -6,6 +6,7 @@ import {TickMath} from "fullrange/libraries/TickMath.sol";
 import {BasePaprControllerTest} from "test/paprController/BasePaprController.ft.sol";
 import {IPaprController} from "src/interfaces/IPaprController.sol";
 import {PaprController} from "src/PaprController.sol";
+import {UniswapHelpers} from "src/libraries/UniswapHelpers.sol";
 
 contract BuyAndReduceDebt is BasePaprControllerTest {
     function testBuyAndReduceDebtReducesDebt() public {
@@ -19,7 +20,7 @@ contract BuyAndReduceDebt is BasePaprControllerTest {
             swapFeeTo: address(0),
             swapFeeBips: 0
         });
-        uint256 underlyingOut = controller.mintAndSellDebt(borrower, collateral.addr, swapParams, oracleInfo);
+        uint256 underlyingOut = controller.increaseDebtAndSell(borrower, collateral.addr, swapParams, oracleInfo);
         IPaprController.VaultInfo memory vaultInfo = controller.vaultInfo(borrower, collateral.addr);
         assertEq(vaultInfo.debt, debt);
         assertEq(underlyingOut, underlying.balanceOf(borrower));
@@ -50,7 +51,7 @@ contract BuyAndReduceDebt is BasePaprControllerTest {
             swapFeeTo: address(0),
             swapFeeBips: 0
         });
-        uint256 underlyingOut = controller.mintAndSellDebt(borrower, collateral.addr, swapParams, oracleInfo);
+        uint256 underlyingOut = controller.increaseDebtAndSell(borrower, collateral.addr, swapParams, oracleInfo);
         underlying.approve(address(controller), underlyingOut);
         uint160 priceLimit = _maxSqrtPriceLimit({sellingPAPR: false});
         uint256 out = quoter.quoteExactInputSingle({
@@ -60,7 +61,7 @@ contract BuyAndReduceDebt is BasePaprControllerTest {
             amountIn: underlyingOut,
             sqrtPriceLimitX96: priceLimit
         });
-        vm.expectRevert(abi.encodeWithSelector(IPaprController.TooLittleOut.selector, out, out + 1));
+        vm.expectRevert(abi.encodeWithSelector(UniswapHelpers.TooLittleOut.selector, out, out + 1));
         swapParams = IPaprController.SwapParams({
             amount: underlyingOut,
             minOut: out + 1,

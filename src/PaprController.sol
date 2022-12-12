@@ -85,7 +85,7 @@ contract PaprController is
         _addCollateralToVault(from, collateral);
 
         if (request.swapParams.minOut > 0) {
-            _mintAndSellDebt(from, request.proceedsTo, ERC721(msg.sender), request.swapParams, request.oracleInfo);
+            _increaseDebtAndSell(from, request.proceedsTo, ERC721(msg.sender), request.swapParams, request.oracleInfo);
         } else if (request.debt > 0) {
             _increaseDebt(from, collateral.addr, request.proceedsTo, request.debt, request.oracleInfo);
         }
@@ -93,7 +93,7 @@ contract PaprController is
         return ERC721TokenReceiver.onERC721Received.selector;
     }
 
-    function mintAndSellDebt(
+    function increaseDebtAndSell(
         address proceedsTo,
         ERC721 collateralAsset,
         IPaprController.SwapParams calldata params,
@@ -101,7 +101,8 @@ contract PaprController is
     ) public returns (uint256 amountOut) {
         bool hasFee = params.swapFeeBips != 0;
 
-        (amountOut,) = _swap(
+        (amountOut,) = UniswapHelpers.swap(
+            pool,
             hasFee ? address(this) : proceedsTo,
             !token0IsUnderlying,
             params.amount,
@@ -123,8 +124,14 @@ contract PaprController is
     {
         bool hasFee = params.swapFeeBips != 0;
 
-        (uint256 amountOut, uint256 amountIn) = _swap(
-            account, token0IsUnderlying, params.amount, params.minOut, params.sqrtPriceLimitX96, abi.encode(msg.sender)
+        (uint256 amountOut, uint256 amountIn) = UniswapHelpers.swap(
+            pool,
+            account,
+            token0IsUnderlying,
+            params.amount,
+            params.minOut,
+            params.sqrtPriceLimitX96,
+            abi.encode(msg.sender)
         );
 
         if (hasFee) {
@@ -335,9 +342,9 @@ contract PaprController is
         return _vaultInfo[account][asset];
     }
 
-    /// same as mintAndSellDebt but takes args in memory
+    /// same as increaseDebtAndSell but takes args in memory
     /// to work with onERC721Received
-    function _mintAndSellDebt(
+    function _increaseDebtAndSell(
         address account,
         address proceedsTo,
         ERC721 collateralAsset,
@@ -346,7 +353,8 @@ contract PaprController is
     ) internal returns (uint256 amountOut) {
         bool hasFee = params.swapFeeBips != 0;
 
-        (amountOut,) = _swap(
+        (amountOut,) = UniswapHelpers.swap(
+            pool,
             hasFee ? address(this) : proceedsTo,
             !token0IsUnderlying,
             params.amount,
@@ -359,22 +367,6 @@ contract PaprController is
             uint256 fee = amountOut * params.swapFeeBips / 1e4;
             underlying.transfer(params.swapFeeTo, fee);
             underlying.transfer(proceedsTo, amountOut - fee);
-        }
-    }
-
-    function _swap(
-        address recipient,
-        bool zeroForOne,
-        uint256 amountSpecified,
-        uint256 minOut,
-        uint160 sqrtPriceLimitX96,
-        bytes memory data
-    ) internal returns (uint256 amountOut, uint256 amountIn) {
-        (amountOut, amountIn) =
-            UniswapHelpers.swap(pool, recipient, zeroForOne, amountSpecified, sqrtPriceLimitX96, data);
-
-        if (amountOut < minOut) {
-            revert IPaprController.TooLittleOut(amountOut, minOut);
         }
     }
 

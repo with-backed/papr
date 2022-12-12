@@ -38,10 +38,6 @@ interface IPaprController {
         bool allowed;
     }
 
-    /// @param minOut The minimum out amount the user wanted
-    /// @param actualOut The actual out amount the user received
-    error TooLittleOut(uint256 minOut, uint256 actualOut);
-
     /// @param vaultDebt how much debt the vault has
     /// @param maxDebt the max debt the vault is allowed to have
     error ExceedsMaxDebt(uint256 vaultDebt, uint256 maxDebt);

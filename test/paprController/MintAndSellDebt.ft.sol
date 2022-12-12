@@ -7,8 +7,8 @@ import {BasePaprControllerTest} from "test/paprController/BasePaprController.ft.
 import {IPaprController} from "src/interfaces/IPaprController.sol";
 import {PaprController} from "src/PaprController.sol";
 
-contract MintAndSellDebt is BasePaprControllerTest {
-    function testMintAndSellDebt() public {
+contract increaseDebtAndSell is BasePaprControllerTest {
+    function testincreaseDebtAndSell() public {
         vm.startPrank(borrower);
         nft.approve(address(controller), collateralId);
         controller.addCollateral(collateral);
@@ -19,7 +19,7 @@ contract MintAndSellDebt is BasePaprControllerTest {
             swapFeeTo: address(5),
             swapFeeBips: 100
         });
-        uint256 underlyingOut = controller.mintAndSellDebt(borrower, collateral.addr, swapParams, oracleInfo);
+        uint256 underlyingOut = controller.increaseDebtAndSell(borrower, collateral.addr, swapParams, oracleInfo);
         uint256 fee = underlyingOut * swapParams.swapFeeBips / 1e4;
         assertEq(underlying.balanceOf(swapParams.swapFeeTo), fee);
         assertEq(underlying.balanceOf(borrower), underlyingOut - fee);
