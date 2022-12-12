@@ -26,11 +26,11 @@ contract PaprController is
     uint256 public immutable maxLTV;
 
     // auction configs
-    uint256 public liquidationAuctionMinSpacing = 2 days;
-    uint256 public perPeriodAuctionDecayWAD = 0.7e18;
-    uint256 public auctionDecayPeriod = 1 days;
-    uint256 public auctionStartPriceMultiplier = 3;
-    uint256 public liquidationPenaltyBips = 1000;
+    uint256 public immutable liquidationAuctionMinSpacing = 2 days;
+    uint256 public immutable perPeriodAuctionDecayWAD = 0.7e18;
+    uint256 public immutable auctionDecayPeriod = 1 days;
+    uint256 public immutable auctionStartPriceMultiplier = 3;
+    uint256 public immutable liquidationPenaltyBips = 1000;
 
     // account => asset => vaultInfo
     mapping(address => mapping(ERC721 => IPaprController.VaultInfo)) private _vaultInfo;
@@ -73,6 +73,59 @@ contract PaprController is
         _init(underlyingONE, sqrtRatio);
     }
 
+    function addCollateral(IPaprController.Collateral calldata collateral) public {
+        _addCollateralToVault(msg.sender, collateral);
+        collateral.addr.transferFrom(msg.sender, address(this), collateral.id);
+    }
+
+    function removeCollateral(
+        address sendTo,
+        IPaprController.Collateral calldata collateral,
+        ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
+    ) external {
+        uint256 newTarget = updateTarget();
+
+        if (collateralOwner[collateral.addr][collateral.id] != msg.sender) {
+            revert IPaprController.OnlyCollateralOwner();
+        }
+
+        delete collateralOwner[collateral.addr][collateral.id];
+
+        uint16 newCount;
+        unchecked {
+            newCount = _vaultInfo[msg.sender][collateral.addr].count - 1;
+            _vaultInfo[msg.sender][collateral.addr].count = newCount;
+        }
+
+        // allows for onReceive hook to sell and repay debt before the
+        // debt check below
+        collateral.addr.safeTransferFrom(address(this), sendTo, collateral.id);
+
+        uint256 debt = _vaultInfo[msg.sender][collateral.addr].debt;
+        uint256 oraclePrice =
+            underwritePriceForCollateral(collateral.addr, ReservoirOracleUnderwriter.PriceKind.LOWER, oracleInfo);
+        uint256 max = _maxDebt(oraclePrice * newCount, newTarget);
+
+        if (debt > max) {
+            revert IPaprController.ExceedsMaxDebt(debt, max);
+        }
+
+        emit RemoveCollateral(msg.sender, collateral);
+    }
+
+    function increaseDebt(
+        address mintTo,
+        ERC721 asset,
+        uint256 amount,
+        ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
+    ) public {
+        _increaseDebt({account: msg.sender, asset: asset, mintTo: mintTo, amount: amount, oracleInfo: oracleInfo});
+    }
+
+    function reduceDebt(address account, ERC721 asset, uint256 amount) public {
+        _reduceDebt({account: account, asset: asset, burnFrom: msg.sender, amount: amount});
+    }
+
     function onERC721Received(address from, address, uint256 _id, bytes calldata data)
         external
         override
@@ -92,6 +145,8 @@ contract PaprController is
 
         return ERC721TokenReceiver.onERC721Received.selector;
     }
+
+    /// CONVENIENCE SWAP FUNCTIONS ///
 
     function increaseDebtAndSell(
         address proceedsTo,
@@ -170,58 +225,7 @@ contract PaprController is
         }
     }
 
-    function addCollateral(IPaprController.Collateral calldata collateral) public {
-        _addCollateralToVault(msg.sender, collateral);
-        collateral.addr.transferFrom(msg.sender, address(this), collateral.id);
-    }
-
-    function removeCollateral(
-        address sendTo,
-        IPaprController.Collateral calldata collateral,
-        ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
-    ) external {
-        uint256 newTarget = updateTarget();
-
-        if (collateralOwner[collateral.addr][collateral.id] != msg.sender) {
-            revert IPaprController.OnlyCollateralOwner();
-        }
-
-        delete collateralOwner[collateral.addr][collateral.id];
-
-        uint16 newCount;
-        unchecked {
-            newCount = _vaultInfo[msg.sender][collateral.addr].count - 1;
-            _vaultInfo[msg.sender][collateral.addr].count = newCount;
-        }
-
-        // allows for onReceive hook to sell and repay debt before the
-        // debt check below
-        collateral.addr.safeTransferFrom(address(this), sendTo, collateral.id);
-
-        uint256 debt = _vaultInfo[msg.sender][collateral.addr].debt;
-        uint256 oraclePrice =
-            underwritePriceForCollateral(collateral.addr, ReservoirOracleUnderwriter.PriceKind.LOWER, oracleInfo);
-        uint256 max = _maxDebt(oraclePrice * newCount, newTarget);
-
-        if (debt > max) {
-            revert IPaprController.ExceedsMaxDebt(debt, max);
-        }
-
-        emit RemoveCollateral(msg.sender, collateral);
-    }
-
-    function increaseDebt(
-        address mintTo,
-        ERC721 asset,
-        uint256 amount,
-        ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
-    ) public {
-        _increaseDebt({account: msg.sender, asset: asset, mintTo: mintTo, amount: amount, oracleInfo: oracleInfo});
-    }
-
-    function reduceDebt(address account, ERC721 asset, uint256 amount) public {
-        _reduceDebt({account: account, asset: asset, burnFrom: msg.sender, amount: amount});
-    }
+    /// LIQUIDATION AUCTION FUNCTIONS ///
 
     function purchaseLiquidationAuctionNFT(
         Auction calldata auction,
@@ -305,6 +309,8 @@ contract PaprController is
         );
     }
 
+    /// OWNER FUNCTIONS ///
+
     function setPool(address _pool) public onlyOwner {
         _setPool(_pool);
     }
@@ -328,7 +334,7 @@ contract PaprController is
         }
     }
 
-    /// TODO admin functions: update auction configs, move papr from liquidation fee, update reservoir oracle configs
+    /// TODO move papr from liquidation fee
 
     function maxDebt(uint256 totalCollateraValue) public view returns (uint256) {
         if (lastUpdated == block.timestamp) {
@@ -342,32 +348,15 @@ contract PaprController is
         return _vaultInfo[account][asset];
     }
 
-    /// same as increaseDebtAndSell but takes args in memory
-    /// to work with onERC721Received
-    function _increaseDebtAndSell(
-        address account,
-        address proceedsTo,
-        ERC721 collateralAsset,
-        IPaprController.SwapParams memory params,
-        ReservoirOracleUnderwriter.OracleInfo memory oracleInfo
-    ) internal returns (uint256 amountOut) {
-        bool hasFee = params.swapFeeBips != 0;
-
-        (amountOut,) = UniswapHelpers.swap(
-            pool,
-            hasFee ? address(this) : proceedsTo,
-            !token0IsUnderlying,
-            params.amount,
-            params.minOut,
-            params.sqrtPriceLimitX96,
-            abi.encode(account, collateralAsset, oracleInfo)
-        );
-
-        if (hasFee) {
-            uint256 fee = amountOut * params.swapFeeBips / 1e4;
-            underlying.transfer(params.swapFeeTo, fee);
-            underlying.transfer(proceedsTo, amountOut - fee);
+    function _addCollateralToVault(address account, IPaprController.Collateral memory collateral) internal {
+        if (!isAllowed[address(collateral.addr)]) {
+            revert IPaprController.InvalidCollateral();
         }
+
+        collateralOwner[collateral.addr][collateral.id] = account;
+        _vaultInfo[account][collateral.addr].count += 1;
+
+        emit AddCollateral(account, collateral);
     }
 
     function _increaseDebt(
@@ -397,17 +386,6 @@ contract PaprController is
         emit IncreaseDebt(account, asset, amount);
     }
 
-    function _addCollateralToVault(address account, IPaprController.Collateral memory collateral) internal {
-        if (!isAllowed[address(collateral.addr)]) {
-            revert IPaprController.InvalidCollateral();
-        }
-
-        collateralOwner[collateral.addr][collateral.id] = account;
-        _vaultInfo[account][collateral.addr].count += 1;
-
-        emit AddCollateral(account, collateral);
-    }
-
     function _reduceDebt(address account, ERC721 asset, address burnFrom, uint256 amount) internal {
         _reduceDebtWithoutBurn(account, asset, amount);
         PaprToken(address(papr)).burn(burnFrom, amount);
@@ -416,6 +394,34 @@ contract PaprController is
     function _reduceDebtWithoutBurn(address account, ERC721 asset, uint256 amount) internal {
         _vaultInfo[account][asset].debt = uint200(_vaultInfo[account][asset].debt - amount);
         emit ReduceDebt(account, asset, amount);
+    }
+
+    /// same as increaseDebtAndSell but takes args in memory
+    /// to work with onERC721Received
+    function _increaseDebtAndSell(
+        address account,
+        address proceedsTo,
+        ERC721 collateralAsset,
+        IPaprController.SwapParams memory params,
+        ReservoirOracleUnderwriter.OracleInfo memory oracleInfo
+    ) internal returns (uint256 amountOut) {
+        bool hasFee = params.swapFeeBips != 0;
+
+        (amountOut,) = UniswapHelpers.swap(
+            pool,
+            hasFee ? address(this) : proceedsTo,
+            !token0IsUnderlying,
+            params.amount,
+            params.minOut,
+            params.sqrtPriceLimitX96,
+            abi.encode(account, collateralAsset, oracleInfo)
+        );
+
+        if (hasFee) {
+            uint256 fee = amountOut * params.swapFeeBips / 1e4;
+            underlying.transfer(params.swapFeeTo, fee);
+            underlying.transfer(proceedsTo, amountOut - fee);
+        }
     }
 
     function _handleExcess(uint256 excess, uint256 neededToSaveVault, uint256 debtCached, Auction calldata auction)
