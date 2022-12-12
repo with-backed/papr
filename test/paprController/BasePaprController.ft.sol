@@ -21,10 +21,12 @@ import {INonfungiblePositionManager} from "test/mocks/uniswap/INonfungiblePositi
 contract BasePaprControllerTest is MainnetForking, UniswapForking, OracleTest {
     TestERC721 nft = new TestERC721();
     TestERC20 underlying = new TestERC20();
+    ERC20 debtToken;
     PaprController controller;
 
     uint256 collateralId = 1;
-    IPaprController.Collateral collateral = IPaprController.Collateral({id: collateralId, addr: nft});
+    IPaprController.Collateral collateral =
+        IPaprController.Collateral({id: collateralId, addr: nft});
     address borrower = address(1);
     uint24 feeTier = 10000;
 
@@ -47,8 +49,10 @@ contract BasePaprControllerTest is MainnetForking, UniswapForking, OracleTest {
             underlying,
             oracleAddress
         );
+        debtToken = ERC20(controller.papr());
 
-        IPaprController.CollateralAllowedConfig[] memory args = new IPaprController.CollateralAllowedConfig[](1);
+        IPaprController.CollateralAllowedConfig[]
+            memory args = new IPaprController.CollateralAllowedConfig[](1);
         args[0] = IPaprController.CollateralAllowedConfig(address(nft), true);
         controller.setAllowedCollateral(args);
         nft.mint(borrower, collateralId);
@@ -64,7 +68,8 @@ contract BasePaprControllerTest is MainnetForking, UniswapForking, OracleTest {
         uint256 amount = 1e19;
         uint256 token0Amount;
         uint256 token1Amount;
-        (, int24 currentTick,,,,,) = IUniswapV3Pool(controller.pool()).slot0();
+        (, int24 currentTick, , , , , ) = IUniswapV3Pool(controller.pool())
+            .slot0();
         int24 tickLower = currentTick;
         int24 tickUpper = currentTick;
 
@@ -78,25 +83,26 @@ contract BasePaprControllerTest is MainnetForking, UniswapForking, OracleTest {
             tickLower -= 400;
         }
         // make ticks align to correct spacing
-        tickLower = tickLower / 200 * 200;
-        tickUpper = tickUpper / 200 * 200;
+        tickLower = (tickLower / 200) * 200;
+        tickUpper = (tickUpper / 200) * 200;
 
         underlying.approve(address(positionManager), amount);
         underlying.mint(address(this), amount);
 
-        INonfungiblePositionManager.MintParams memory mintParams = INonfungiblePositionManager.MintParams(
-            IUniswapV3Pool(controller.pool()).token0(),
-            IUniswapV3Pool(controller.pool()).token1(),
-            feeTier,
-            tickLower,
-            tickUpper,
-            token0Amount,
-            token1Amount,
-            0,
-            0,
-            address(this),
-            block.timestamp + 1
-        );
+        INonfungiblePositionManager.MintParams
+            memory mintParams = INonfungiblePositionManager.MintParams(
+                IUniswapV3Pool(controller.pool()).token0(),
+                IUniswapV3Pool(controller.pool()).token1(),
+                feeTier,
+                tickLower,
+                tickUpper,
+                token0Amount,
+                token1Amount,
+                0,
+                0,
+                address(this),
+                block.timestamp + 1
+            );
 
         positionManager.mint(mintParams);
     }
@@ -117,11 +123,20 @@ contract BasePaprControllerTest is MainnetForking, UniswapForking, OracleTest {
     }
 
     function _openMaxLoanAndSwap() internal {
-        safeTransferReceivedArgs.swapParams.amount = controller.maxDebt(oraclePrice) - 2;
+        safeTransferReceivedArgs.swapParams.amount =
+            controller.maxDebt(oraclePrice) -
+            2;
         safeTransferReceivedArgs.swapParams.minOut = 1;
-        safeTransferReceivedArgs.swapParams.sqrtPriceLimitX96 = _maxSqrtPriceLimit(true);
+        safeTransferReceivedArgs
+            .swapParams
+            .sqrtPriceLimitX96 = _maxSqrtPriceLimit(true);
         vm.prank(borrower);
-        nft.safeTransferFrom(borrower, address(controller), collateralId, abi.encode(safeTransferReceivedArgs));
+        nft.safeTransferFrom(
+            borrower,
+            address(controller),
+            collateralId,
+            abi.encode(safeTransferReceivedArgs)
+        );
     }
 
     function _makeMaxLoanLiquidatable() internal {
@@ -130,8 +145,13 @@ contract BasePaprControllerTest is MainnetForking, UniswapForking, OracleTest {
         oracleInfo = _getOracleInfoForCollateral(nft, underlying);
     }
 
-    function _viableSqrtPriceLimit(bool sellingPAPR) internal view returns (uint160) {
-        (uint160 sqrtPrice,,,,,,) = IUniswapV3Pool(controller.pool()).slot0();
+    function _viableSqrtPriceLimit(bool sellingPAPR)
+        internal
+        view
+        returns (uint160)
+    {
+        (uint160 sqrtPrice, , , , , , ) = IUniswapV3Pool(controller.pool())
+            .slot0();
         int24 tick = TickMath.getTickAtSqrtRatio(sqrtPrice);
 
         if (sellingPAPR) {
@@ -143,11 +163,21 @@ contract BasePaprControllerTest is MainnetForking, UniswapForking, OracleTest {
         return TickMath.getSqrtRatioAtTick(tick);
     }
 
-    function _maxSqrtPriceLimit(bool sellingPAPR) internal view returns (uint160) {
+    function _maxSqrtPriceLimit(bool sellingPAPR)
+        internal
+        view
+        returns (uint160)
+    {
         if (sellingPAPR) {
-            return !controller.token0IsUnderlying() ? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1;
+            return
+                !controller.token0IsUnderlying()
+                    ? TickMath.MIN_SQRT_RATIO + 1
+                    : TickMath.MAX_SQRT_RATIO - 1;
         } else {
-            return controller.token0IsUnderlying() ? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1;
+            return
+                controller.token0IsUnderlying()
+                    ? TickMath.MIN_SQRT_RATIO + 1
+                    : TickMath.MAX_SQRT_RATIO - 1;
         }
     }
 }
