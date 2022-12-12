@@ -2,6 +2,7 @@
 pragma solidity ^0.8.13;
 
 import "./BaseFundingRateController.t.sol";
+import {OracleLibrary} from "src/libraries/OracleLibrary.sol";
 
 contract UpdateTargetTest is BaseFundingRateControllerTest {
     function testFuzzUpdateTarget(int56 newTickCumulative, uint32 secondsPassed) public {
@@ -19,6 +20,29 @@ contract UpdateTargetTest is BaseFundingRateControllerTest {
         _tickCumulatives[0] = newTickCumulative;
         MinimalObservablePool(fundingRateController.pool()).setTickComulatives(_tickCumulatives);
         fundingRateController.updateTarget();
-        fundingRateController.newTarget();
+    }
+
+    function testUpdateUpdatesTargetToNewTargetValue() public {
+        int56[] memory _tickCumulatives = new int56[](1);
+        _tickCumulatives[0] = 10;
+        MinimalObservablePool(fundingRateController.pool()).setTickComulatives(_tickCumulatives);
+        vm.warp(block.timestamp + 1);
+        uint256 n = fundingRateController.newTarget();
+        uint256 cached = fundingRateController.target();
+        assertTrue(n != cached);
+        fundingRateController.updateTarget();
+        assertEq(n, fundingRateController.target());
+    }
+
+    function testUpdateTargetEmitsNewTarget() public {
+        vm.warp(block.timestamp + 1);
+        vm.expectEmit(false, false, false, true);
+        emit UpdateTarget(fundingRateController.newTarget());
+        fundingRateController.updateTarget();
+    }
+
+    function testUpdateTargetCalledSameBlockReturnsCurrentTarget() public {
+        uint256 cached = fundingRateController.target();
+        assertEq(cached, fundingRateController.updateTarget());
     }
 }

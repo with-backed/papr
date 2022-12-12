@@ -26,5 +26,8 @@ contract BaseFundingRateControllerTest is Test {
         fundingRateController = new MockFundingRateController(underlying, papr, indexMarkRatioMax, indexMarkRatioMin);
         fundingRateController.init(1e18, 0);
         fundingRateController.setPool(address(new MinimalObservablePool(underlying, papr)));
+        int56[] memory _tickCumulatives = new int56[](1);
+        _tickCumulatives[0] = 0;
+        MinimalObservablePool(fundingRateController.pool()).setTickComulatives(_tickCumulatives);
     }
 }
