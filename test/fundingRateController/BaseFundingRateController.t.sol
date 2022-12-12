@@ -8,7 +8,10 @@ import {MockFundingRateController} from "test/mocks/MockFundingRateController.so
 import {MinimalObservablePool} from "test/mocks/uniswap/MinimalObservablePool.sol";
 import {TestERC20} from "test/mocks/TestERC20.sol";
 import {TickMath} from "fullrange/libraries/TickMath.sol";
-import {IFundingRateController} from "src/interfaces/IFundingRateController.sol";
+import {
+    IUniswapOracleFundingRateController,
+    IFundingRateController
+} from "src/interfaces/IUniswapOracleFundingRateController.sol";
 
 contract BaseFundingRateControllerTest is Test {
     event UpdateTarget(uint256 newTarget);

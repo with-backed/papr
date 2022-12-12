@@ -61,16 +61,18 @@ contract PaprController is
         maxLTV = _maxLTV;
         token0IsUnderlying = address(underlying) < address(papr);
         uint256 underlyingONE = 10 ** underlying.decimals();
-        uint160 sqrtRatio;
+        uint160 initSqrtRatio;
 
         // initialize the pool at 1:1
         if (token0IsUnderlying) {
-            sqrtRatio = UniswapHelpers.oneToOneSqrtRatio(underlyingONE, 10 ** 18);
+            initSqrtRatio = UniswapHelpers.oneToOneSqrtRatio(underlyingONE, 10 ** 18);
         } else {
-            sqrtRatio = UniswapHelpers.oneToOneSqrtRatio(10 ** 18, underlyingONE);
+            initSqrtRatio = UniswapHelpers.oneToOneSqrtRatio(10 ** 18, underlyingONE);
         }
 
-        _init(underlyingONE, sqrtRatio);
+        address _pool = UniswapHelpers.deployAndInitPool(address(underlying), address(papr), 10000, initSqrtRatio);
+
+        _init(underlyingONE, _pool);
     }
 
     function addCollateral(IPaprController.Collateral calldata collateral) public {

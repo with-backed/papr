@@ -7,14 +7,23 @@ import {SafeCastLib} from "solmate/utils/SafeCastLib.sol";
 
 import {OracleLibrary} from "src/libraries/OracleLibrary.sol";
 import {UniswapHelpers} from "src/libraries/UniswapHelpers.sol";
-import {IFundingRateController} from "src/interfaces/IFundingRateController.sol";
+import {
+    IUniswapOracleFundingRateController,
+    IFundingRateController
+} from "src/interfaces/IUniswapOracleFundingRateController.sol";
 
-contract FundingRateController is IFundingRateController {
+contract FundingRateController is IUniswapOracleFundingRateController {
+    /// @inheritdoc IFundingRateController
     ERC20 public immutable underlying;
+    /// @inheritdoc IFundingRateController
     ERC20 public immutable papr;
+    /// @inheritdoc IFundingRateController
     uint256 public fundingPeriod;
+    /// @inheritdoc IUniswapOracleFundingRateController
     address public pool;
+    /// @dev the max value of target / mark, used as a guard in _multiplier
     uint256 immutable targetMarkRatioMax;
+    /// @dev the min value of target / mark, used as a guard in _multiplier
     uint256 immutable targetMarkRatioMin;
     // single slot, write together
     uint128 internal _target;
@@ -32,7 +41,8 @@ contract FundingRateController is IFundingRateController {
         _setFundingPeriod(4 weeks);
     }
 
-    function updateTarget() public returns (uint256 nTarget) {
+    /// @inheritdoc IFundingRateController
+    function updateTarget() public override returns (uint256 nTarget) {
         if (_lastUpdated == block.timestamp) {
             return _target;
         }
@@ -41,6 +51,7 @@ contract FundingRateController is IFundingRateController {
         nTarget = _newTarget(latestTwapTick, _target);
 
         _target = SafeCastLib.safeCastTo128(nTarget);
+        // will not overflow for 8000 years
         _lastUpdated = uint48(block.timestamp);
         lastCumulativeTick = latestCumulativeTick;
         lastTwapTick = latestTwapTick;
@@ -48,7 +59,8 @@ contract FundingRateController is IFundingRateController {
         emit UpdateTarget(nTarget);
     }
 
-    function newTarget() public view returns (uint256) {
+    /// @inheritdoc IFundingRateController
+    function newTarget() public view override returns (uint256) {
         if (_lastUpdated == block.timestamp) {
             return _target;
         }
@@ -56,6 +68,7 @@ contract FundingRateController is IFundingRateController {
         return _newTarget(latestTwapTick, _target);
     }
 
+    /// @inheritdoc IFundingRateController
     function mark() public view returns (uint256) {
         if (_lastUpdated == block.timestamp) {
             return _mark(lastTwapTick);
@@ -64,21 +77,25 @@ contract FundingRateController is IFundingRateController {
         return _mark(latestTwapTick);
     }
 
-    function lastUpdated() external returns(uint256) {
+    /// @inheritdoc IFundingRateController
+    function lastUpdated() external view override returns (uint256) {
         return _lastUpdated;
     }
 
-    function target() external returns (uint256) {
+    /// @inheritdoc IFundingRateController
+    function target() external view override returns (uint256) {
         return _target;
     }
 
-    function _init(uint256 target, uint160 initSqrtRatio) internal {
+    /// @notice initializes the controller, setting pool and target
+    /// @dev assumes pool is initialized
+    /// @param target the start value of target
+    /// @param _pool the pool address to use
+    function _init(uint256 target, address _pool) internal {
         if (_lastUpdated != 0) revert AlreadyInitialized();
 
-        address _pool = UniswapHelpers.deployAndInitPool(address(underlying), address(papr), 10000, initSqrtRatio);
         _setPool(_pool);
 
-        // will not overflow for 8000 years
         _lastUpdated = uint48(block.timestamp);
         _target = SafeCastLib.safeCastTo128(target);
         lastCumulativeTick = OracleLibrary.latestCumulativeTick(pool);
@@ -86,6 +103,9 @@ contract FundingRateController is IFundingRateController {
         emit UpdateTarget(target);
     }
 
+    /// @notice Updates `pool`
+    /// @dev reverts if new pool does not have same token0 and token1 as `pool`
+    /// @dev intended to be used in inherited contract with owner guard
     function _setPool(address _pool) internal {
         if (pool != address(0) && !UniswapHelpers.poolsHaveSameTokens(pool, _pool)) revert PoolTokensDoNotMatch();
         pool = _pool;
@@ -93,6 +113,8 @@ contract FundingRateController is IFundingRateController {
         emit SetPool(_pool);
     }
 
+    /// @notice Updates fundingPeriod
+    /// @dev reverts if period is longer than 90 days or less than 7
     function _setFundingPeriod(uint256 _fundingPeriod) internal {
         if (_fundingPeriod < 7 days) revert FundingPeriodTooShort();
         if (_fundingPeriod > 90 days) revert FundingPeriodTooLong();
@@ -102,10 +124,12 @@ contract FundingRateController is IFundingRateController {
         emit SetFundingPeriod(_fundingPeriod);
     }
 
+    /// @dev internal function to allow optimized SLOADs
     function _newTarget(int24 latestTwapTick, uint256 cachedTarget) internal view returns (uint256) {
         return FixedPointMathLib.mulWadDown(cachedTarget, _multiplier(latestTwapTick, cachedTarget));
     }
 
+    /// @dev internal function to allow optimized SLOADs
     function _mark(int24 twapTick) internal view returns (uint256) {
         return OracleLibrary.getQuoteAtTick(twapTick, 1e18, address(papr), address(underlying));
     }
@@ -118,9 +142,13 @@ contract FundingRateController is IFundingRateController {
         );
     }
 
-    // computing funding rate for the past period
-    // > 1e18 means positive funding rate
-    // < 1e18 means negative funding rate
+    /// @notice The multiplier to apply to target() to get newTarget()
+    /// @dev Computes the funding rate for the time since _lastUpdates
+    /// 1 = 1e18, i.e.
+    /// > 1e18 means positive funding rate
+    /// < 1e18 means negative funding rate
+    /// sub 1e18 to get percent change
+    /// @return multiplier used to obtain newTarget()
     function _multiplier(int24 latestTwapTick, uint256 cachedTarget) internal view returns (uint256) {
         uint256 m = _mark(latestTwapTick);
         uint256 period = block.timestamp - _lastUpdated;

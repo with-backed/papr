@@ -7,14 +7,14 @@ contract SetPoolTest is BaseFundingRateControllerTest {
     function testSetPoolRevertsIfWrongToken0() public {
         address token0 = address(1);
         MinimalObservablePool p = new MinimalObservablePool(ERC20(token0), papr);
-        vm.expectRevert(IFundingRateController.PoolTokensDoNotMatch.selector);
+        vm.expectRevert(IUniswapOracleFundingRateController.PoolTokensDoNotMatch.selector);
         fundingRateController.setPool(address(p));
     }
 
     function testSetPoolRevertsIfWrongToken1() public {
         address token1 = address(type(uint160).max);
         MinimalObservablePool p = new MinimalObservablePool(ERC20(token1), papr);
-        vm.expectRevert(IFundingRateController.PoolTokensDoNotMatch.selector);
+        vm.expectRevert(IUniswapOracleFundingRateController.PoolTokensDoNotMatch.selector);
         fundingRateController.setPool(address(p));
     }
 
