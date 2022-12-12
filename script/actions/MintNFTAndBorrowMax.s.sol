@@ -31,7 +31,7 @@ contract MintNFTAndBorrowMax is Base {
 
     function _openMaxLoanAndSwap(address borrower) internal {
         // IPaprController.OnERC721ReceivedArgs memory safeTransferReceivedArgs = IPaprController.OnERC721ReceivedArgs({
-        //     mintDebtOrProceedsTo: borrower,
+        //     increaseDebtOrProceedsTo: borrower,
         //     minOut: 0,
         //     debt: controller.maxDebt(oraclePrice) - 100,
         //     sqrtPriceLimitX96: _maxSqrtPriceLimit(true),
