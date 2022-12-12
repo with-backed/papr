@@ -12,7 +12,7 @@ import {
     IFundingRateController
 } from "src/interfaces/IUniswapOracleFundingRateController.sol";
 
-contract FundingRateController is IUniswapOracleFundingRateController {
+contract UniswapOracleFundingRateController is IUniswapOracleFundingRateController {
     /// @inheritdoc IFundingRateController
     ERC20 public immutable underlying;
     /// @inheritdoc IFundingRateController

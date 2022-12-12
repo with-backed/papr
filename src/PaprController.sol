@@ -8,14 +8,14 @@ import {INFTEDA, NFTEDAStarterIncentive} from "NFTEDA/extensions/NFTEDAStarterIn
 import {Ownable2Step} from "openzeppelin-contracts/access/Ownable2Step.sol";
 
 import {PaprToken} from "./PaprToken.sol";
-import {FundingRateController} from "./FundingRateController.sol";
+import {UniswapOracleFundingRateController} from "./UniswapOracleFundingRateController.sol";
 import {Multicall} from "src/base/Multicall.sol";
 import {ReservoirOracleUnderwriter} from "src/ReservoirOracleUnderwriter.sol";
 import {IPaprController} from "src/interfaces/IPaprController.sol";
 import {UniswapHelpers} from "src/libraries/UniswapHelpers.sol";
 
 contract PaprController is
-    FundingRateController,
+    UniswapOracleFundingRateController,
     ERC721TokenReceiver,
     Multicall,
     Ownable2Step,
@@ -55,7 +55,7 @@ contract PaprController is
         address oracleSigner
     )
         NFTEDAStarterIncentive(1e17)
-        FundingRateController(underlying, new PaprToken(name, symbol), indexMarkRatioMax, indexMarkRatioMin)
+        UniswapOracleFundingRateController(underlying, new PaprToken(name, symbol), indexMarkRatioMax, indexMarkRatioMin)
         ReservoirOracleUnderwriter(oracleSigner, address(underlying))
     {
         maxLTV = _maxLTV;

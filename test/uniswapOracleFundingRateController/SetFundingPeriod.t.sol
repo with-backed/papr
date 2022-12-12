@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import "./BaseFundingRateController.t.sol";
+import "./BaseUniswapOracleFundingRateController.t.sol";
 
-contract SetFundingPeriodTest is BaseFundingRateControllerTest {
+contract SetFundingPeriodTest is BaseUniswapOracleFundingRateControllerTest {
     function testSetFundingPeriodEmitsCorrectly() public {
         vm.expectEmit(false, false, false, true);
         emit SetFundingPeriod(5 weeks);

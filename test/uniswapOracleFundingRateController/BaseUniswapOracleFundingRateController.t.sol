@@ -13,7 +13,7 @@ import {
     IFundingRateController
 } from "src/interfaces/IUniswapOracleFundingRateController.sol";
 
-contract BaseFundingRateControllerTest is Test {
+contract BaseUniswapOracleFundingRateControllerTest is Test {
     event UpdateTarget(uint256 newTarget);
     event SetPool(address indexed pool);
     event SetFundingPeriod(uint256 fundingPeriod);

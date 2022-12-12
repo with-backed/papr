@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import "./BaseFundingRateController.t.sol";
+import "./BaseUniswapOracleFundingRateController.t.sol";
 import {OracleLibrary} from "src/libraries/OracleLibrary.sol";
 
-contract UpdateTargetTest is BaseFundingRateControllerTest {
+contract UpdateTargetTest is BaseUniswapOracleFundingRateControllerTest {
     function testFuzzUpdateTarget(int56 newTickCumulative, uint32 secondsPassed) public {
         vm.warp(block.timestamp + secondsPassed);
         vm.assume(secondsPassed != 0);
