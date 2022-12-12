@@ -8,14 +8,14 @@ import {INFTEDA, NFTEDAStarterIncentive} from "NFTEDA/extensions/NFTEDAStarterIn
 import {Ownable2Step} from "openzeppelin-contracts/access/Ownable2Step.sol";
 
 import {PaprToken} from "./PaprToken.sol";
-import {FundingRateController} from "./FundingRateController.sol";
+import {UniswapOracleFundingRateController} from "./UniswapOracleFundingRateController.sol";
 import {Multicall} from "src/base/Multicall.sol";
 import {ReservoirOracleUnderwriter} from "src/ReservoirOracleUnderwriter.sol";
 import {IPaprController} from "src/interfaces/IPaprController.sol";
 import {UniswapHelpers} from "src/libraries/UniswapHelpers.sol";
 
 contract PaprController is
-    FundingRateController,
+    UniswapOracleFundingRateController,
     ERC721TokenReceiver,
     Multicall,
     Ownable2Step,
@@ -55,22 +55,24 @@ contract PaprController is
         address oracleSigner
     )
         NFTEDAStarterIncentive(1e17)
-        FundingRateController(underlying, new PaprToken(name, symbol), indexMarkRatioMax, indexMarkRatioMin)
+        UniswapOracleFundingRateController(underlying, new PaprToken(name, symbol), indexMarkRatioMax, indexMarkRatioMin)
         ReservoirOracleUnderwriter(oracleSigner, address(underlying))
     {
         maxLTV = _maxLTV;
         token0IsUnderlying = address(underlying) < address(papr);
         uint256 underlyingONE = 10 ** underlying.decimals();
-        uint160 sqrtRatio;
+        uint160 initSqrtRatio;
 
         // initialize the pool at 1:1
         if (token0IsUnderlying) {
-            sqrtRatio = UniswapHelpers.oneToOneSqrtRatio(underlyingONE, 10 ** 18);
+            initSqrtRatio = UniswapHelpers.oneToOneSqrtRatio(underlyingONE, 10 ** 18);
         } else {
-            sqrtRatio = UniswapHelpers.oneToOneSqrtRatio(10 ** 18, underlyingONE);
+            initSqrtRatio = UniswapHelpers.oneToOneSqrtRatio(10 ** 18, underlyingONE);
         }
 
-        _init(underlyingONE, sqrtRatio);
+        address _pool = UniswapHelpers.deployAndInitPool(address(underlying), address(papr), 10000, initSqrtRatio);
+
+        _init(underlyingONE, _pool);
     }
 
     function addCollateral(IPaprController.Collateral calldata collateral) public {
@@ -83,7 +85,7 @@ contract PaprController is
         IPaprController.Collateral calldata collateral,
         ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
     ) external {
-        uint256 newTarget = updateTarget();
+        uint256 cachedTarget = updateTarget();
 
         if (collateralOwner[collateral.addr][collateral.id] != msg.sender) {
             revert IPaprController.OnlyCollateralOwner();
@@ -104,7 +106,7 @@ contract PaprController is
         uint256 debt = _vaultInfo[msg.sender][collateral.addr].debt;
         uint256 oraclePrice =
             underwritePriceForCollateral(collateral.addr, ReservoirOracleUnderwriter.PriceKind.LOWER, oracleInfo);
-        uint256 max = _maxDebt(oraclePrice * newCount, newTarget);
+        uint256 max = _maxDebt(oraclePrice * newCount, cachedTarget);
 
         if (debt > max) {
             revert IPaprController.ExceedsMaxDebt(debt, max);
@@ -268,7 +270,7 @@ contract PaprController is
         IPaprController.Collateral calldata collateral,
         ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
     ) public returns (INFTEDA.Auction memory auction) {
-        uint256 _target = updateTarget();
+        uint256 cachedTarget = updateTarget();
 
         IPaprController.VaultInfo storage info = _vaultInfo[account][collateral.addr];
 
@@ -279,7 +281,7 @@ contract PaprController is
 
         uint256 oraclePrice =
             underwritePriceForCollateral(collateral.addr, ReservoirOracleUnderwriter.PriceKind.TWAP, oracleInfo);
-        if (info.debt < _maxDebt(oraclePrice * info.count, _target)) {
+        if (info.debt < _maxDebt(oraclePrice * info.count, cachedTarget)) {
             revert IPaprController.NotLiquidatable();
         }
 
@@ -303,7 +305,7 @@ contract PaprController is
                 secondsInPeriod: auctionDecayPeriod,
                 // start price is frozen price * auctionStartPriceMultiplier,
                 // converted to papr value at the current contract price
-                startPrice: (oraclePrice * auctionStartPriceMultiplier) * FixedPointMathLib.WAD / _target,
+                startPrice: (oraclePrice * auctionStartPriceMultiplier) * FixedPointMathLib.WAD / cachedTarget,
                 paymentAsset: papr
             })
         );
@@ -337,8 +339,8 @@ contract PaprController is
     /// TODO move papr from liquidation fee
 
     function maxDebt(uint256 totalCollateraValue) public view returns (uint256) {
-        if (lastUpdated == block.timestamp) {
-            return _maxDebt(totalCollateraValue, target);
+        if (_lastUpdated == block.timestamp) {
+            return _maxDebt(totalCollateraValue, _target);
         }
 
         return _maxDebt(totalCollateraValue, newTarget());
@@ -366,7 +368,7 @@ contract PaprController is
         uint256 amount,
         ReservoirOracleUnderwriter.OracleInfo memory oracleInfo
     ) internal {
-        uint256 _target = updateTarget();
+        uint256 cachedTarget = updateTarget();
 
         uint256 newDebt = _vaultInfo[account][asset].debt + amount;
         uint256 oraclePrice =
@@ -374,7 +376,7 @@ contract PaprController is
 
         // TODO do we need to check if oraclePrice is 0?
 
-        uint256 max = _maxDebt(_vaultInfo[account][asset].count * oraclePrice, _target);
+        uint256 max = _maxDebt(_vaultInfo[account][asset].count * oraclePrice, cachedTarget);
         if (newDebt > max) {
             revert IPaprController.ExceedsMaxDebt(newDebt, max);
         }
@@ -446,8 +448,8 @@ contract PaprController is
         }
     }
 
-    function _maxDebt(uint256 totalCollateraValue, uint256 _target) internal view returns (uint256) {
+    function _maxDebt(uint256 totalCollateraValue, uint256 cachedTarget) internal view returns (uint256) {
         uint256 maxLoanUnderlying = totalCollateraValue * maxLTV;
-        return maxLoanUnderlying / _target;
+        return maxLoanUnderlying / cachedTarget;
     }
 }

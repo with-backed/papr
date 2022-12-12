@@ -4,12 +4,10 @@ import {IUniswapV3Pool} from "v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
 import {PaprController} from "src/PaprController.sol";
 import {IPaprController} from "src/interfaces/IPaprController.sol";
-import {FundingRateController} from "src/FundingRateController.sol";
 import {TestERC721} from "test/mocks/TestERC721.sol";
 import {TestERC20} from "test/mocks/TestERC20.sol";
 import {MainnetForking} from "test/base/MainnetForking.sol";
 import {UniswapForking} from "test/base/UniswapForking.sol";
-import {IFundingRateController} from "src/interfaces/IFundingRateController.sol";
 
 contract OwnerFunctionsTest is MainnetForking, UniswapForking {
     TestERC721 nft = new TestERC721();
