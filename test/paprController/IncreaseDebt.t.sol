@@ -42,8 +42,6 @@ contract IncreaseDebtTest is BasePaprControllerTest {
         nft.approve(address(controller), collateralId);
         controller.addCollateral(collateral);
 
-        uint256 maxDebt = controller.maxDebt(oraclePrice);
-
         vm.expectRevert();
         controller.increaseDebt(borrower, collateral.addr, debt, oracleInfo);
     }
