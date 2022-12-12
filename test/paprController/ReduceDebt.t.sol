@@ -31,7 +31,7 @@ contract ReduceDebtTest is BasePaprControllerTest {
     function testReduceDebtEmitsReduceDebtEvent() public {
         uint256 debtAmount = _openMaxLoan();
         vm.startPrank(borrower);
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(true, true, false, true);
         emit ReduceDebt(borrower, collateral.addr, debtAmount);
         controller.reduceDebt(borrower, collateral.addr, debtAmount);
     }
