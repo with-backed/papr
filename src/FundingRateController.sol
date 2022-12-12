@@ -3,6 +3,7 @@ pragma solidity ^0.8.13;
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+import {SafeCastLib} from "solmate/utils/SafeCastLib.sol";
 
 import {OracleLibrary} from "src/libraries/OracleLibrary.sol";
 import {UniswapHelpers} from "src/libraries/UniswapHelpers.sol";
@@ -16,10 +17,10 @@ contract FundingRateController is IFundingRateController {
     uint256 immutable targetMarkRatioMax;
     uint256 immutable targetMarkRatioMin;
     // single slot, write together
-    uint128 public target;
-    int56 lastCumulativeTick;
-    uint48 public lastUpdated;
-    int24 lastTwapTick;
+    uint128 internal _target;
+    int56 internal lastCumulativeTick;
+    uint48 internal _lastUpdated;
+    int24 internal lastTwapTick;
 
     constructor(ERC20 _underlying, ERC20 _papr, uint256 _targetMarkRatioMax, uint256 _targetMarkRatioMin) {
         underlying = _underlying;
@@ -32,16 +33,15 @@ contract FundingRateController is IFundingRateController {
     }
 
     function updateTarget() public returns (uint256 nTarget) {
-        uint128 previousTarget = target;
-        if (lastUpdated == block.timestamp) {
-            return previousTarget;
+        if (_lastUpdated == block.timestamp) {
+            return _target;
         }
 
         (int56 latestCumulativeTick, int24 latestTwapTick) = _latestTwapTickAndTickCumulative();
-        nTarget = _newTarget(latestTwapTick, previousTarget);
+        nTarget = _newTarget(latestTwapTick, _target);
 
-        target = uint128(nTarget);
-        lastUpdated = uint48(block.timestamp);
+        _target = SafeCastLib.safeCastTo128(nTarget);
+        _lastUpdated = uint48(block.timestamp);
         lastCumulativeTick = latestCumulativeTick;
         lastTwapTick = latestTwapTick;
 
@@ -49,40 +49,41 @@ contract FundingRateController is IFundingRateController {
     }
 
     function newTarget() public view returns (uint256) {
-        if (lastUpdated == block.timestamp) {
-            return target;
+        if (_lastUpdated == block.timestamp) {
+            return _target;
         }
         (, int24 latestTwapTick) = _latestTwapTickAndTickCumulative();
-        return _newTarget(latestTwapTick, target);
+        return _newTarget(latestTwapTick, _target);
     }
 
     function mark() public view returns (uint256) {
-        if (lastUpdated == block.timestamp) {
+        if (_lastUpdated == block.timestamp) {
             return _mark(lastTwapTick);
         }
         (, int24 latestTwapTick) = _latestTwapTickAndTickCumulative();
         return _mark(latestTwapTick);
     }
 
-    function multiplier() public view returns (uint256) {
-        if (lastUpdated == block.timestamp) {
-            return _multiplier(lastTwapTick, target);
-        }
-        (, int24 latestTwapTick) = _latestTwapTickAndTickCumulative();
-        return _multiplier(latestTwapTick, target);
+    function lastUpdated() external returns(uint256) {
+        return _lastUpdated;
     }
 
-    function _init(uint256 _target, uint160 initSqrtRatio) internal {
-        if (lastUpdated != 0) revert AlreadyInitialized();
+    function target() external returns (uint256) {
+        return _target;
+    }
+
+    function _init(uint256 target, uint160 initSqrtRatio) internal {
+        if (_lastUpdated != 0) revert AlreadyInitialized();
 
         address _pool = UniswapHelpers.deployAndInitPool(address(underlying), address(papr), 10000, initSqrtRatio);
         _setPool(_pool);
 
-        lastUpdated = uint48(block.timestamp);
-        target = uint128(_target);
+        // will not overflow for 8000 years
+        _lastUpdated = uint48(block.timestamp);
+        _target = SafeCastLib.safeCastTo128(target);
         lastCumulativeTick = OracleLibrary.latestCumulativeTick(pool);
 
-        emit UpdateTarget(_target);
+        emit UpdateTarget(target);
     }
 
     function _setPool(address _pool) internal {
@@ -102,18 +103,18 @@ contract FundingRateController is IFundingRateController {
     }
 
     function _newTarget(int24 latestTwapTick, uint256 cachedTarget) internal view returns (uint256) {
-        return FixedPointMathLib.mulWadDown(target, _multiplier(latestTwapTick, cachedTarget));
+        return FixedPointMathLib.mulWadDown(cachedTarget, _multiplier(latestTwapTick, cachedTarget));
     }
 
     function _mark(int24 twapTick) internal view returns (uint256) {
         return OracleLibrary.getQuoteAtTick(twapTick, 1e18, address(papr), address(underlying));
     }
 
-    /// @dev reverts if block.timestamp - lastUpdated == 0
+    /// @dev reverts if block.timestamp - _lastUpdated == 0
     function _latestTwapTickAndTickCumulative() internal view returns (int56 tickCumulative, int24 twapTick) {
         tickCumulative = OracleLibrary.latestCumulativeTick(pool);
         twapTick = OracleLibrary.timeWeightedAverageTick(
-            lastCumulativeTick, tickCumulative, int56(uint56(block.timestamp - lastUpdated))
+            lastCumulativeTick, tickCumulative, int56(uint56(block.timestamp - _lastUpdated))
         );
     }
 
@@ -122,7 +123,7 @@ contract FundingRateController is IFundingRateController {
     // < 1e18 means negative funding rate
     function _multiplier(int24 latestTwapTick, uint256 cachedTarget) internal view returns (uint256) {
         uint256 m = _mark(latestTwapTick);
-        uint256 period = block.timestamp - lastUpdated;
+        uint256 period = block.timestamp - _lastUpdated;
         uint256 periodRatio = FixedPointMathLib.divWadDown(period, fundingPeriod);
         uint256 targetMarkRatio;
         if (m == 0) {
