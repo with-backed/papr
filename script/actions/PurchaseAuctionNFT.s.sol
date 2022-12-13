@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 
 import "forge-std/Script.sol";
 import {ERC721} from "solmate/tokens/ERC721.sol";
-import {INFTEDA} from "NFTEDA/extensions/NFTEDAStarterIncentive.sol";
+import {INFTEDA} from "src/NFTEDA/extensions/NFTEDAStarterIncentive.sol";
 
 import {Base} from "script/actions/Base.s.sol";
 import {IPaprController} from "src/interfaces/IPaprController.sol";

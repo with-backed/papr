@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 import {ReservoirOracleUnderwriter} from "src/ReservoirOracleUnderwriter.sol";
-import {INFTEDA} from "NFTEDA/extensions/NFTEDAStarterIncentive.sol";
+import {INFTEDA} from "src/NFTEDA/extensions/NFTEDAStarterIncentive.sol";
 import {ERC721} from "solmate/tokens/ERC721.sol";
 
 import {BasePaprControllerTest} from "test/paprController/BasePaprController.ft.sol";

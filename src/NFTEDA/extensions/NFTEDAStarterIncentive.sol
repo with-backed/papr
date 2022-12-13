@@ -3,8 +3,8 @@ pragma solidity >=0.8.0;
 
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 
-import {INFTEDA} from "src/interfaces/INFTEDA.sol";
-import {NFTEDA} from "src/NFTEDA.sol";
+import {INFTEDA} from "../interfaces/INFTEDA.sol";
+import {NFTEDA} from "../NFTEDA.sol";
 
 contract NFTEDAStarterIncentive is NFTEDA {
     struct AuctionState {

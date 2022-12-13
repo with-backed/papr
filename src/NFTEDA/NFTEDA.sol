@@ -5,8 +5,8 @@ import {ERC721} from "solmate/tokens/ERC721.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {SafeCast} from "v3-core/contracts/libraries/SafeCast.sol";
 
-import {INFTEDA} from "src/interfaces/INFTEDA.sol";
-import {EDAPrice} from "src/libraries/EDAPrice.sol";
+import {INFTEDA} from "./interfaces/INFTEDA.sol";
+import {EDAPrice} from "./libraries/EDAPrice.sol";
 
 abstract contract NFTEDA is INFTEDA {
     error AuctionExists();

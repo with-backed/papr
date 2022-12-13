@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0;
 
-import {NFTEDA} from "src/NFTEDA.sol";
+import {NFTEDA} from "../NFTEDA.sol";
 
 contract SimpleNFTEDA is NFTEDA {
     mapping(uint256 => uint256) internal _auctionStartTime;
