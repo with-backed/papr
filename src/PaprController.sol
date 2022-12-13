@@ -233,7 +233,7 @@ contract PaprController is
 
     /// @inheritdoc IPaprController
     function purchaseLiquidationAuctionNFT(
-        INFTEDA.Auction calldata auction,
+        Auction calldata auction,
         uint256 maxPrice,
         address sendTo,
         ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo

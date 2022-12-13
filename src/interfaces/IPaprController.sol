@@ -104,7 +104,7 @@ interface IPaprController {
     /// @param amount amount of debt to remove
     function reduceDebt(address account, ERC721 asset, uint256 amount) external;
 
-    /// @notice adds debt to a vault and swaps the debt for the controller's underlying token on Uniswap
+    /// @notice mints debt and swaps the debt for the controller's underlying token on Uniswap
     /// @param proceedsTo address to send the proceeds to
     /// @param collateralAsset address of the collateral token used to mint the debt
     /// @param params parameters for the swap
@@ -117,11 +117,11 @@ interface IPaprController {
         ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
     ) external returns (uint256);
 
-    /// @notice removes debt from a vault by buying it on Uniswap in exchange for the controller's underlying token
+    /// @notice removes debt from a vault and burns it by buying it on Uniswap in exchange for the controller's underlying token
     /// @param account address reducing their debt
     /// @param collateralAsset address of the collateral token the user would like to remove debt from
     /// @param params parameters for the swap
-    /// @return amount amount of debt received from the swap and paid down by the user
+    /// @return amount amount of debt received from the swap and burned
     function buyAndReduceDebt(address account, ERC721 collateralAsset, IPaprController.SwapParams calldata params)
         external
         returns (uint256);
@@ -157,12 +157,12 @@ interface IPaprController {
     function setFundingPeriod(uint256 _fundingPeriod) external;
 
     /// @notice sets whether a collateral is allowed to be used to mint debt
-    /// @param collateralConfigs configurations setting whether a collateral is allowed or not
+    /// @param collateralConfigs configuration settings indicating whether a collateral is allowed or not
     function setAllowedCollateral(IPaprController.CollateralAllowedConfig[] calldata collateralConfigs) external;
 
     /// @notice returns the maximum debt that can be minted for a given collateral value
     /// @param totalCollateraValue total value of the collateral
-    /// @return maxDebt maximum debt that can be minted, expressed in papr token terms
+    /// @return maxDebt maximum debt that can be minted, expressed in terms of the papr token
     function maxDebt(uint256 totalCollateraValue) external view returns (uint256);
 
     /// @notice returns information about a vault
