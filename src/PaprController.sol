@@ -15,6 +15,7 @@ import {IPaprController} from "src/interfaces/IPaprController.sol";
 import {UniswapHelpers} from "src/libraries/UniswapHelpers.sol";
 
 contract PaprController is
+    IPaprController,
     UniswapOracleFundingRateController,
     ERC721TokenReceiver,
     Multicall,
@@ -22,28 +23,35 @@ contract PaprController is
     ReservoirOracleUnderwriter,
     NFTEDAStarterIncentive
 {
-    bool public immutable token0IsUnderlying;
-    uint256 public immutable maxLTV;
+    // @inheritdoc IPaprController
+    bool public immutable override token0IsUnderlying;
 
-    // auction configs
-    uint256 public immutable liquidationAuctionMinSpacing = 2 days;
-    uint256 public immutable perPeriodAuctionDecayWAD = 0.7e18;
-    uint256 public immutable auctionDecayPeriod = 1 days;
-    uint256 public immutable auctionStartPriceMultiplier = 3;
-    uint256 public immutable liquidationPenaltyBips = 1000;
+    // @inheritdoc IPaprController
+    uint256 public immutable override maxLTV;
 
-    // account => asset => vaultInfo
+    // @inheritdoc IPaprController
+    uint256 public immutable override liquidationAuctionMinSpacing = 2 days;
+
+    // @inheritdoc IPaprController
+    uint256 public immutable override perPeriodAuctionDecayWAD = 0.7e18;
+
+    // @inheritdoc IPaprController
+    uint256 public immutable override auctionDecayPeriod = 1 days;
+
+    // @inheritdoc IPaprController
+    uint256 public immutable override auctionStartPriceMultiplier = 3;
+
+    // @inheritdoc IPaprController
+    uint256 public immutable override liquidationPenaltyBips = 1000;
+
+    // @inheritdoc IPaprController
+    mapping(ERC721 => mapping(uint256 => address)) public override collateralOwner;
+
+    // @inheritdoc IPaprController
+    mapping(address => bool) public override isAllowed;
+
+    /// @dev account => asset => vaultInfo
     mapping(address => mapping(ERC721 => IPaprController.VaultInfo)) private _vaultInfo;
-    // nft address => tokenId => account
-    mapping(ERC721 => mapping(uint256 => address)) public collateralOwner;
-    // nft address => whether this controller allows as collateral
-    mapping(address => bool) public isAllowed;
-
-    event IncreaseDebt(address indexed account, ERC721 indexed collateralAddress, uint256 amount);
-    event AddCollateral(address indexed account, IPaprController.Collateral collateral);
-    event ReduceDebt(address indexed account, ERC721 indexed collateralAddress, uint256 amount);
-    event RemoveCollateral(address indexed account, IPaprController.Collateral collateral);
-    event AllowCollateral(address indexed collateral, bool isAllowed);
 
     constructor(
         string memory name,
@@ -75,16 +83,18 @@ contract PaprController is
         _init(underlyingONE, _pool);
     }
 
-    function addCollateral(IPaprController.Collateral calldata collateral) public {
+    /// @inheritdoc IPaprController
+    function addCollateral(IPaprController.Collateral calldata collateral) external override {
         _addCollateralToVault(msg.sender, collateral);
         collateral.addr.transferFrom(msg.sender, address(this), collateral.id);
     }
 
+    /// @inheritdoc IPaprController
     function removeCollateral(
         address sendTo,
         IPaprController.Collateral calldata collateral,
         ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
-    ) external {
+    ) external override {
         uint256 cachedTarget = updateTarget();
 
         if (collateralOwner[collateral.addr][collateral.id] != msg.sender) {
@@ -115,16 +125,18 @@ contract PaprController is
         emit RemoveCollateral(msg.sender, collateral);
     }
 
+    /// @inheritdoc IPaprController
     function increaseDebt(
         address mintTo,
         ERC721 asset,
         uint256 amount,
         ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
-    ) public {
+    ) external override {
         _increaseDebt({account: msg.sender, asset: asset, mintTo: mintTo, amount: amount, oracleInfo: oracleInfo});
     }
 
-    function reduceDebt(address account, ERC721 asset, uint256 amount) public {
+    /// @inheritdoc IPaprController
+    function reduceDebt(address account, ERC721 asset, uint256 amount) external override {
         _reduceDebt({account: account, asset: asset, burnFrom: msg.sender, amount: amount});
     }
 
@@ -150,12 +162,13 @@ contract PaprController is
 
     /// CONVENIENCE SWAP FUNCTIONS ///
 
+    /// @inheritdoc IPaprController
     function increaseDebtAndSell(
         address proceedsTo,
         ERC721 collateralAsset,
         IPaprController.SwapParams calldata params,
         ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
-    ) public returns (uint256 amountOut) {
+    ) external override returns (uint256 amountOut) {
         bool hasFee = params.swapFeeBips != 0;
 
         (amountOut,) = UniswapHelpers.swap(
@@ -175,8 +188,10 @@ contract PaprController is
         }
     }
 
+    /// @inheritdoc IPaprController
     function buyAndReduceDebt(address account, ERC721 collateralAsset, IPaprController.SwapParams calldata params)
-        public
+        external
+        override
         returns (uint256)
     {
         bool hasFee = params.swapFeeBips != 0;
@@ -195,7 +210,7 @@ contract PaprController is
             underlying.transfer(params.swapFeeTo, amountIn * params.swapFeeBips / 1e4);
         }
 
-        reduceDebt(account, collateralAsset, uint96(amountOut));
+        _reduceDebt({account: account, asset: collateralAsset, burnFrom: msg.sender, amount: amountOut});
 
         return amountOut;
     }
@@ -229,12 +244,13 @@ contract PaprController is
 
     /// LIQUIDATION AUCTION FUNCTIONS ///
 
+    /// @inheritdoc IPaprController
     function purchaseLiquidationAuctionNFT(
         Auction calldata auction,
         uint256 maxPrice,
         address sendTo,
         ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
-    ) public {
+    ) external override {
         // TODO consider clearing latestAuctionStartTime if this is the most recent auction
         // need to check auctionStartTime() which means hashing auction to get ID, gas kind
         // of annoying
@@ -265,11 +281,12 @@ contract PaprController is
         }
     }
 
+    /// @inheritdoc IPaprController
     function startLiquidationAuction(
         address account,
         IPaprController.Collateral calldata collateral,
         ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
-    ) public returns (INFTEDA.Auction memory auction) {
+    ) external override returns (INFTEDA.Auction memory auction) {
         uint256 cachedTarget = updateTarget();
 
         IPaprController.VaultInfo storage info = _vaultInfo[account][collateral.addr];
@@ -313,16 +330,20 @@ contract PaprController is
 
     /// OWNER FUNCTIONS ///
 
-    function setPool(address _pool) public onlyOwner {
+    /// @inheritdoc IPaprController
+    function setPool(address _pool) external override onlyOwner {
         _setPool(_pool);
     }
 
-    function setFundingPeriod(uint256 _fundingPeriod) public onlyOwner {
+    /// @inheritdoc IPaprController
+    function setFundingPeriod(uint256 _fundingPeriod) external override onlyOwner {
         _setFundingPeriod(_fundingPeriod);
     }
 
+    /// @inheritdoc IPaprController
     function setAllowedCollateral(IPaprController.CollateralAllowedConfig[] calldata collateralConfigs)
         external
+        override
         onlyOwner
     {
         for (uint256 i = 0; i < collateralConfigs.length;) {
@@ -338,7 +359,8 @@ contract PaprController is
 
     /// TODO move papr from liquidation fee
 
-    function maxDebt(uint256 totalCollateraValue) public view returns (uint256) {
+    /// @inheritdoc IPaprController
+    function maxDebt(uint256 totalCollateraValue) external view override returns (uint256) {
         if (_lastUpdated == block.timestamp) {
             return _maxDebt(totalCollateraValue, _target);
         }
@@ -346,7 +368,13 @@ contract PaprController is
         return _maxDebt(totalCollateraValue, newTarget());
     }
 
-    function vaultInfo(address account, ERC721 asset) public view returns (IPaprController.VaultInfo memory) {
+    /// @inheritdoc IPaprController
+    function vaultInfo(address account, ERC721 asset)
+        external
+        view
+        override
+        returns (IPaprController.VaultInfo memory)
+    {
         return _vaultInfo[account][asset];
     }
 
