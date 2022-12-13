@@ -7,10 +7,7 @@ contract MultiplierTest is BaseUniswapOracleFundingRateControllerTest {
     function testMultiplierStartsAtOne() public {
         int24 latestTwapTick = fundingRateController.lastTwapTick();
         uint256 target = fundingRateController.target();
-        assertEq(
-            fundingRateController.multiplier(latestTwapTick, target),
-            1e18
-        );
+        assertEq(fundingRateController.multiplier(latestTwapTick, target), 1e18);
     }
 
     function testMultiplierDoesNotGoUnderMinBound() public {
@@ -18,10 +15,7 @@ contract MultiplierTest is BaseUniswapOracleFundingRateControllerTest {
         vm.warp(block.timestamp + 5 weeks);
 
         assertEq(
-            fundingRateController.multiplier(
-                fundingRateController.lastTwapTick(),
-                fundingRateController.target()
-            ),
+            fundingRateController.multiplier(fundingRateController.lastTwapTick(), fundingRateController.target()),
             0.8e18 - 1
         );
     }

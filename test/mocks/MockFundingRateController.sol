@@ -6,18 +6,8 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 import {UniswapOracleFundingRateController} from "src/UniswapOracleFundingRateController.sol";
 
 contract MockFundingRateController is UniswapOracleFundingRateController {
-    constructor(
-        ERC20 _underlying,
-        ERC20 _papr,
-        uint256 _targetMarkRatioMax,
-        uint256 _targetMarkRatioMin
-    )
-        UniswapOracleFundingRateController(
-            _underlying,
-            _papr,
-            _targetMarkRatioMax,
-            _targetMarkRatioMin
-        )
+    constructor(ERC20 _underlying, ERC20 _papr, uint256 _targetMarkRatioMax, uint256 _targetMarkRatioMin)
+        UniswapOracleFundingRateController(_underlying, _papr, _targetMarkRatioMax, _targetMarkRatioMin)
     {}
 
     function setPool(address _pool) external {
@@ -43,11 +33,7 @@ contract MockFundingRateController is UniswapOracleFundingRateController {
         _lastTwapTick = int24(initCumulativeTick);
     }
 
-    function latestTwapTickAndTickCumulative()
-        external
-        view
-        returns (int56 tickCumulative, int24 twapTick)
-    {
+    function latestTwapTickAndTickCumulative() external view returns (int56 tickCumulative, int24 twapTick) {
         return _latestTwapTickAndTickCumulative();
     }
 
@@ -59,10 +45,7 @@ contract MockFundingRateController is UniswapOracleFundingRateController {
         return _lastTwapTick;
     }
 
-    function multiplier(int24 lastTwapTick, uint256 target)
-        external
-        returns (uint256)
-    {
+    function multiplier(int24 lastTwapTick, uint256 target) external returns (uint256) {
         return _multiplier(lastTwapTick, target);
     }
 }
