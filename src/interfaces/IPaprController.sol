@@ -109,6 +109,7 @@ interface IPaprController {
     /// @param collateralAsset address of the collateral token used to mint the debt
     /// @param params parameters for the swap
     /// @param oracleInfo LOWER oracle information for the collateral being used to mint debt
+    /// @return amount amount of underlying token received by the user
     function increaseDebtAndSell(
         address proceedsTo,
         ERC721 collateralAsset,
@@ -120,6 +121,7 @@ interface IPaprController {
     /// @param account address reducing their debt
     /// @param collateralAsset address of the collateral token the user would like to remove debt from
     /// @param params parameters for the swap
+    /// @return amount amount of debt received from the swap and paid down by the user
     function buyAndReduceDebt(address account, ERC721 collateralAsset, IPaprController.SwapParams calldata params)
         external
         returns (uint256);
@@ -139,6 +141,7 @@ interface IPaprController {
     /// @param account address of the user who's vault to liquidate
     /// @param collateral collateral to liquidate
     /// @param oracleInfo TWAP oracle information for the collateral being liquidated
+    /// @return auction auction that was started
     function startLiquidationAuction(
         address account,
         IPaprController.Collateral calldata collateral,
