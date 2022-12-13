@@ -9,11 +9,11 @@ import {INFTEDA} from "NFTEDA/extensions/NFTEDAStarterIncentive.sol";
 interface IPaprController {
     /// @notice collateral for a vault
     struct Collateral {
-        ERC721 addr;
         /// @dev address of the collateral, cast to ERC721
+        ERC721 addr;
+        /// @dev tokenId of the collateral
         uint256 id;
     }
-    /// @dev tokenId of the collateral
 
     /// @notice vault information for a vault
     struct VaultInfo {
