@@ -19,17 +19,29 @@ contract MockFundingRateController is UniswapOracleFundingRateController {
     }
 
     function setLastCumulativeTick(int56 tick) external {
-        lastCumulativeTick = tick;
+        _lastCumulativeTick = tick;
     }
 
     function setLastTwapTick(int24 tick) external {
-        lastTwapTick = tick;
+        _lastTwapTick = tick;
     }
 
     function init(uint256 target, int56 initCumulativeTick) external {
         _lastUpdated = uint48(block.timestamp);
         _target = uint128(target);
-        lastCumulativeTick = initCumulativeTick;
-        lastTwapTick = int24(initCumulativeTick);
+        _lastCumulativeTick = initCumulativeTick;
+        _lastTwapTick = int24(initCumulativeTick);
+    }
+
+    function latestTwapTickAndTickCumulative() external view returns (int56 tickCumulative, int24 twapTick) {
+        return _latestTwapTickAndTickCumulative();
+    }
+
+    function lastCumulativeTick() external view returns (int56) {
+        return _lastCumulativeTick;
+    }
+
+    function lastTwapTick() external view returns (int56) {
+        return _lastTwapTick;
     }
 }

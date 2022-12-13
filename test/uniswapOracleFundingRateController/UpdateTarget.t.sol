@@ -2,7 +2,6 @@
 pragma solidity ^0.8.13;
 
 import "./BaseUniswapOracleFundingRateController.t.sol";
-import {OracleLibrary} from "src/libraries/OracleLibrary.sol";
 
 contract UpdateTargetTest is BaseUniswapOracleFundingRateControllerTest {
     function testFuzzUpdateTarget(int56 newTickCumulative, uint32 secondsPassed) public {
@@ -32,6 +31,36 @@ contract UpdateTargetTest is BaseUniswapOracleFundingRateControllerTest {
         assertTrue(n != cached);
         fundingRateController.updateTarget();
         assertEq(n, fundingRateController.target());
+    }
+
+    function testUpdateTargetUpdatesLastUpdated() public {
+        uint256 newTime = block.timestamp + 10;
+        vm.warp(newTime);
+        assertTrue(newTime != fundingRateController.lastUpdated());
+        fundingRateController.updateTarget();
+        assertEq(newTime, fundingRateController.lastUpdated());
+    }
+
+    function testUpdatesLastCumulativeTick() public {
+        vm.warp(block.timestamp + 1);
+        int56[] memory _tickCumulatives = new int56[](1);
+        _tickCumulatives[0] = -200;
+        MinimalObservablePool(fundingRateController.pool()).setTickComulatives(_tickCumulatives);
+        (int56 latest,) = fundingRateController.latestTwapTickAndTickCumulative();
+        assertTrue(latest != fundingRateController.lastCumulativeTick());
+        fundingRateController.updateTarget();
+        assertEq(latest, fundingRateController.lastCumulativeTick());
+    }
+
+    function testUpdatesLastTwapTick() public {
+        vm.warp(block.timestamp + 1);
+        int56[] memory _tickCumulatives = new int56[](1);
+        _tickCumulatives[0] = -200;
+        MinimalObservablePool(fundingRateController.pool()).setTickComulatives(_tickCumulatives);
+        (, int24 latest) = fundingRateController.latestTwapTickAndTickCumulative();
+        assertTrue(latest != fundingRateController.lastTwapTick());
+        fundingRateController.updateTarget();
+        assertEq(latest, fundingRateController.lastTwapTick());
     }
 
     function testUpdateTargetEmitsNewTarget() public {
