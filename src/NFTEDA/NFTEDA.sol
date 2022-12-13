@@ -68,10 +68,10 @@ abstract contract NFTEDA is INFTEDA {
     function _purchaseNFT(INFTEDA.Auction memory auction, uint256 maxPrice, address sendTo)
         internal
         virtual
-        returns (uint256 price)
+        returns (uint256 startTime, uint256 price)
     {
         uint256 id = auctionID(auction);
-        uint256 startTime = auctionStartTime(id);
+        startTime = auctionStartTime(id);
 
         if (startTime == 0) {
             revert InvalidAuction();

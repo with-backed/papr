@@ -251,10 +251,6 @@ contract PaprController is
         address sendTo,
         ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
     ) external override {
-        // TODO consider clearing latestAuctionStartTime if this is the most recent auction
-        // need to check auctionStartTime() which means hashing auction to get ID, gas kind
-        // of annoying
-
         uint256 collateralValueCached = underwritePriceForCollateral(
             auction.auctionAssetContract, ReservoirOracleUnderwriter.PriceKind.TWAP, oracleInfo
         ) * _vaultInfo[auction.nftOwner][auction.auctionAssetContract].count;
@@ -264,7 +260,7 @@ contract PaprController is
         uint256 maxDebtCached = isLastCollateral ? debtCached : _maxDebt(collateralValueCached, updateTarget());
         /// anything above what is needed to bring this vault under maxDebt is considered excess
         uint256 neededToSaveVault = maxDebtCached > debtCached ? 0 : debtCached - maxDebtCached;
-        uint256 price = _purchaseNFT(auction, maxPrice, sendTo);
+        uint256 price = _purchaseNFTAndUpdateVaultIfNeeded(auction, maxPrice, sendTo);
         uint256 excess = price > neededToSaveVault ? price - neededToSaveVault : 0;
         uint256 remaining;
 
@@ -279,6 +275,19 @@ contract PaprController is
             /// there will be debt left with no NFTs, set it to 0
             _reduceDebtWithoutBurn(auction.nftOwner, auction.auctionAssetContract, remaining);
         }
+    }
+
+    function _purchaseNFTAndUpdateVaultIfNeeded(Auction calldata auction, uint256 maxPrice, address sendTo)
+        internal
+        returns (uint256)
+    {
+        (uint256 startTime, uint256 price) = _purchaseNFT(auction, maxPrice, sendTo);
+
+        if (startTime == _vaultInfo[auction.nftOwner][auction.auctionAssetContract].latestAuctionStartTime) {
+            _vaultInfo[auction.nftOwner][auction.auctionAssetContract].latestAuctionStartTime = 0;
+        }
+
+        return price;
     }
 
     /// @inheritdoc IPaprController

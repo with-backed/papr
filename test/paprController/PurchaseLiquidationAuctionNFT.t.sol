@@ -193,6 +193,38 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         assertEq(beforeInfo.debt - afterInfo.debt, price);
     }
 
-    /// @note we do not test noExcess and last collateral because the contract considers any amount
+    /// @dev we do not test noExcess and last collateral because the contract considers any amount
     /// to be excess
+
+    function testResetsLatestAuctionStartTimeIfLatestAuction() public {
+        vm.warp(block.timestamp + 58187);
+        oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
+        controller.papr().approve(address(controller), auction.startPrice);
+        controller.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
+        assertEq(0, controller.vaultInfo(borrower, collateral.addr).latestAuctionStartTime);
+    }
+
+    function testDoesNotResetLatestAuctionStartTimeIfLatestAuction() public {
+        // add collateral
+        uint256 tokenId = collateralId + 5;
+        nft.mint(borrower, tokenId);
+        vm.stopPrank();
+        vm.startPrank(borrower);
+        nft.approve(address(controller), tokenId);
+        collateral.id = tokenId;
+        controller.addCollateral(collateral);
+        // start new auction
+        uint256 expectedTimestamp = block.timestamp + 2 days;
+        vm.warp(expectedTimestamp); // min auction sapcing
+        oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
+        controller.startLiquidationAuction(borrower, collateral, oracleInfo);
+        vm.stopPrank();
+        vm.startPrank(purchaser);
+        //
+        vm.warp(block.timestamp + 58187);
+        oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
+        controller.papr().approve(address(controller), auction.startPrice);
+        controller.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
+        assertEq(expectedTimestamp, controller.vaultInfo(borrower, collateral.addr).latestAuctionStartTime);
+    }
 }

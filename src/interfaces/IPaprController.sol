@@ -4,7 +4,7 @@ pragma solidity >=0.8.0;
 import {ReservoirOracleUnderwriter} from "src/ReservoirOracleUnderwriter.sol";
 import {ERC721} from "solmate/tokens/ERC721.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
-import {INFTEDA} from "NFTEDA/extensions/NFTEDAStarterIncentive.sol";
+import {INFTEDA} from "src/NFTEDA/extensions/NFTEDAStarterIncentive.sol";
 
 interface IPaprController {
     /// @notice collateral for a vault
