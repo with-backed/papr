@@ -27,9 +27,9 @@ contract UniswapOracleFundingRateController is IUniswapOracleFundingRateControll
     uint256 immutable targetMarkRatioMin;
     // single slot, write together
     uint128 internal _target;
-    int56 internal lastCumulativeTick;
+    int56 internal _lastCumulativeTick;
     uint48 internal _lastUpdated;
-    int24 internal lastTwapTick;
+    int24 internal _lastTwapTick;
 
     constructor(ERC20 _underlying, ERC20 _papr, uint256 _targetMarkRatioMax, uint256 _targetMarkRatioMin) {
         underlying = _underlying;
@@ -53,8 +53,8 @@ contract UniswapOracleFundingRateController is IUniswapOracleFundingRateControll
         _target = SafeCastLib.safeCastTo128(nTarget);
         // will not overflow for 8000 years
         _lastUpdated = uint48(block.timestamp);
-        lastCumulativeTick = latestCumulativeTick;
-        lastTwapTick = latestTwapTick;
+        _lastCumulativeTick = latestCumulativeTick;
+        _lastTwapTick = latestTwapTick;
 
         emit UpdateTarget(nTarget);
     }
@@ -71,7 +71,7 @@ contract UniswapOracleFundingRateController is IUniswapOracleFundingRateControll
     /// @inheritdoc IFundingRateController
     function mark() public view returns (uint256) {
         if (_lastUpdated == block.timestamp) {
-            return _mark(lastTwapTick);
+            return _mark(_lastTwapTick);
         }
         (, int24 latestTwapTick) = _latestTwapTickAndTickCumulative();
         return _mark(latestTwapTick);
@@ -98,7 +98,7 @@ contract UniswapOracleFundingRateController is IUniswapOracleFundingRateControll
 
         _lastUpdated = uint48(block.timestamp);
         _target = SafeCastLib.safeCastTo128(target);
-        lastCumulativeTick = OracleLibrary.latestCumulativeTick(pool);
+        _lastCumulativeTick = OracleLibrary.latestCumulativeTick(pool);
 
         emit UpdateTarget(target);
     }
@@ -138,7 +138,7 @@ contract UniswapOracleFundingRateController is IUniswapOracleFundingRateControll
     function _latestTwapTickAndTickCumulative() internal view returns (int56 tickCumulative, int24 twapTick) {
         tickCumulative = OracleLibrary.latestCumulativeTick(pool);
         twapTick = OracleLibrary.timeWeightedAverageTick(
-            lastCumulativeTick, tickCumulative, int56(uint56(block.timestamp - _lastUpdated))
+            _lastCumulativeTick, tickCumulative, int56(uint56(block.timestamp - _lastUpdated))
         );
     }
 
