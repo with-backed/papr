@@ -62,7 +62,10 @@ interface IPaprController {
     /// @notice returns who owns a collateral token in a vault
     /// @param collateral address of the collateral
     /// @param tokenId tokenId of the collateral
-    function collateralOwner(ERC721 collateral, uint256 tokenId) external view returns (address);
+    function collateralOwner(ERC721 collateral, uint256 tokenId)
+        external
+        view
+        returns (address);
 
     /// @notice returns whether a token address is allowed to serve as collateral for a vault
     /// @param collateral address of the collateral token
@@ -73,23 +76,37 @@ interface IPaprController {
     /// @param collateralAddress address of the collateral token
     /// @param amount amount of debt added
     /// @dev vaults are uniquely identified by the address of the vault owner and the address of the collateral token used in the vault
-    event IncreaseDebt(address indexed account, ERC721 indexed collateralAddress, uint256 amount);
+    event IncreaseDebt(
+        address indexed account,
+        ERC721 indexed collateralAddress,
+        uint256 amount
+    );
 
     /// @notice emitted when a user adds collateral to their vault
     /// @param account address adding collateral
     /// @param collateral collateral added
-    event AddCollateral(address indexed account, IPaprController.Collateral collateral);
+    event AddCollateral(
+        address indexed account,
+        IPaprController.Collateral collateral
+    );
 
     /// @notice emitted when a user reduces the debt balance of their vault
     /// @param account address reducing their debt
     /// @param collateralAddress address of the collateral token
     /// @param amount amount of debt removed
-    event ReduceDebt(address indexed account, ERC721 indexed collateralAddress, uint256 amount);
+    event ReduceDebt(
+        address indexed account,
+        ERC721 indexed collateralAddress,
+        uint256 amount
+    );
 
     /// @notice emitted when a user removes collateral from their vault
     /// @param account address removing collateral
     /// @param collateral collateral removed
-    event RemoveCollateral(address indexed account, IPaprController.Collateral collateral);
+    event RemoveCollateral(
+        address indexed account,
+        IPaprController.Collateral collateral
+    );
 
     /// @notice emitted when the owner sets whether a token address is allowed to serve as collateral for a vault
     /// @param collateral address of the collateral token
@@ -135,7 +152,8 @@ interface IPaprController {
 
     /// @notice adds collateral to msg.senders vault
     /// @param collateral collateral to add
-    function addCollateral(IPaprController.Collateral calldata collateral) external;
+    function addCollateral(IPaprController.Collateral calldata collateral)
+        external;
 
     /// @notice removes collateral from msg.senders vault
     /// @param sendTo address to send the collateral to when removed
@@ -165,7 +183,11 @@ interface IPaprController {
     /// @param account address reducing their debt
     /// @param asset address of the collateral token the user would like to remove debt from
     /// @param amount amount of debt to remove
-    function reduceDebt(address account, ERC721 asset, uint256 amount) external;
+    function reduceDebt(
+        address account,
+        ERC721 asset,
+        uint256 amount
+    ) external;
 
     /// @notice mints debt and swaps the debt for the controller's underlying token on Uniswap
     /// @param proceedsTo address to send the proceeds to
@@ -186,9 +208,11 @@ interface IPaprController {
     /// @param collateralAsset address of the collateral token the user would like to remove debt from
     /// @param params parameters for the swap
     /// @return amount amount of debt received from the swap and burned
-    function buyAndReduceDebt(address account, ERC721 collateralAsset, IPaprController.SwapParams calldata params)
-        external
-        returns (uint256);
+    function buyAndReduceDebt(
+        address account,
+        ERC721 collateralAsset,
+        IPaprController.SwapParams calldata params
+    ) external returns (uint256);
 
     /// @notice purchases a liquidation auction with the controller's papr token
     /// @param auction auction to purchase
@@ -223,16 +247,24 @@ interface IPaprController {
 
     /// @notice sets whether a collateral is allowed to be used to mint debt
     /// @param collateralConfigs configuration settings indicating whether a collateral is allowed or not
-    function setAllowedCollateral(IPaprController.CollateralAllowedConfig[] calldata collateralConfigs) external;
+    function setAllowedCollateral(
+        IPaprController.CollateralAllowedConfig[] calldata collateralConfigs
+    ) external;
 
     /// @notice returns the maximum debt that can be minted for a given collateral value
     /// @param totalCollateraValue total value of the collateral
     /// @return maxDebt maximum debt that can be minted, expressed in terms of the papr token
-    function maxDebt(uint256 totalCollateraValue) external view returns (uint256);
+    function maxDebt(uint256 totalCollateraValue)
+        external
+        view
+        returns (uint256);
 
     /// @notice returns information about a vault
     /// @param account address of the vault owner
     /// @param asset address of the collateral token associated with the vault
     /// @return vaultInfo VaultInfo struct representing information about a vault
-    function vaultInfo(address account, ERC721 asset) external view returns (IPaprController.VaultInfo memory);
+    function vaultInfo(address account, ERC721 asset)
+        external
+        view
+        returns (IPaprController.VaultInfo memory);
 }
