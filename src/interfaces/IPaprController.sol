@@ -19,13 +19,15 @@ interface IPaprController {
     struct VaultInfo {
         /// @dev number of collateral tokens in the vault
         uint16 count;
-        /// @dev latest time the vault could be liquidatable due to a potential previous vault liquidation
+        /// @dev start time of last auction the vault underwent, 0 if no auction has been started
         uint40 latestAuctionStartTime;
-        /// @dev debt of the vault, expressed in papr token terms
+        /// @dev debt of the vault, expressed in papr token units
         uint200 debt;
     }
 
     /// @notice parameters describing a swap
+    /// @dev increaseDebtAndSell has the input token as papr and output token as the underlying
+    /// @dev buyAndReduceDebt has the input token as the underlying and output token as papr
     struct SwapParams {
         /// @dev amount of input token to swap
         uint256 amount;
@@ -41,6 +43,7 @@ interface IPaprController {
 
     /// @notice parameters to be encoded in safeTransferFrom collateral addition
     struct OnERC721ReceivedArgs {
+        /// @dev address to send proceeds to if minting debt or swapping
         address proceedsTo;
         /// @dev debt is ignored in favor of `swapParams.amount` of minOut > 0
         uint256 debt;
