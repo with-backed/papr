@@ -20,6 +20,3 @@
 [submodule "lib/oracle"]
 	path = lib/oracle
 	url = https://github.com/reservoirprotocol/oracle
-[submodule "lib/NFTEDA"]
-	path = lib/NFTEDA
-	url = https://github.com/with-backed/NFTEDA
