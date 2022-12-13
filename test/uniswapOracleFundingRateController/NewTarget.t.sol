@@ -5,12 +5,11 @@ import "./BaseUniswapOracleFundingRateController.t.sol";
 
 contract NewTargetTest is BaseUniswapOracleFundingRateControllerTest {
     function testNewTargetReturnsCurrentTargetIfNoTimeHasPassed() public {
-        assertEq(fundingRateController.newTarget(), 1e6);
+        assertEq(fundingRateController.newTarget(), fundingRateController.target());
     }
 
     function testNewTargetComputesCorrectlyIfTimeHasPassed() public {
         vm.warp(block.timestamp + 1 weeks);
-        uint256 newTarget = fundingRateController.newTarget();
-        assertEq(newTarget, 945741);
+        assertTrue(fundingRateController.newTarget() != fundingRateController.target());
     }
 }
