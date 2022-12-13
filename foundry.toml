@@ -9,6 +9,3 @@ remappings = [
     '@boringsolidity/=lib/BoringSolidity/contracts',
     '@reservoir/=lib/oracle/contracts'
 ]
-fs_permissions = [{ access = "read", path = "./"}]
-[profile.local]
-path_pattern = '**/*.t.sol'
