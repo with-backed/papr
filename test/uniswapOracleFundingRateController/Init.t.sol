@@ -5,13 +5,7 @@ import "./BaseUniswapOracleFundingRateController.t.sol";
 
 contract FundingRateInitTest is BaseUniswapOracleFundingRateControllerTest {
     function testInitSetsValuesCorrectly() public {
-        assertTrue(fundingRateController.lastUpdated() != 0);
+        assertEq(fundingRateController.lastUpdated(), uint48(block.timestamp));
         assertTrue(fundingRateController.target() != 0);
-    }
-
-    function testInitEmitsUpdateTarget() public {
-        vm.expectEmit(false, false, false, true);
-        emit UpdateTarget(1e6);
-        fundingRateController.init(1e6, 0);
     }
 }
