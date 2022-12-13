@@ -23,22 +23,35 @@ contract PaprController is
     ReservoirOracleUnderwriter,
     NFTEDAStarterIncentive
 {
-    bool public immutable token0IsUnderlying;
-    uint256 public immutable maxLTV;
+    // @inheritdoc IPaprController
+    bool public immutable override token0IsUnderlying;
 
-    // auction configs
-    uint256 public immutable liquidationAuctionMinSpacing = 2 days;
-    uint256 public immutable perPeriodAuctionDecayWAD = 0.7e18;
-    uint256 public immutable auctionDecayPeriod = 1 days;
-    uint256 public immutable auctionStartPriceMultiplier = 3;
-    uint256 public immutable liquidationPenaltyBips = 1000;
+    // @inheritdoc IPaprController
+    uint256 public immutable override maxLTV;
 
-    // account => asset => vaultInfo
+    // @inheritdoc IPaprController
+    uint256 public immutable override liquidationAuctionMinSpacing = 2 days;
+
+    // @inheritdoc IPaprController
+    uint256 public immutable override perPeriodAuctionDecayWAD = 0.7e18;
+
+    // @inheritdoc IPaprController
+    uint256 public immutable override auctionDecayPeriod = 1 days;
+
+    // @inheritdoc IPaprController
+    uint256 public immutable override auctionStartPriceMultiplier = 3;
+
+    // @inheritdoc IPaprController
+    uint256 public immutable override liquidationPenaltyBips = 1000;
+
+    // @inheritdoc IPaprController
+    mapping(ERC721 => mapping(uint256 => address)) public override collateralOwner;
+
+    // @inheritdoc IPaprController
+    mapping(address => bool) public override isAllowed;
+
+    /// @dev account => asset => vaultInfo
     mapping(address => mapping(ERC721 => IPaprController.VaultInfo)) private _vaultInfo;
-    // nft address => tokenId => account
-    mapping(ERC721 => mapping(uint256 => address)) public collateralOwner;
-    // nft address => whether this controller allows as collateral
-    mapping(address => bool) public isAllowed;
 
     constructor(
         string memory name,
