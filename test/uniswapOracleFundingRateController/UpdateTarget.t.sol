@@ -52,7 +52,7 @@ contract UpdateTargetTest is BaseUniswapOracleFundingRateControllerTest {
         assertEq(latest, fundingRateController.lastCumulativeTick());
     }
 
-    function testUpdatesLastTwaoTick() public {
+    function testUpdatesLastTwapTick() public {
         vm.warp(block.timestamp + 1);
         int56[] memory _tickCumulatives = new int56[](1);
         _tickCumulatives[0] = -200;
