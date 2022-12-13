@@ -210,7 +210,7 @@ contract PaprController is
             underlying.transfer(params.swapFeeTo, amountIn * params.swapFeeBips / 1e4);
         }
 
-        _reduceDebt({account: account, asset: collateralAsset, burnFrom: msg.sender, amount: uint96(amountOut)});
+        _reduceDebt({account: account, asset: collateralAsset, burnFrom: msg.sender, amount: amountOut});
 
         return amountOut;
     }
