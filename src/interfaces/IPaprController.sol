@@ -33,17 +33,11 @@ interface IPaprController {
     /// @param vaultDebt how much debt the vault has
     /// @param maxDebt the max debt the vault is allowed to have
     error ExceedsMaxDebt(uint256 vaultDebt, uint256 maxDebt);
-
     error InvalidCollateral();
-
     error MinAuctionSpacing();
-
     error NotLiquidatable();
-
     error InvalidCollateralAccountPair();
-
     error AccountHasNoDebt();
-
     error OnlyCollateralOwner();
 
     struct Collateral {

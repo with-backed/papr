@@ -155,7 +155,7 @@ contract PaprController is
         ERC721 collateralAsset,
         IPaprController.SwapParams calldata params,
         ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
-    ) public returns (uint256 amountOut) {
+    ) external override returns (uint256 amountOut) {
         bool hasFee = params.swapFeeBips != 0;
 
         (amountOut,) = UniswapHelpers.swap(
