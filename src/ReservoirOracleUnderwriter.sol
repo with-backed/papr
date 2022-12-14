@@ -53,11 +53,14 @@ contract ReservoirOracleUnderwriter {
         quoteCurrency = _quoteCurrency;
     }
 
-    /// @notice returns the price of an asset
+    /// @notice returns the price of an asset from a signed oracle message
     /// @param asset the address of the ERC721 asset to underwrite the price for
     /// @param priceKind the kind of price to use from the oracle
     /// @param oracleInfo the message and signature from our oracle signer
-    /// @return oraclePrice the price of the asset
+    /// @return oraclePrice the price of the asset, expressed in quoteCurrency units
+    /// @dev reverts if the signer of the oracle message is incorrect
+    /// @dev reverts if the oracle message is longer than VALID_FOR old
+    /// @dev reverts if the oracle message is for the wrong ERC721 asset, wrong price kind, or wrong quote currency
     function underwritePriceForCollateral(ERC721 asset, PriceKind priceKind, OracleInfo memory oracleInfo)
         public
         returns (uint256)
