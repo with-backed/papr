@@ -140,6 +140,13 @@ contract PaprController is
         _reduceDebt({account: account, asset: asset, burnFrom: msg.sender, amount: amount});
     }
 
+    /// @notice Handler for safeTransferFrom of an NFT
+    /// @dev Should be preferred to `addCollateral` if only one NFT is being added
+    /// to avoid approval call and save gas
+    /// @param from the current owner of the nft
+    /// @param _id the id of the NFT
+    /// @param data encoded IPaprController.OnERC721ReceivedArgs
+    /// @return selector indicating succesful receiving of the NFT
     function onERC721Received(address from, address, uint256 _id, bytes calldata data)
         external
         override
@@ -366,7 +373,7 @@ contract PaprController is
         }
     }
 
-    /// TODO move papr from liquidation fee
+    /// VIEW FUNCTIONS ///
 
     /// @inheritdoc IPaprController
     function maxDebt(uint256 totalCollateraValue) external view override returns (uint256) {
@@ -398,6 +405,8 @@ contract PaprController is
         emit AddCollateral(account, collateral);
     }
 
+    /// INTERNAL NON-VIEW ///
+
     function _increaseDebt(
         address account,
         ERC721 asset,
@@ -411,14 +420,12 @@ contract PaprController is
         uint256 oraclePrice =
             underwritePriceForCollateral(asset, ReservoirOracleUnderwriter.PriceKind.LOWER, oracleInfo);
 
-        // TODO do we need to check if oraclePrice is 0?
-
         uint256 max = _maxDebt(_vaultInfo[account][asset].count * oraclePrice, cachedTarget);
-        if (newDebt > max) {
-            revert IPaprController.ExceedsMaxDebt(newDebt, max);
-        }
 
-        // TODO safeCast
+        if (newDebt > max) revert IPaprController.ExceedsMaxDebt(newDebt, max);
+
+        if (newDebt >= 1 << 200) revert IPaprController.DebtAmountExceedsUint200();
+
         _vaultInfo[account][asset].debt = uint200(newDebt);
         PaprToken(address(papr)).mint(mintTo, amount);
 
@@ -484,6 +491,8 @@ contract PaprController is
             remaining = debtCached - totalOwed;
         }
     }
+
+    /// INTERNAL VIEW ///
 
     function _maxDebt(uint256 totalCollateraValue, uint256 cachedTarget) internal view returns (uint256) {
         uint256 maxLoanUnderlying = totalCollateraValue * maxLTV;
