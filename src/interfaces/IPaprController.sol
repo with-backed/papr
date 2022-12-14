@@ -112,6 +112,8 @@ interface IPaprController {
 
     error OnlyCollateralOwner();
 
+    error DebtAmountExceedsUint200();
+
     /// @notice boolean indicating whether token0 in pool is the underlying token
     function token0IsUnderlying() external view returns (bool);
 
