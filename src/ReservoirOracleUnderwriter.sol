@@ -10,6 +10,7 @@ contract ReservoirOracleUnderwriter {
     /// @dev TWAP is the average weighted floor price over the last TWAP_SECONDS
     /// @dev LOWER is the minimum of SPOT and TWAP
     /// @dev UPPER is the maximum of SPOT and TWAP
+    /// @dev see https://docs.reservoir.tools/reference/getoraclecollectionsflooraskv4 for more details
     enum PriceKind {
         SPOT,
         TWAP,
@@ -52,7 +53,7 @@ contract ReservoirOracleUnderwriter {
         quoteCurrency = _quoteCurrency;
     }
 
-    /// @notice returns the price of a collateral token
+    /// @notice returns the price of an asset
     /// @param asset the address of the ERC721 asset to underwrite the price for
     /// @param priceKind the kind of price to use from the oracle
     /// @param oracleInfo the message and signature from our oracle signer
