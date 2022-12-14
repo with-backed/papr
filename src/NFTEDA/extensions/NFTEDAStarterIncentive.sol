@@ -8,9 +8,9 @@ import {NFTEDA} from "../NFTEDA.sol";
 
 contract NFTEDAStarterIncentive is NFTEDA {
     struct AuctionState {
-        // the time the auction started
+        /// @dev the time the auction started
         uint96 startTime;
-        // who called to start the auction
+        /// @dev who called to start the auction
         address starter;
     }
 
