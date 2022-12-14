@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.17;
 
 import {IUniswapV3PoolDerivedState} from "v3-core/contracts/interfaces/pool/IUniswapV3PoolDerivedState.sol";
 import {IUniswapV3PoolState} from "v3-core/contracts/interfaces/pool/IUniswapV3PoolState.sol";
