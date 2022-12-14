@@ -57,7 +57,7 @@ contract PaprController is
     mapping(address => mapping(ERC721 => IPaprController.VaultInfo)) private _vaultInfo;
 
     /// @dev does not validate args
-    /// e.g. does not check with underlying or oracleSigner are address(0)
+    /// e.g. does not check whether underlying or oracleSigner are address(0)
     constructor(
         string memory name,
         string memory symbol,

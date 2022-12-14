@@ -41,7 +41,7 @@ abstract contract NFTEDA is INFTEDA {
 
     /// @notice Creates an auction defined by the passed `auction`
     /// @dev assumes the nft being sold is already controlled by the auction contract
-    /// @dev does not validation on the auction, aside that it does not exist.
+    /// @dev does no validation the auction, aside that it does not exist.
     /// @dev if paymentAsset = address(0), purchase will not revert
     /// @param auction The defintion of the auction
     /// @return id the id of the auction
