@@ -14,6 +14,10 @@ contract MockFundingRateController is UniswapOracleFundingRateController {
         _setPool(_pool);
     }
 
+    function setPoolCheat(address _pool) external {
+        pool = _pool;
+    }
+
     function setFundingPeriod(uint256 _fundingPeriod) external {
         _setFundingPeriod(_fundingPeriod);
     }
