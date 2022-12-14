@@ -102,15 +102,19 @@ contract OwnerFunctionsTest is MainnetForking, UniswapForking {
     }
 
     function testBurnPaprFromAuctionFeesRevertsIfNotOwner() public {
-        PaprToken paprToken = PaprToken(address(controller.papr()));
-
-        vm.startPrank(address(controller));
-        paprToken.mint(address(controller), 1e18);
-        paprToken.approve(address(controller), 1e18);
-        vm.stopPrank();
-
         vm.startPrank(address(1));
         vm.expectRevert("Ownable: caller is not the owner");
         controller.burnPaprFromAuctionFees(1e18);
+    }
+
+    function testSetLiquidationsLockedUpdatesLiquidationsLocked() public {
+        controller.setLiquidationsLocked(true);
+        assertTrue(controller.liquidationsLocked());
+    }
+
+    function testSetLiquidationsLockedRevertsIfCallerNotOwner() public {
+        vm.startPrank(address(1));
+        vm.expectRevert("Ownable: caller is not the owner");
+        controller.setLiquidationsLocked(false);
     }
 }

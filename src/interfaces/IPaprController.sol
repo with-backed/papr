@@ -59,15 +59,6 @@ interface IPaprController {
         bool allowed;
     }
 
-    /// @notice returns who owns a collateral token in a vault
-    /// @param collateral address of the collateral
-    /// @param tokenId tokenId of the collateral
-    function collateralOwner(ERC721 collateral, uint256 tokenId) external view returns (address);
-
-    /// @notice returns whether a token address is allowed to serve as collateral for a vault
-    /// @param collateral address of the collateral token
-    function isAllowed(address collateral) external view returns (bool);
-
     /// @notice emitted when an address increases the debt balance of their vault
     /// @param account address increasing their debt
     /// @param collateralAddress address of the collateral token
@@ -118,26 +109,7 @@ interface IPaprController {
 
     error CollateralAddressesDoNotMatch();
 
-    /// @notice boolean indicating whether token0 in pool is the underlying token
-    function token0IsUnderlying() external view returns (bool);
-
-    /// @notice maximum LTV a vault can have, expressed as a decimal scaled by 1e18
-    function maxLTV() external view returns (uint256);
-
-    /// @notice minimum time that must pass before consecutive collateral is liquidated from the same vault
-    function liquidationAuctionMinSpacing() external view returns (uint256);
-
-    /// @notice amount the price of an auction decreases by per auctionDecayPeriod, expressed as a decimal scaled by 1e18
-    function perPeriodAuctionDecayWAD() external view returns (uint256);
-
-    /// @notice amount of time that perPeriodAuctionDecayWAD is applied to, expressed in seconds
-    function auctionDecayPeriod() external view returns (uint256);
-
-    /// @notice the multiplier for the starting price of an auction, applied to the current price of the collateral in papr tokens
-    function auctionStartPriceMultiplier() external view returns (uint256);
-
-    /// @notice fee paid by the vault owner when their vault is liquidated if there was excess debt credited to their vault, in bips
-    function liquidationPenaltyBips() external view returns (uint256);
+    error LiquidationsLocked();
 
     /// @notice adds collateral to msg.senders vault for collateral.addr
     /// @dev use safeTransferFrom to save gas if only sending one NFT
@@ -223,6 +195,7 @@ interface IPaprController {
     ) external returns (INFTEDA.Auction memory auction);
 
     /// @notice sets the Uniswap V3 pool that is used to determine mark
+    /// @dev owner function
     /// @param _pool address of the Uniswap V3 pool
     function setPool(address _pool) external;
 
@@ -230,9 +203,62 @@ interface IPaprController {
     /// @param _fundingPeriod new funding period in seconds
     function setFundingPeriod(uint256 _fundingPeriod) external;
 
+    /// @notice sets value of liquidationsLocked
+    /// @dev owner function for use in emergencies
+    /// @param locked new value for liquidationsLocked
+    function setLiquidationsLocked(bool locked) external;
+
     /// @notice sets whether a collateral is allowed to be used to mint debt
+    /// @dev owner function
     /// @param collateralConfigs configuration settings indicating whether a collateral is allowed or not
     function setAllowedCollateral(IPaprController.CollateralAllowedConfig[] calldata collateralConfigs) external;
+
+    /// @notice transfers papr tokens held in controller from auction fees
+    /// @dev owner function
+    /// @param to address to send papr tokens to
+    /// @param amount amount of papr to send
+    /// @dev only controller owner will be able to execute this function
+    function sendPaprFromAuctionFees(address to, uint256 amount) external;
+
+    /// @notice burns papr tokens held in controller from auction fees
+    /// @param amount amount of papr to burn
+    /// @dev only controller owner will be able to execute this function
+    function burnPaprFromAuctionFees(uint256 amount) external;
+
+    /// @notice returns who owns a collateral token in a vault
+    /// @param collateral address of the collateral
+    /// @param tokenId tokenId of the collateral
+    function collateralOwner(ERC721 collateral, uint256 tokenId) external view returns (address);
+
+    /// @notice returns whether a token address is allowed to serve as collateral for a vault
+    /// @param collateral address of the collateral token
+    function isAllowed(address collateral) external view returns (bool);
+
+    /// @notice if liquidations are currently locked, meaning startLiquidationAuciton will revert
+    /// @dev for use in case of emergencies
+    /// @return liquidationsLocked whether liquidations are locked
+    function liquidationsLocked() external view returns (bool);
+
+    /// @notice boolean indicating whether token0 in pool is the underlying token
+    function token0IsUnderlying() external view returns (bool);
+
+    /// @notice maximum LTV a vault can have, expressed as a decimal scaled by 1e18
+    function maxLTV() external view returns (uint256);
+
+    /// @notice minimum time that must pass before consecutive collateral is liquidated from the same vault
+    function liquidationAuctionMinSpacing() external view returns (uint256);
+
+    /// @notice amount the price of an auction decreases by per auctionDecayPeriod, expressed as a decimal scaled by 1e18
+    function perPeriodAuctionDecayWAD() external view returns (uint256);
+
+    /// @notice amount of time that perPeriodAuctionDecayWAD is applied to, expressed in seconds
+    function auctionDecayPeriod() external view returns (uint256);
+
+    /// @notice the multiplier for the starting price of an auction, applied to the current price of the collateral in papr tokens
+    function auctionStartPriceMultiplier() external view returns (uint256);
+
+    /// @notice fee paid by the vault owner when their vault is liquidated if there was excess debt credited to their vault, in bips
+    function liquidationPenaltyBips() external view returns (uint256);
 
     /// @notice returns the maximum debt that can be minted for a given collateral value
     /// @param totalCollateraValue total value of the collateral
@@ -244,15 +270,4 @@ interface IPaprController {
     /// @param asset address of the collateral token associated with the vault
     /// @return vaultInfo VaultInfo struct representing information about a vault
     function vaultInfo(address account, ERC721 asset) external view returns (IPaprController.VaultInfo memory);
-
-    /// @notice transfers papr tokens held in controller from auction fees
-    /// @param to address to send papr tokens to
-    /// @param amount amount of papr to send
-    /// @dev only controller owner will be able to execute this function
-    function sendPaprFromAuctionFees(address to, uint256 amount) external;
-
-    /// @notice burns papr tokens held in controller from auction fees
-    /// @param amount amount of papr to burn
-    /// @dev only controller owner will be able to execute this function
-    function burnPaprFromAuctionFees(uint256 amount) external;
 }
