@@ -3,6 +3,7 @@ pragma solidity ^0.8.13;
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {ERC721, ERC721TokenReceiver} from "solmate/tokens/ERC721.sol";
+import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {INFTEDA, NFTEDAStarterIncentive} from "src/NFTEDA/extensions/NFTEDAStarterIncentive.sol";
 import {Ownable2Step} from "openzeppelin-contracts/access/Ownable2Step.sol";
@@ -23,6 +24,8 @@ contract PaprController is
     ReservoirOracleUnderwriter,
     NFTEDAStarterIncentive
 {
+    using SafeTransferLib for ERC20;
+
     // @inheritdoc IPaprController
     bool public immutable override token0IsUnderlying;
 
@@ -53,6 +56,8 @@ contract PaprController is
     /// @dev account => asset => vaultInfo
     mapping(address => mapping(ERC721 => IPaprController.VaultInfo)) private _vaultInfo;
 
+    /// @dev does not validate args
+    /// e.g. does not check with underlying or oracleSigner are address(0)
     constructor(
         string memory name,
         string memory symbol,
@@ -241,7 +246,7 @@ contract PaprController is
 
         if (isUnderlyingIn) {
             address payer = abi.decode(_data, (address));
-            underlying.transferFrom(payer, msg.sender, amountToPay);
+            underlying.safeTransferFrom(payer, msg.sender, amountToPay);
         } else {
             (address account, ERC721 asset, ReservoirOracleUnderwriter.OracleInfo memory oracleInfo) =
                 abi.decode(_data, (address, ERC721, ReservoirOracleUnderwriter.OracleInfo));

@@ -3,12 +3,14 @@ pragma solidity >=0.8.0;
 
 import {ERC721} from "solmate/tokens/ERC721.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
-import {SafeCast} from "v3-core/contracts/libraries/SafeCast.sol";
+import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 
 import {INFTEDA} from "./interfaces/INFTEDA.sol";
 import {EDAPrice} from "./libraries/EDAPrice.sol";
 
 abstract contract NFTEDA is INFTEDA {
+    using SafeTransferLib for ERC20;
+
     error AuctionExists();
     error InvalidAuction();
     /// @param received The amount of payment received
@@ -39,6 +41,8 @@ abstract contract NFTEDA is INFTEDA {
 
     /// @notice Creates an auction defined by the passed `auction`
     /// @dev assumes the nft being sold is already controlled by the auction contract
+    /// @dev does not validation on the auction, aside that it does not exist.
+    /// @dev if paymentAsset = address(0), purchase will not revert
     /// @param auction The defintion of the auction
     /// @return id the id of the auction
     function _startAuction(INFTEDA.Auction memory auction) internal virtual returns (uint256 id) {
@@ -86,7 +90,7 @@ abstract contract NFTEDA is INFTEDA {
 
         auction.auctionAssetContract.safeTransferFrom(address(this), sendTo, auction.auctionAssetID);
 
-        auction.paymentAsset.transferFrom(msg.sender, address(this), price);
+        auction.paymentAsset.safeTransferFrom(msg.sender, address(this), price);
 
         emit EndAuction(id, price);
     }
