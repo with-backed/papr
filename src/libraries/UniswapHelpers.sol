@@ -7,6 +7,8 @@ import {TickMath} from "fullrange/libraries/TickMath.sol";
 import {FullMath} from "fullrange/libraries/FullMath.sol";
 import {SafeCast} from "v3-core/contracts/libraries/SafeCast.sol";
 
+import {PoolAddress} from "./PoolAddress.sol";
+
 library UniswapHelpers {
     using SafeCast for uint256;
 
@@ -51,6 +53,12 @@ library UniswapHelpers {
     function poolsHaveSameTokens(address pool1, address pool2) internal view returns (bool) {
         return IUniswapV3Pool(pool1).token0() == IUniswapV3Pool(pool2).token0()
             && IUniswapV3Pool(pool1).token1() == IUniswapV3Pool(pool2).token1();
+    }
+
+    function isUniswapPool(address pool) internal returns (bool) {
+        IUniswapV3Pool p = IUniswapV3Pool(pool);
+        PoolAddress.PoolKey memory k = PoolAddress.getPoolKey(p.token0(), p.token1(), p.fee());
+        return pool == PoolAddress.computeAddress(address(FACTORY), k);
     }
 
     /// @notice returns the sqrt ratio at which token0 and token1 are trading at 1:1

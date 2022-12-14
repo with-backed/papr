@@ -108,6 +108,8 @@ contract UniswapOracleFundingRateController is IUniswapOracleFundingRateControll
     /// @dev intended to be used in inherited contract with owner guard
     function _setPool(address _pool) internal {
         if (pool != address(0) && !UniswapHelpers.poolsHaveSameTokens(pool, _pool)) revert PoolTokensDoNotMatch();
+        if (!UniswapHelpers.isUniswapPool(_pool)) revert InvalidUniswapV3Pool();
+
         pool = _pool;
 
         emit SetPool(_pool);

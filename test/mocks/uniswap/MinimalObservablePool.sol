@@ -7,6 +7,7 @@ contract MinimalObservablePool {
     int56[] tickCumulatives;
     ERC20 public token0;
     ERC20 public token1;
+    uint24 public fee = 10000;
 
     constructor(ERC20 tokenA, ERC20 tokenB) {
         (token0, token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
