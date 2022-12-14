@@ -26,6 +26,9 @@ contract PaprController is
 {
     using SafeTransferLib for ERC20;
 
+    /// @dev what 1 = 100% is in basis points (bips)
+    uint256 public constant BIPS_ONE = 1e4;
+
     // @inheritdoc IPaprController
     bool public immutable override token0IsUnderlying;
 
@@ -45,7 +48,7 @@ contract PaprController is
     uint256 public immutable override auctionStartPriceMultiplier = 3;
 
     // @inheritdoc IPaprController
-    uint256 public immutable override liquidationPenaltyBips = 1000;
+    uint256 public immutable override liquidationPenaltyBips = 100;
 
     // @inheritdoc IPaprController
     mapping(ERC721 => mapping(uint256 => address)) public override collateralOwner;
@@ -192,7 +195,7 @@ contract PaprController is
         );
 
         if (hasFee) {
-            uint256 fee = amountOut * params.swapFeeBips / 1e4;
+            uint256 fee = amountOut * params.swapFeeBips / BIPS_ONE;
             underlying.transfer(params.swapFeeTo, fee);
             underlying.transfer(proceedsTo, amountOut - fee);
         }
@@ -217,7 +220,7 @@ contract PaprController is
         );
 
         if (hasFee) {
-            underlying.transfer(params.swapFeeTo, amountIn * params.swapFeeBips / 1e4);
+            underlying.transfer(params.swapFeeTo, amountIn * params.swapFeeBips / BIPS_ONE);
         }
 
         _reduceDebt({account: account, asset: collateralAsset, burnFrom: msg.sender, amount: amountOut});
@@ -508,7 +511,7 @@ contract PaprController is
         );
 
         if (hasFee) {
-            uint256 fee = amountOut * params.swapFeeBips / 1e4;
+            uint256 fee = amountOut * params.swapFeeBips / BIPS_ONE;
             underlying.transfer(params.swapFeeTo, fee);
             underlying.transfer(proceedsTo, amountOut - fee);
         }
@@ -518,7 +521,7 @@ contract PaprController is
         internal
         returns (uint256 remaining)
     {
-        uint256 fee = excess * liquidationPenaltyBips / 1e4;
+        uint256 fee = excess * liquidationPenaltyBips / BIPS_ONE;
         uint256 credit = excess - fee;
         uint256 totalOwed = credit + neededToSaveVault;
 
