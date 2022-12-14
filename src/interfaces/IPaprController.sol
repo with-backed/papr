@@ -77,19 +77,21 @@ interface IPaprController {
 
     /// @notice emitted when a user adds collateral to their vault
     /// @param account address adding collateral
-    /// @param collateral collateral added
-    event AddCollateral(address indexed account, IPaprController.Collateral collateral);
+    /// @param collateralAddress contract address of the ERC721 collateral added
+    /// @param tokenId token id of the ERC721 collateral added
+    event AddCollateral(address indexed account, ERC721 indexed collateralAddress, uint256 indexed tokenId);
+
+    /// @notice emitted when a user removes collateral from their vault
+    /// @param account address removing collateral
+    /// @param collateralAddress contract address of the ERC721 collateral removed
+    /// @param tokenId token id of the ERC721 collateral removed
+    event RemoveCollateral(address indexed account, ERC721 indexed collateralAddress, uint256 indexed tokenId);
 
     /// @notice emitted when a user reduces the debt balance of their vault
     /// @param account address reducing their debt
     /// @param collateralAddress address of the collateral token
     /// @param amount amount of debt removed
     event ReduceDebt(address indexed account, ERC721 indexed collateralAddress, uint256 amount);
-
-    /// @notice emitted when a user removes collateral from their vault
-    /// @param account address removing collateral
-    /// @param collateral collateral removed
-    event RemoveCollateral(address indexed account, IPaprController.Collateral collateral);
 
     /// @notice emitted when the owner sets whether a token address is allowed to serve as collateral for a vault
     /// @param collateral address of the collateral token
@@ -114,6 +116,8 @@ interface IPaprController {
 
     error DebtAmountExceedsUint200();
 
+    error CollateralAddressesDoNotMatch();
+
     /// @notice boolean indicating whether token0 in pool is the underlying token
     function token0IsUnderlying() external view returns (bool);
 
@@ -135,27 +139,29 @@ interface IPaprController {
     /// @notice fee paid by the vault owner when their vault is liquidated if there was excess debt credited to their vault, in bips
     function liquidationPenaltyBips() external view returns (uint256);
 
-    /// @notice adds collateral to msg.senders vault
+    /// @notice adds collateral to msg.senders vault for collateral.addr
+    /// @dev use safeTransferFrom to save gas if only sending one NFT
     /// @param collateral collateral to add
-    function addCollateral(IPaprController.Collateral calldata collateral) external;
+    function addCollateral(IPaprController.Collateral[] calldata collateral) external;
 
     /// @notice removes collateral from msg.senders vault
+    /// @dev all collateral must be from same contract address
+    /// @dev oracleInfo price must be type LOWER
     /// @param sendTo address to send the collateral to when removed
-    /// @param collateral collateral to remove
+    /// @param collateralArr array of IPaprController.Collateral to be removed
     /// @param oracleInfo oracle information for the collateral being removed
-    /// @dev removing collateral expects the TWAP price information from the oracle
     function removeCollateral(
         address sendTo,
-        IPaprController.Collateral calldata collateral,
+        IPaprController.Collateral[] calldata collateralArr,
         ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
     ) external;
 
     /// @notice increases debt balance of the vault uniquely identified by msg.sender and the collateral address
+    /// @dev oracleInfo price must be type LOWER
     /// @param mintTo address to mint the debt to
     /// @param asset address of the collateral token used to mint the debt
     /// @param amount amount of debt to mint
     /// @param oracleInfo oracle information for the collateral being used to mint debt
-    /// @dev increasing debt expects the LOWER price information from the oracle
     function increaseDebt(
         address mintTo,
         ERC721 asset,
@@ -170,11 +176,11 @@ interface IPaprController {
     function reduceDebt(address account, ERC721 asset, uint256 amount) external;
 
     /// @notice mints debt and swaps the debt for the controller's underlying token on Uniswap
+    /// @dev oracleInfo price must be type LOWER
     /// @param proceedsTo address to send the proceeds to
     /// @param collateralAsset address of the collateral token used to mint the debt
     /// @param params parameters for the swap
     /// @param oracleInfo oracle information for the collateral being used to mint debt
-    /// @dev increasing debt expects the LOWER price information from the oracle
     /// @return amount amount of underlying token received by the user
     function increaseDebtAndSell(
         address proceedsTo,
@@ -193,6 +199,7 @@ interface IPaprController {
         returns (uint256);
 
     /// @notice purchases a liquidation auction with the controller's papr token
+    /// @dev oracleInfo price must be type TWAP
     /// @param auction auction to purchase
     /// @param maxPrice maximum price to pay for the auction
     /// @param sendTo address to send the collateral to if auction is won
@@ -204,10 +211,10 @@ interface IPaprController {
     ) external;
 
     /// @notice starts a liquidation auction for a vault if it is liquidatable
+    /// @dev oracleInfo price must be type TWAP
     /// @param account address of the user who's vault to liquidate
     /// @param collateral collateral to liquidate
     /// @param oracleInfo oracle information for the collateral being liquidated
-    /// @dev liquidating collateral expects the TWAP price information from the oracle
     /// @return auction auction that was started
     function startLiquidationAuction(
         address account,

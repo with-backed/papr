@@ -21,7 +21,9 @@ contract IncreaseDebtTest is BasePaprControllerTest {
 
         vm.startPrank(borrower);
         nft.approve(address(controller), collateralId);
-        controller.addCollateral(collateral);
+        IPaprController.Collateral[] memory c = new IPaprController.Collateral[](1);
+        c[0] = collateral;
+        controller.addCollateral(c);
 
         controller.increaseDebt(borrower, collateral.addr, debt, oracleInfo);
         assertEq(debtToken.balanceOf(borrower), debt);
@@ -31,7 +33,9 @@ contract IncreaseDebtTest is BasePaprControllerTest {
     function testIncreaseDebtEmitsEvent() public {
         vm.startPrank(borrower);
         nft.approve(address(controller), collateralId);
-        controller.addCollateral(collateral);
+        IPaprController.Collateral[] memory c = new IPaprController.Collateral[](1);
+        c[0] = collateral;
+        controller.addCollateral(c);
 
         vm.expectEmit(true, true, false, true);
         emit IncreaseDebt(borrower, collateral.addr, debt);
@@ -42,7 +46,9 @@ contract IncreaseDebtTest is BasePaprControllerTest {
         vm.assume(debt > controller.maxDebt(oraclePrice));
         vm.startPrank(borrower);
         nft.approve(address(controller), collateralId);
-        controller.addCollateral(collateral);
+        IPaprController.Collateral[] memory c = new IPaprController.Collateral[](1);
+        c[0] = collateral;
+        controller.addCollateral(c);
 
         uint256 maxDebt = controller.maxDebt(oraclePrice);
 

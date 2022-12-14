@@ -11,7 +11,9 @@ contract IncreaseDebtAndSellTest is BasePaprControllerTest {
     function testIncreaseDebtAndSell() public {
         vm.startPrank(borrower);
         nft.approve(address(controller), collateralId);
-        controller.addCollateral(collateral);
+        IPaprController.Collateral[] memory c = new IPaprController.Collateral[](1);
+        c[0] = collateral;
+        controller.addCollateral(c);
         IPaprController.SwapParams memory swapParams = IPaprController.SwapParams({
             amount: debt,
             minOut: 982507,

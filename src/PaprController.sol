@@ -89,45 +89,43 @@ contract PaprController is
     }
 
     /// @inheritdoc IPaprController
-    function addCollateral(IPaprController.Collateral calldata collateral) external override {
-        _addCollateralToVault(msg.sender, collateral);
-        collateral.addr.transferFrom(msg.sender, address(this), collateral.id);
+    function addCollateral(IPaprController.Collateral[] calldata collateralArr) external override {
+        for (uint256 i = 0; i < collateralArr.length;) {
+            _addCollateralToVault(msg.sender, collateralArr[i]);
+            collateralArr[i].addr.transferFrom(msg.sender, address(this), collateralArr[i].id);
+            unchecked {
+                ++i;
+            }
+        }
     }
 
     /// @inheritdoc IPaprController
     function removeCollateral(
         address sendTo,
-        IPaprController.Collateral calldata collateral,
+        IPaprController.Collateral[] calldata collateralArr,
         ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
     ) external override {
         uint256 cachedTarget = updateTarget();
+        uint256 oraclePrice;
+        ERC721 collateralAddr;
 
-        if (collateralOwner[collateral.addr][collateral.id] != msg.sender) {
-            revert IPaprController.OnlyCollateralOwner();
+        for (uint256 i = 0; i < collateralArr.length;) {
+            if (i == 0) {
+                collateralAddr = collateralArr[i].addr;
+                oraclePrice =
+                    underwritePriceForCollateral(collateralAddr, ReservoirOracleUnderwriter.PriceKind.LOWER, oracleInfo);
+            } else {
+                if (collateralAddr != collateralArr[i].addr) {
+                    revert CollateralAddressesDoNotMatch();
+                }
+            }
+
+            _removeCollateral(sendTo, collateralArr[i], oraclePrice, cachedTarget);
+
+            unchecked {
+                ++i;
+            }
         }
-
-        delete collateralOwner[collateral.addr][collateral.id];
-
-        uint16 newCount;
-        unchecked {
-            newCount = _vaultInfo[msg.sender][collateral.addr].count - 1;
-            _vaultInfo[msg.sender][collateral.addr].count = newCount;
-        }
-
-        // allows for onReceive hook to sell and repay debt before the
-        // debt check below
-        collateral.addr.safeTransferFrom(address(this), sendTo, collateral.id);
-
-        uint256 debt = _vaultInfo[msg.sender][collateral.addr].debt;
-        uint256 oraclePrice =
-            underwritePriceForCollateral(collateral.addr, ReservoirOracleUnderwriter.PriceKind.LOWER, oracleInfo);
-        uint256 max = _maxDebt(oraclePrice * newCount, cachedTarget);
-
-        if (debt > max) {
-            revert IPaprController.ExceedsMaxDebt(debt, max);
-        }
-
-        emit RemoveCollateral(msg.sender, collateral);
     }
 
     /// @inheritdoc IPaprController
@@ -330,7 +328,7 @@ contract PaprController is
         info.latestAuctionStartTime = uint40(block.timestamp);
         info.count -= 1;
 
-        emit RemoveCollateral(account, collateral);
+        emit RemoveCollateral(account, collateral.addr, collateral.id);
 
         delete collateralOwner[collateral.addr][collateral.id];
 
@@ -408,6 +406,8 @@ contract PaprController is
         return _vaultInfo[account][asset];
     }
 
+    /// INTERNAL NON-VIEW ///
+
     function _addCollateralToVault(address account, IPaprController.Collateral memory collateral) internal {
         if (!isAllowed[address(collateral.addr)]) {
             revert IPaprController.InvalidCollateral();
@@ -416,10 +416,40 @@ contract PaprController is
         collateralOwner[collateral.addr][collateral.id] = account;
         _vaultInfo[account][collateral.addr].count += 1;
 
-        emit AddCollateral(account, collateral);
+        emit AddCollateral(account, collateral.addr, collateral.id);
     }
 
-    /// INTERNAL NON-VIEW ///
+    function _removeCollateral(
+        address sendTo,
+        IPaprController.Collateral calldata collateral,
+        uint256 oraclePrice,
+        uint256 cachedTarget
+    ) internal {
+        if (collateralOwner[collateral.addr][collateral.id] != msg.sender) {
+            revert IPaprController.OnlyCollateralOwner();
+        }
+
+        delete collateralOwner[collateral.addr][collateral.id];
+
+        uint16 newCount;
+        unchecked {
+            newCount = _vaultInfo[msg.sender][collateral.addr].count - 1;
+            _vaultInfo[msg.sender][collateral.addr].count = newCount;
+        }
+
+        // allows for onReceive hook to sell and repay debt before the
+        // debt check below
+        collateral.addr.safeTransferFrom(address(this), sendTo, collateral.id);
+
+        uint256 debt = _vaultInfo[msg.sender][collateral.addr].debt;
+        uint256 max = _maxDebt(oraclePrice * newCount, cachedTarget);
+
+        if (debt > max) {
+            revert IPaprController.ExceedsMaxDebt(debt, max);
+        }
+
+        emit RemoveCollateral(msg.sender, collateral.addr, collateral.id);
+    }
 
     function _increaseDebt(
         address account,

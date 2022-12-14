@@ -12,7 +12,9 @@ contract BuyAndReduceDebt is BasePaprControllerTest {
     function testBuyAndReduceDebtReducesDebt() public {
         vm.startPrank(borrower);
         nft.approve(address(controller), collateralId);
-        controller.addCollateral(IPaprController.Collateral(nft, collateralId));
+        IPaprController.Collateral[] memory c = new IPaprController.Collateral[](1);
+        c[0] = collateral;
+        controller.addCollateral(c);
         IPaprController.SwapParams memory swapParams = IPaprController.SwapParams({
             amount: debt,
             minOut: 982507,
@@ -43,7 +45,9 @@ contract BuyAndReduceDebt is BasePaprControllerTest {
     function testBuyAndReduceDebtRevertsIfMinOutTooLittle() public {
         vm.startPrank(borrower);
         nft.approve(address(controller), collateralId);
-        controller.addCollateral(collateral);
+        IPaprController.Collateral[] memory c = new IPaprController.Collateral[](1);
+        c[0] = collateral;
+        controller.addCollateral(c);
         IPaprController.SwapParams memory swapParams = IPaprController.SwapParams({
             amount: debt,
             minOut: 982507,

@@ -11,11 +11,27 @@ import {ReservoirOracleUnderwriter} from "src/ReservoirOracleUnderwriter.sol";
 import {TestERC721} from "test/mocks/TestERC721.sol";
 
 contract AddCollateralTest is BasePaprControllerTest {
-    function testAddCollateral() public {
+    event AddCollateral(address indexed account, ERC721 indexed collateralAddress, uint256 indexed tokenId);
+
+    function testAddCollateralUpdatesCollateralOwnerCorrectly() public {
+        _addCollateral();
+        assertEq(controller.collateralOwner(collateral.addr, collateral.id), borrower);
+    }
+
+    function testAddCollateralEmitsAddCollateral() public {
         vm.startPrank(borrower);
         nft.approve(address(controller), collateralId);
-        controller.addCollateral(collateral);
-        controller.increaseDebt(borrower, collateral.addr, controller.maxDebt(oraclePrice), oracleInfo);
+        IPaprController.Collateral[] memory c = new IPaprController.Collateral[](1);
+        c[0] = collateral;
+        vm.expectEmit(true, true, true, false);
+        emit AddCollateral(borrower, collateral.addr, collateral.id);
+        controller.addCollateral(c);
+    }
+
+    function testAddCollateralIncreasesCountInVault() public {
+        uint256 beforeCount = controller.vaultInfo(borrower, collateral.addr).count;
+        _addCollateral();
+        assertEq(beforeCount + 1, controller.vaultInfo(borrower, collateral.addr).count);
     }
 
     function testAddCollateralFailsIfInvalidCollateral() public {
@@ -23,20 +39,16 @@ contract AddCollateralTest is BasePaprControllerTest {
         vm.startPrank(borrower);
         nft.approve(address(controller), collateralId);
         vm.expectRevert(IPaprController.InvalidCollateral.selector);
-        controller.addCollateral(IPaprController.Collateral(ERC721(address(1)), 1));
+        IPaprController.Collateral[] memory c = new IPaprController.Collateral[](1);
+        c[0] = IPaprController.Collateral(ERC721(address(1)), 1);
+        controller.addCollateral(c);
     }
 
-    function testAddCollateralMulticall() public {
-        nft.mint(borrower, collateralId + 1);
+    function _addCollateral() internal {
         vm.startPrank(borrower);
-        nft.setApprovalForAll(address(controller), true);
-        bytes[] memory data = new bytes[](2);
-        data[0] = abi.encodeWithSelector(
-            controller.addCollateral.selector, IPaprController.Collateral(nft, collateralId), oracleInfo
-        );
-        data[1] = abi.encodeWithSelector(
-            controller.addCollateral.selector, IPaprController.Collateral(nft, collateralId + 1), oracleInfo
-        );
-        controller.multicall(data);
+        nft.approve(address(controller), collateralId);
+        IPaprController.Collateral[] memory c = new IPaprController.Collateral[](1);
+        c[0] = collateral;
+        controller.addCollateral(c);
     }
 }

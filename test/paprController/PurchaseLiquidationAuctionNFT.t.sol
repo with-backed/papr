@@ -100,7 +100,9 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         vm.startPrank(borrower);
         nft.approve(address(controller), tokenId);
         collateral.id = tokenId;
-        controller.addCollateral(collateral);
+        IPaprController.Collateral[] memory c = new IPaprController.Collateral[](1);
+        c[0] = collateral;
+        controller.addCollateral(c);
         vm.stopPrank();
         vm.startPrank(purchaser);
 
@@ -137,7 +139,9 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         vm.startPrank(borrower);
         nft.approve(address(controller), tokenId);
         collateral.id = tokenId;
-        controller.addCollateral(collateral);
+        IPaprController.Collateral[] memory c = new IPaprController.Collateral[](1);
+        c[0] = collateral;
+        controller.addCollateral(c);
         vm.stopPrank();
         vm.startPrank(purchaser);
 
@@ -172,7 +176,9 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         vm.startPrank(borrower);
         nft.approve(address(controller), tokenId);
         collateral.id = tokenId;
-        controller.addCollateral(collateral);
+        IPaprController.Collateral[] memory c = new IPaprController.Collateral[](1);
+        c[0] = collateral;
+        controller.addCollateral(c);
         vm.stopPrank();
         vm.startPrank(purchaser);
 
@@ -212,7 +218,9 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         vm.startPrank(borrower);
         nft.approve(address(controller), tokenId);
         collateral.id = tokenId;
-        controller.addCollateral(collateral);
+        IPaprController.Collateral[] memory c = new IPaprController.Collateral[](1);
+        c[0] = collateral;
+        controller.addCollateral(c);
         // start new auction
         uint256 expectedTimestamp = block.timestamp + 2 days;
         vm.warp(expectedTimestamp); // min auction sapcing
