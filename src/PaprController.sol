@@ -29,6 +29,8 @@ contract PaprController is
     /// @dev what 1 = 100% is in basis points (bips)
     uint256 public constant BIPS_ONE = 1e4;
 
+    bool public override liquidationsLocked;
+
     /// @inheritdoc IPaprController
     bool public immutable override token0IsUnderlying;
 
@@ -291,25 +293,16 @@ contract PaprController is
         }
     }
 
-    function _purchaseNFTAndUpdateVaultIfNeeded(Auction calldata auction, uint256 maxPrice, address sendTo)
-        internal
-        returns (uint256)
-    {
-        (uint256 startTime, uint256 price) = _purchaseNFT(auction, maxPrice, sendTo);
-
-        if (startTime == _vaultInfo[auction.nftOwner][auction.auctionAssetContract].latestAuctionStartTime) {
-            _vaultInfo[auction.nftOwner][auction.auctionAssetContract].latestAuctionStartTime = 0;
-        }
-
-        return price;
-    }
-
     /// @inheritdoc IPaprController
     function startLiquidationAuction(
         address account,
         IPaprController.Collateral calldata collateral,
         ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
     ) external override returns (INFTEDA.Auction memory auction) {
+        if (liquidationsLocked) {
+            revert LiquidationsLocked();
+        }
+
         uint256 cachedTarget = updateTarget();
 
         IPaprController.VaultInfo storage info = _vaultInfo[account][collateral.addr];
@@ -362,6 +355,12 @@ contract PaprController is
     function setFundingPeriod(uint256 _fundingPeriod) external override onlyOwner {
         _setFundingPeriod(_fundingPeriod);
     }
+
+    /// @inheritdoc IPaprController
+    function setLiquidationsLocked(bool locked) external override onlyOwner {
+        liquidationsLocked = locked;
+    }
+
 
     /// @inheritdoc IPaprController
     function setAllowedCollateral(IPaprController.CollateralAllowedConfig[] calldata collateralConfigs)
@@ -516,6 +515,19 @@ contract PaprController is
             underlying.transfer(params.swapFeeTo, fee);
             underlying.transfer(proceedsTo, amountOut - fee);
         }
+    }
+
+    function _purchaseNFTAndUpdateVaultIfNeeded(Auction calldata auction, uint256 maxPrice, address sendTo)
+        internal
+        returns (uint256)
+    {
+        (uint256 startTime, uint256 price) = _purchaseNFT(auction, maxPrice, sendTo);
+
+        if (startTime == _vaultInfo[auction.nftOwner][auction.auctionAssetContract].latestAuctionStartTime) {
+            _vaultInfo[auction.nftOwner][auction.auctionAssetContract].latestAuctionStartTime = 0;
+        }
+
+        return price;
     }
 
     function _handleExcess(uint256 excess, uint256 neededToSaveVault, uint256 debtCached, Auction calldata auction)
