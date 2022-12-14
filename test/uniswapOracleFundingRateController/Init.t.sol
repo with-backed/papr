@@ -28,7 +28,7 @@ contract InitableFundingRateController is UniswapOracleFundingRateController {
     }
 }
 
-contract SetPoolTest is MainnetForking, UniswapForking {
+contract InitTest is MainnetForking, UniswapForking {
     event UpdateTarget(uint256 newTarget);
 
     ERC20 underlying = new TestERC20();
