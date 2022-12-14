@@ -361,7 +361,6 @@ contract PaprController is
         liquidationsLocked = locked;
     }
 
-
     /// @inheritdoc IPaprController
     function setAllowedCollateral(IPaprController.CollateralAllowedConfig[] calldata collateralConfigs)
         external
