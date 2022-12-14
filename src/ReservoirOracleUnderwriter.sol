@@ -57,7 +57,7 @@ contract ReservoirOracleUnderwriter {
     /// @param asset the address of the ERC721 asset to underwrite the price for
     /// @param priceKind the kind of price to use from the oracle
     /// @param oracleInfo the message and signature from our oracle signer
-    /// @return oraclePrice the price of the collateral token
+    /// @return oraclePrice the price of the asset
     function underwritePriceForCollateral(ERC721 asset, PriceKind priceKind, OracleInfo memory oracleInfo)
         public
         returns (uint256)
