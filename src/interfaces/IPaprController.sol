@@ -237,4 +237,15 @@ interface IPaprController {
     /// @param asset address of the collateral token associated with the vault
     /// @return vaultInfo VaultInfo struct representing information about a vault
     function vaultInfo(address account, ERC721 asset) external view returns (IPaprController.VaultInfo memory);
+
+    /// @notice transfers papr tokens held in controller from auction fees
+    /// @param to address to send papr tokens to
+    /// @param amount amount of papr to send
+    /// @dev only controller owner will be able to execute this function
+    function sendPaprFromAuctionFees(address to, uint256 amount) external;
+
+    /// @notice burns papr tokens held in controller from auction fees
+    /// @param amount amount of papr to burn
+    /// @dev only controller owner will be able to execute this function
+    function burnPaprFromAuctionFees(uint256 amount) external;
 }

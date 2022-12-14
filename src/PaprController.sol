@@ -378,6 +378,15 @@ contract PaprController is
         }
     }
 
+    /// @inheritdoc IPaprController
+    function sendPaprFromAuctionFees(address to, uint256 amount) external override onlyOwner {
+        papr.safeTransferFrom(address(this), to, amount);
+    }
+
+    function burnPaprFromAuctionFees(uint256 amount) external override onlyOwner {
+        PaprToken(address(papr)).burn(address(this), amount);
+    }
+
     /// VIEW FUNCTIONS ///
 
     /// @inheritdoc IPaprController
