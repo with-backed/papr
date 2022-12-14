@@ -5,6 +5,11 @@ import {ERC721} from "solmate/tokens/ERC721.sol";
 import {ReservoirOracle} from "@reservoir/ReservoirOracle.sol";
 
 contract ReservoirOracleUnderwriter {
+    /// @notice The kind of floor price to use from the oracle
+    /// @dev SPOT is the floor price at the time of the oracle message
+    /// @dev TWAP is the average weighted floor price over the last TWAP_SECONDS
+    /// @dev LOWER is the minimum of SPOT and TWAP
+    /// @dev UPPER is the maximum of SPOT and TWAP
     enum PriceKind {
         SPOT,
         TWAP,
@@ -12,20 +17,29 @@ contract ReservoirOracleUnderwriter {
         UPPER
     }
 
+    /// @notice The signature of a message from our oracle signer
     struct Sig {
         uint8 v;
         bytes32 r;
         bytes32 s;
     }
 
+    /// @notice The message and signature from our oracle signer
     struct OracleInfo {
         ReservoirOracle.Message message;
         Sig sig;
     }
 
+    /// @notice the amount of time to use for the TWAP
     uint256 constant TWAP_SECONDS = 30 days;
+
+    /// @notice the maximum time a given signed oracle message is valid for
     uint256 constant VALID_FOR = 20 minutes;
+
+    /// @notice the signing address the contract expects from the oracle message
     address public immutable oracleSigner;
+
+    /// @notice address of the currency we are receiving oracle prices in
     address public immutable quoteCurrency;
 
     error IncorrectOracleSigner();
@@ -38,6 +52,11 @@ contract ReservoirOracleUnderwriter {
         quoteCurrency = _quoteCurrency;
     }
 
+    /// @notice returns the price of a collateral token
+    /// @param asset the address of the ERC721 asset to underwrite the price for
+    /// @param priceKind the kind of price to use from the oracle
+    /// @param oracleInfo the message and signature from our oracle signer
+    /// @return oraclePrice the price of the collateral token
     function underwritePriceForCollateral(ERC721 asset, PriceKind priceKind, OracleInfo memory oracleInfo)
         public
         returns (uint256)
@@ -62,7 +81,6 @@ contract ReservoirOracleUnderwriter {
             oracleInfo.sig.s
         );
 
-        // Ensure the signer matches the designated oracle address
         if (signerAddress != oracleSigner) {
             revert IncorrectOracleSigner();
         }

@@ -32,7 +32,7 @@ AddCollateralTest:testAddCollateralUpdatesCollateralOwnerCorrectly() (gas: 11061
 BuyAndReduceDebt:testBuyAndReduceDebtReducesDebt() (gas: 385470)
 BuyAndReduceDebt:testBuyAndReduceDebtRevertsIfMinOutTooLittle() (gas: 462100)
 IncreaseDebtAndSellTest:testIncreaseDebtAndSell() (gas: 369513)
-IncreaseDebtTest:testFuzzIncreaseDebt(uint256) (runs: 256, μ: 227558, ~: 229417)
+IncreaseDebtTest:testFuzzIncreaseDebt(uint256) (runs: 256, μ: 227634, ~: 229417)
 IncreaseDebtTest:testFuzzIncreaseDebtRevertsIfTooMuchDebt(uint200) (runs: 256, μ: 146623, ~: 146623)
 IncreaseDebtTest:testIncreaseDebtEmitsEvent() (gas: 196848)
 IncreaseDebtTest:testIncreaseDebtRevertsIfWrongPriceTypeFromOracle() (gas: 174738)
