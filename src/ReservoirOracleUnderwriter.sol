@@ -59,7 +59,7 @@ contract ReservoirOracleUnderwriter {
     /// @param oracleInfo the message and signature from our oracle signer
     /// @return oraclePrice the price of the asset, expressed in quoteCurrency units
     /// @dev reverts if the signer of the oracle message is incorrect
-    /// @dev reverts if the oracle message is longer than VALID_FOR old
+    /// @dev reverts if the oracle message was signed longer than VALID_FOR ago
     /// @dev reverts if the oracle message is for the wrong ERC721 asset, wrong price kind, or wrong quote currency
     function underwritePriceForCollateral(ERC721 asset, PriceKind priceKind, OracleInfo memory oracleInfo)
         public
