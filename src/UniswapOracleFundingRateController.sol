@@ -130,8 +130,7 @@ contract UniswapOracleFundingRateController is IUniswapOracleFundingRateControll
 
     /// @dev internal function to allow optimized SLOADs
     function _newTarget(int24 latestTwapTick, uint256 cachedTarget) internal view returns (uint256) {
-        uint256 m = _mark(latestTwapTick);
-        return FixedPointMathLib.mulWadDown(cachedTarget, _multiplier(m, cachedTarget));
+        return FixedPointMathLib.mulWadDown(cachedTarget, _multiplier(_mark(latestTwapTick), cachedTarget));
     }
 
     /// @dev internal function to allow optimized SLOADs
