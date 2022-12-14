@@ -129,7 +129,7 @@ abstract contract NFTEDATest is Test {
     function testPurchaseNFTRevertsIfTransferFails() public {
         vm.startPrank(purchaser);
         erc20.approve(address(auctionContract), startPrice - 1);
-        vm.expectRevert(stdError.arithmeticError);
+        vm.expectRevert("TRANSFER_FROM_FAILED");
         auctionContract.purchaseNFT(auction, startPrice, purchaser);
     }
 
