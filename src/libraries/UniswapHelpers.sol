@@ -96,7 +96,7 @@ library UniswapHelpers {
 
     /// @notice returns whether or not a pool is a UniswapV3 pool
     /// @param pool the address of the pool
-    /// @return isUniswap whether or not the pool is a UniswapV3 pool
+    /// @return isUniswapPool whether or not the pool is a UniswapV3 pool
     function isUniswapPool(address pool) internal view returns (bool) {
         IUniswapV3Pool p = IUniswapV3Pool(pool);
         PoolAddress.PoolKey memory k = PoolAddress.getPoolKey(p.token0(), p.token1(), p.fee());
