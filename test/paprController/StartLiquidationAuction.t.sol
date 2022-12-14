@@ -4,17 +4,17 @@ pragma solidity ^0.8.13;
 import {ReservoirOracleUnderwriter} from "src/ReservoirOracleUnderwriter.sol";
 
 import {BasePaprControllerTest} from "test/paprController/BasePaprController.ft.sol";
-import {IPaprController} from "src/interfaces/IPaprController.sol";
+import {IPaprController, ERC721} from "src/interfaces/IPaprController.sol";
 
 contract StartLiquidationAuctionTest is BasePaprControllerTest {
+    event RemoveCollateral(address indexed account, ERC721 indexed collateralAddress, uint256 indexed tokenId);
+
     function setUp() public override {
         super.setUp();
         _openMaxLoanAndSwap();
         priceKind = ReservoirOracleUnderwriter.PriceKind.TWAP;
         oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
     }
-
-    /// TODO sets start price correctly
 
     function testDrecrementsCollateralCountCorrectly() public {
         IPaprController.VaultInfo memory beforeInfo = controller.vaultInfo(borrower, collateral.addr);
@@ -55,8 +55,9 @@ contract StartLiquidationAuctionTest is BasePaprControllerTest {
         nft.mint(borrower, collateralId + 1);
         vm.startPrank(borrower);
         nft.approve(address(controller), collateralId + 1);
-        controller.addCollateral(IPaprController.Collateral(nft, collateralId + 1));
-
+        IPaprController.Collateral[] memory c = new IPaprController.Collateral[](1);
+        c[0] = IPaprController.Collateral(nft, collateralId + 1);
+        controller.addCollateral(c);
         vm.expectRevert(IPaprController.MinAuctionSpacing.selector);
         controller.startLiquidationAuction(
             borrower, IPaprController.Collateral({id: collateralId + 1, addr: nft}), oracleInfo
@@ -70,7 +71,9 @@ contract StartLiquidationAuctionTest is BasePaprControllerTest {
         nft.mint(borrower, collateralId + 1);
         vm.startPrank(borrower);
         nft.approve(address(controller), collateralId + 1);
-        controller.addCollateral(IPaprController.Collateral(nft, collateralId + 1));
+        IPaprController.Collateral[] memory c = new IPaprController.Collateral[](1);
+        c[0] = IPaprController.Collateral(nft, collateralId + 1);
+        controller.addCollateral(c);
 
         vm.warp(block.timestamp + controller.liquidationAuctionMinSpacing());
         oracleInfo = _getOracleInfoForCollateral(nft, underlying);
@@ -79,12 +82,10 @@ contract StartLiquidationAuctionTest is BasePaprControllerTest {
         );
     }
 
-    event RemoveCollateral(address indexed account, IPaprController.Collateral collateral);
-
     function testEmitsRemoveCollateral() public {
         _makeMaxLoanLiquidatable();
-        vm.expectEmit(true, false, false, true);
-        emit RemoveCollateral(borrower, collateral);
+        vm.expectEmit(true, true, true, false);
+        emit RemoveCollateral(borrower, collateral.addr, collateral.id);
         controller.startLiquidationAuction(borrower, collateral, oracleInfo);
     }
 }
