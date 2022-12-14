@@ -55,7 +55,7 @@ contract ReservoirOracleUnderwriter {
 
     /// @notice returns the price of an asset from a signed oracle message
     /// @param asset the address of the ERC721 asset to underwrite the price for
-    /// @param priceKind the kind of price to use from the oracle
+    /// @param priceKind the kind of price the function expects the oracle message to contain
     /// @param oracleInfo the message and signature from our oracle signer
     /// @return oraclePrice the price of the asset, expressed in quoteCurrency units
     /// @dev reverts if the signer of the oracle message is incorrect
