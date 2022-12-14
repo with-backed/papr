@@ -48,6 +48,14 @@ contract StartLiquidationAuctionTest is BasePaprControllerTest {
         controller.startLiquidationAuction(address(0xded), collateral, oracleInfo);
     }
 
+    function testRevertsIfWrongPriceTypeFromOracle() public {
+        _makeMaxLoanLiquidatable();
+        priceKind = ReservoirOracleUnderwriter.PriceKind.LOWER;
+        oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
+        vm.expectRevert(ReservoirOracleUnderwriter.WrongIdentifierFromOracleMessage.selector);
+        controller.startLiquidationAuction(borrower, collateral, oracleInfo);
+    }
+
     function testRevertsIfAuctionOngoing() public {
         _makeMaxLoanLiquidatable();
         controller.startLiquidationAuction(borrower, collateral, oracleInfo);

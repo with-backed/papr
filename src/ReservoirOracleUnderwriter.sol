@@ -29,7 +29,7 @@ contract ReservoirOracleUnderwriter {
     address public immutable quoteCurrency;
 
     error IncorrectOracleSigner();
-    error WrongCollateralFromOracleMessage();
+    error WrongIdentifierFromOracleMessage();
     error WrongCurrencyFromOracleMessage();
     error OracleMessageTooOld();
 
@@ -77,7 +77,7 @@ contract ReservoirOracleUnderwriter {
         );
 
         if (oracleInfo.message.id != expectedId) {
-            revert WrongCollateralFromOracleMessage();
+            revert WrongIdentifierFromOracleMessage();
         }
 
         if (

@@ -4,6 +4,7 @@ pragma solidity ^0.8.13;
 import {BasePaprControllerTest, TestERC721} from "test/paprController/BasePaprController.ft.sol";
 import {IPaprController, ERC721} from "src/interfaces/IPaprController.sol";
 import {PaprController} from "src/PaprController.sol";
+import {ReservoirOracleUnderwriter} from "src/ReservoirOracleUnderwriter.sol";
 
 contract RemoveCollateralTest is BasePaprControllerTest {
     event RemoveCollateral(address indexed account, ERC721 indexed collateralAddress, uint256 indexed tokenId);
@@ -50,6 +51,16 @@ contract RemoveCollateralTest is BasePaprControllerTest {
         _addCollateral();
         controller.increaseDebt(borrower, collateral.addr, 1, oracleInfo);
         vm.expectRevert(abi.encodeWithSelector(IPaprController.ExceedsMaxDebt.selector, 1, 0));
+        controller.removeCollateral(borrower, collateralArr, oracleInfo);
+    }
+
+    function testRemoveCollateralFailsIfWrongOraclePriceType() public {
+        _addCollateral();
+        controller.increaseDebt(borrower, collateral.addr, 1, oracleInfo);
+
+        priceKind = ReservoirOracleUnderwriter.PriceKind.TWAP;
+        oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
+        vm.expectRevert(abi.encodeWithSelector(ReservoirOracleUnderwriter.WrongIdentifierFromOracleMessage.selector));
         controller.removeCollateral(borrower, collateralArr, oracleInfo);
     }
 
