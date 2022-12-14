@@ -18,6 +18,16 @@ library UniswapHelpers {
 
     IUniswapV3Factory constant FACTORY = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
 
+    /// @notice executes a swap on the Uniswap
+    /// @param pool The pool to swap on
+    /// @param recipient The address to send the output to
+    /// @param zeroForOne Whether to swap token0 for token1 or vice versa
+    /// @param amountSpecified The amount of token0 or token1 to swap
+    /// @param minOut The minimum amount of token0 or token1 to receive
+    /// @param sqrtPriceLimitX96 The price limit for the swap
+    /// @param data Any data to pass to the uniswap callback handler
+    /// @return amountOut The amount of token0 or token1 received
+    /// @return amountIn The amount of token0 or token1 sent
     function swap(
         address pool,
         address recipient,
@@ -50,6 +60,12 @@ library UniswapHelpers {
         }
     }
 
+    /// @notice initializes a UniswapV3 pool with the given sqrt ratio
+    /// @param tokenA the first token in the pool
+    /// @param tokenB the second token in the pool
+    /// @param feeTier the fee tier of the pool
+    /// @param sqrtRatio the sqrt ratio to initialize the pool with
+    /// @return pool the address of the newly created pool
     function deployAndInitPool(address tokenA, address tokenB, uint24 feeTier, uint160 sqrtRatio)
         internal
         returns (address)
@@ -60,17 +76,27 @@ library UniswapHelpers {
         return address(pool);
     }
 
+    /// @notice returns the current price tick of a UniswapV3 pool
+    /// @param pool the address of the pool
+    /// @return tick the current price tick of the pool
     function poolCurrentTick(address pool) internal returns (int24) {
         (, int24 tick,,,,,) = IUniswapV3Pool(pool).slot0();
 
         return tick;
     }
 
+    /// @notice returns whether or not two pools have the same tokens
+    /// @param pool1 the first pool
+    /// @param pool2 the second pool
+    /// @return same whether or not the two pools have the same tokens
     function poolsHaveSameTokens(address pool1, address pool2) internal view returns (bool) {
         return IUniswapV3Pool(pool1).token0() == IUniswapV3Pool(pool2).token0()
             && IUniswapV3Pool(pool1).token1() == IUniswapV3Pool(pool2).token1();
     }
 
+    /// @notice returns whether or not a pool is a UniswapV3 pool
+    /// @param pool the address of the pool
+    /// @return isUniswap whether or not the pool is a UniswapV3 pool
     function isUniswapPool(address pool) internal view returns (bool) {
         IUniswapV3Pool p = IUniswapV3Pool(pool);
         PoolAddress.PoolKey memory k = PoolAddress.getPoolKey(p.token0(), p.token1(), p.fee());
