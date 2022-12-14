@@ -29,31 +29,32 @@ contract PaprController is
     /// @dev what 1 = 100% is in basis points (bips)
     uint256 public constant BIPS_ONE = 1e4;
 
-    // @inheritdoc IPaprController
+    /// @inheritdoc IPaprController
     bool public immutable override token0IsUnderlying;
 
-    // @inheritdoc IPaprController
+    /// @inheritdoc IPaprController
     uint256 public immutable override maxLTV;
 
-    // @inheritdoc IPaprController
+    /// @inheritdoc IPaprController
     uint256 public immutable override liquidationAuctionMinSpacing = 2 days;
 
-    // @inheritdoc IPaprController
+    /// @inheritdoc IPaprController
     uint256 public immutable override perPeriodAuctionDecayWAD = 0.7e18;
 
-    // @inheritdoc IPaprController
+    /// @inheritdoc IPaprController
     uint256 public immutable override auctionDecayPeriod = 1 days;
 
-    // @inheritdoc IPaprController
+    /// @inheritdoc IPaprController
     uint256 public immutable override auctionStartPriceMultiplier = 3;
 
-    // @inheritdoc IPaprController
-    uint256 public immutable override liquidationPenaltyBips = 100;
+    /// @inheritdoc IPaprController
+    /// @dev Set to 10%
+    uint256 public immutable override liquidationPenaltyBips = 1000;
 
-    // @inheritdoc IPaprController
+    /// @inheritdoc IPaprController
     mapping(ERC721 => mapping(uint256 => address)) public override collateralOwner;
 
-    // @inheritdoc IPaprController
+    /// @inheritdoc IPaprController
     mapping(address => bool) public override isAllowed;
 
     /// @dev account => asset => vaultInfo
