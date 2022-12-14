@@ -4,6 +4,7 @@ import {IUniswapV3Pool} from "v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
 import {PaprController} from "src/PaprController.sol";
 import {IPaprController} from "src/interfaces/IPaprController.sol";
+import {PaprToken} from "src/PaprToken.sol";
 import {TestERC721} from "test/mocks/TestERC721.sol";
 import {TestERC20} from "test/mocks/TestERC20.sol";
 import {MainnetForking} from "test/base/MainnetForking.sol";
@@ -54,5 +55,62 @@ contract OwnerFunctionsTest is MainnetForking, UniswapForking {
         vm.startPrank(address(1));
         vm.expectRevert("Ownable: caller is not the owner");
         controller.setFundingPeriod(1);
+    }
+
+    function testSendPaprFromAuctionFeesWorksIfOwner() public {
+        PaprToken paprToken = PaprToken(address(controller.papr()));
+
+        vm.startPrank(address(controller));
+        paprToken.mint(address(controller), 1e18);
+        paprToken.approve(address(controller), 1e18);
+        vm.stopPrank();
+
+        assertEq(paprToken.balanceOf(address(controller)), 1e18);
+
+        controller.sendPaprFromAuctionFees(address(1), 1e18);
+        assertEq(paprToken.balanceOf(address(controller)), 0);
+        assertEq(paprToken.balanceOf(address(1)), 1e18);
+    }
+
+    function testSendPaprFromAuctionFeesRevertsIfNotOwner() public {
+        PaprToken paprToken = PaprToken(address(controller.papr()));
+
+        vm.startPrank(address(controller));
+        paprToken.mint(address(controller), 1e18);
+        paprToken.approve(address(controller), 1e18);
+        vm.stopPrank();
+
+        vm.startPrank(address(1));
+        vm.expectRevert("Ownable: caller is not the owner");
+        controller.sendPaprFromAuctionFees(address(1), 1e18);
+    }
+
+    function testBurnPaprFromAuctionFeesWorksIfOwner() public {
+        PaprToken paprToken = PaprToken(address(controller.papr()));
+
+        vm.startPrank(address(controller));
+        paprToken.mint(address(controller), 1e18);
+        paprToken.approve(address(controller), 1e18);
+        vm.stopPrank();
+
+        assertEq(paprToken.balanceOf(address(controller)), 1e18);
+        assertEq(paprToken.totalSupply(), 1e18);
+
+        controller.burnPaprFromAuctionFees(1e18);
+        assertEq(paprToken.balanceOf(address(controller)), 0);
+        assertEq(paprToken.totalSupply(), 0);
+    }
+
+    function testBurnPaprFromAuctionFeesRevertsIfNotOwner() public {
+        PaprToken paprToken = PaprToken(address(controller.papr()));
+
+        vm.startPrank(address(controller));
+        paprToken.mint(address(controller), 1e18);
+        paprToken.approve(address(controller), 1e18);
+        vm.stopPrank();
+
+        vm.startPrank(address(1));
+        vm.expectRevert("Ownable: caller is not the owner");
+        controller.burnPaprFromAuctionFees(1e18);
     }
 }
