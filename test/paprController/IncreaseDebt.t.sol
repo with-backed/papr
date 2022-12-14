@@ -8,6 +8,7 @@ import {BasePaprControllerTest} from "test/paprController/BasePaprController.ft.
 import {IPaprController} from "src/interfaces/IPaprController.sol";
 import {PaprController} from "src/PaprController.sol";
 import {ERC721} from "solmate/tokens/ERC721.sol";
+import {ReservoirOracleUnderwriter} from "src/ReservoirOracleUnderwriter.sol";
 
 contract IncreaseDebtTest is BasePaprControllerTest {
     event IncreaseDebt(address indexed account, ERC721 indexed collateralAddress, uint256 amount);
@@ -54,5 +55,18 @@ contract IncreaseDebtTest is BasePaprControllerTest {
 
         vm.expectRevert(abi.encodeWithSelector(IPaprController.ExceedsMaxDebt.selector, debt, maxDebt));
         controller.increaseDebt(borrower, collateral.addr, debt, oracleInfo);
+    }
+
+    function testIncreaseDebtRevertsIfWrongPriceTypeFromOracle() public {
+        vm.startPrank(borrower);
+        nft.approve(address(controller), collateralId);
+        controller.addCollateral(collateral);
+
+        priceKind = ReservoirOracleUnderwriter.PriceKind.TWAP;
+        oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
+
+        vm.expectRevert(ReservoirOracleUnderwriter.WrongIdentifierFromOracleMessage.selector);
+        controller.increaseDebt(borrower, collateral.addr, debt, oracleInfo);
+        vm.stopPrank();
     }
 }
