@@ -20,3 +20,6 @@
 [submodule "lib/oracle"]
 	path = lib/oracle
 	url = https://github.com/reservoirprotocol/oracle
+[submodule "lib/solady"]
+	path = lib/solady
+	url = https://github.com/vectorized/solady
