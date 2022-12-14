@@ -1,7 +1,6 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity ^0.8.13;
 
-import {TickMath} from "fullrange/libraries/TickMath.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import "forge-std/Test.sol";
 
