@@ -2,6 +2,7 @@
 pragma solidity ^0.8.13;
 
 import {IUniswapV3PoolDerivedState} from "v3-core/contracts/interfaces/pool/IUniswapV3PoolDerivedState.sol";
+import {IUniswapV3PoolState} from "v3-core/contracts/interfaces/pool/IUniswapV3PoolState.sol";
 import {MainnetForking} from "test/base/MainnetForking.sol";
 import {UniswapForking} from "test/base/UniswapForking.sol";
 import {TickMath} from "fullrange/libraries/TickMath.sol";
@@ -74,7 +75,11 @@ contract InitTest is MainnetForking, UniswapForking {
     function testInitUpdatesLastTwapTick() public {
         address p = _deployPool();
         fundingRateController.init(1e18, p);
-        assertTrue(fundingRateController.lastTwapTick() != 0);
+        int24 tick = 200;
+        vm.mockCall(
+            p, abi.encodeWithSelector(IUniswapV3PoolState.slot0.selector), abi.encode(0, 200, 0, 0, 0, 0, false)
+        );
+        assertEq(fundingRateController.lastTwapTick(), tick);
     }
 
     function testInitUpdatesLastCumulativeTick() public {
