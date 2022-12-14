@@ -22,9 +22,9 @@ contract UniswapOracleFundingRateController is IUniswapOracleFundingRateControll
     /// @inheritdoc IUniswapOracleFundingRateController
     address public pool;
     /// @dev the max value of target / mark, used as a guard in _multiplier
-    uint256 immutable targetMarkRatioMax;
+    uint256 public immutable targetMarkRatioMax;
     /// @dev the min value of target / mark, used as a guard in _multiplier
-    uint256 immutable targetMarkRatioMin;
+    uint256 public immutable targetMarkRatioMin;
     // single slot, write together
     uint128 internal _target;
     int56 internal _lastCumulativeTick;
@@ -88,7 +88,8 @@ contract UniswapOracleFundingRateController is IUniswapOracleFundingRateControll
     }
 
     /// @notice initializes the controller, setting pool and target
-    /// @dev assumes pool is initialized
+    /// @dev assumes pool is initialized, does not check that pool tokens
+    /// match papr and underlying
     /// @param target the start value of target
     /// @param _pool the pool address to use
     function _init(uint256 target, address _pool) internal {
@@ -99,13 +100,14 @@ contract UniswapOracleFundingRateController is IUniswapOracleFundingRateControll
         _lastUpdated = uint48(block.timestamp);
         _target = SafeCastLib.safeCastTo128(target);
         _lastCumulativeTick = OracleLibrary.latestCumulativeTick(pool);
+        _lastTwapTick = UniswapHelpers.poolCurrentTick(pool);
 
         emit UpdateTarget(target);
     }
 
     /// @notice Updates `pool`
     /// @dev reverts if new pool does not have same token0 and token1 as `pool`
-    /// @dev intended to be used in inherited contract with owner guard
+    /// @dev if pool = address(0), does NOT check that tokens match papr and underlying
     function _setPool(address _pool) internal {
         if (pool != address(0) && !UniswapHelpers.poolsHaveSameTokens(pool, _pool)) revert PoolTokensDoNotMatch();
         if (!UniswapHelpers.isUniswapPool(_pool)) revert InvalidUniswapV3Pool();

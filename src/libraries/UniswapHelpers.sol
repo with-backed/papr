@@ -50,12 +50,28 @@ library UniswapHelpers {
         }
     }
 
+    function deployAndInitPool(address tokenA, address tokenB, uint24 feeTier, uint160 sqrtRatio)
+        internal
+        returns (address)
+    {
+        IUniswapV3Pool pool = IUniswapV3Pool(FACTORY.createPool(tokenA, tokenB, feeTier));
+        pool.initialize(sqrtRatio);
+
+        return address(pool);
+    }
+
+    function poolCurrentTick(address pool) internal returns (int24) {
+        (, int24 tick,,,,,) = IUniswapV3Pool(pool).slot0();
+
+        return tick;
+    }
+
     function poolsHaveSameTokens(address pool1, address pool2) internal view returns (bool) {
         return IUniswapV3Pool(pool1).token0() == IUniswapV3Pool(pool2).token0()
             && IUniswapV3Pool(pool1).token1() == IUniswapV3Pool(pool2).token1();
     }
 
-    function isUniswapPool(address pool) internal returns (bool) {
+    function isUniswapPool(address pool) internal view returns (bool) {
         IUniswapV3Pool p = IUniswapV3Pool(pool);
         PoolAddress.PoolKey memory k = PoolAddress.getPoolKey(p.token0(), p.token1(), p.fee());
         return pool == PoolAddress.computeAddress(address(FACTORY), k);
@@ -67,15 +83,5 @@ library UniswapHelpers {
     /// @return sqrtRatio at which token0 and token1 are trading at 1:1
     function oneToOneSqrtRatio(uint256 token0ONE, uint256 token1ONE) internal pure returns (uint160) {
         return TickMath.getSqrtRatioAtTick(TickMath.getTickAtSqrtRatio(uint160((token1ONE << 96) / token0ONE)) / 2);
-    }
-
-    function deployAndInitPool(address tokenA, address tokenB, uint24 feeTier, uint160 sqrtRatio)
-        internal
-        returns (address)
-    {
-        IUniswapV3Pool pool = IUniswapV3Pool(FACTORY.createPool(tokenA, tokenB, feeTier));
-        pool.initialize(sqrtRatio);
-
-        return address(pool);
     }
 }
