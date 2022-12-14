@@ -61,7 +61,7 @@ contract RemoveCollateralTest is BasePaprControllerTest {
         priceKind = ReservoirOracleUnderwriter.PriceKind.TWAP;
         oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
         vm.expectRevert(abi.encodeWithSelector(ReservoirOracleUnderwriter.WrongIdentifierFromOracleMessage.selector));
-        controller.removeCollateral(borrower, collateral, oracleInfo);
+        controller.removeCollateral(borrower, collateralArr, oracleInfo);
     }
 
     function testRemoveCollateralEmitsCorrectly() public {

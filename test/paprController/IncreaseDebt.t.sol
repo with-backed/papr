@@ -60,7 +60,9 @@ contract IncreaseDebtTest is BasePaprControllerTest {
     function testIncreaseDebtRevertsIfWrongPriceTypeFromOracle() public {
         vm.startPrank(borrower);
         nft.approve(address(controller), collateralId);
-        controller.addCollateral(collateral);
+        IPaprController.Collateral[] memory c = new IPaprController.Collateral[](1);
+        c[0] = collateral;
+        controller.addCollateral(c);
 
         priceKind = ReservoirOracleUnderwriter.PriceKind.TWAP;
         oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
