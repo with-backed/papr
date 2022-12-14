@@ -49,7 +49,7 @@ contract MockFundingRateController is UniswapOracleFundingRateController {
         return _lastTwapTick;
     }
 
-    function multiplier(int24 lastTwapTick, uint256 target) external returns (uint256) {
-        return _multiplier(lastTwapTick, target);
+    function multiplier(uint256 _mark_, uint256 target) external returns (uint256) {
+        return _multiplier(_mark_, target);
     }
 }
