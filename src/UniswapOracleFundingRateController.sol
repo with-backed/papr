@@ -130,7 +130,8 @@ contract UniswapOracleFundingRateController is IUniswapOracleFundingRateControll
 
     /// @dev internal function to allow optimized SLOADs
     function _newTarget(int24 latestTwapTick, uint256 cachedTarget) internal view returns (uint256) {
-        return FixedPointMathLib.mulWadDown(cachedTarget, _multiplier(latestTwapTick, cachedTarget));
+        uint256 m = _mark(latestTwapTick);
+        return FixedPointMathLib.mulWadDown(cachedTarget, _multiplier(m, cachedTarget));
     }
 
     /// @dev internal function to allow optimized SLOADs
@@ -153,15 +154,14 @@ contract UniswapOracleFundingRateController is IUniswapOracleFundingRateControll
     /// < 1e18 means negative funding rate
     /// sub 1e18 to get percent change
     /// @return multiplier used to obtain newTarget()
-    function _multiplier(int24 latestTwapTick, uint256 cachedTarget) internal view returns (uint256) {
-        uint256 m = _mark(latestTwapTick);
+    function _multiplier(uint256 mark, uint256 cachedTarget) internal view returns (uint256) {
         uint256 period = block.timestamp - _lastUpdated;
         uint256 periodRatio = FixedPointMathLib.divWadDown(period, fundingPeriod);
         uint256 targetMarkRatio;
-        if (m == 0) {
+        if (mark == 0) {
             targetMarkRatio = targetMarkRatioMax;
         } else {
-            targetMarkRatio = FixedPointMathLib.divWadDown(cachedTarget, m);
+            targetMarkRatio = FixedPointMathLib.divWadDown(cachedTarget, mark);
             if (targetMarkRatio > targetMarkRatioMax) {
                 targetMarkRatio = targetMarkRatioMax;
             } else if (targetMarkRatio < targetMarkRatioMin) {
