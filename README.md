@@ -13,4 +13,4 @@ Papr is dual-licensed under the Business Source License 1.1 (BUSL-1.1) and MIT a
   - [Uniswap v3-periphery](https://github.com/Uniswap/v3-periphery)
   - [0xtomyo fullrange](https://github.com/0xTomoyo/fullrange)
   
-See `LICENSE`.
+See [`LICENSE`](https://github.com/with-backed/papr/blob/master/LICENSING.txt).
