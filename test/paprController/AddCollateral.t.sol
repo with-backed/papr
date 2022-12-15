@@ -4,11 +4,11 @@ pragma solidity ^0.8.17;
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {ERC721} from "solmate/tokens/ERC721.sol";
 
-import {BasePaprControllerTest} from "test/paprController/BasePaprController.ft.sol";
-import {PaprController} from "src/PaprController.sol";
-import {IPaprController} from "src/interfaces/IPaprController.sol";
-import {ReservoirOracleUnderwriter} from "src/ReservoirOracleUnderwriter.sol";
-import {TestERC721} from "test/mocks/TestERC721.sol";
+import {BasePaprControllerTest} from "./BasePaprController.ft.sol";
+import {PaprController} from "../../src/PaprController.sol";
+import {IPaprController} from "../../src/interfaces/IPaprController.sol";
+import {ReservoirOracleUnderwriter} from "../../src/ReservoirOracleUnderwriter.sol";
+import {TestERC721} from "../mocks/TestERC721.sol";
 
 contract AddCollateralTest is BasePaprControllerTest {
     event AddCollateral(address indexed account, ERC721 indexed collateralAddress, uint256 indexed tokenId);

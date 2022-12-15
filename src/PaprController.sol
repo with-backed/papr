@@ -5,15 +5,15 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 import {ERC721, ERC721TokenReceiver} from "solmate/tokens/ERC721.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
-import {INFTEDA, NFTEDAStarterIncentive} from "src/NFTEDA/extensions/NFTEDAStarterIncentive.sol";
+import {INFTEDA, NFTEDAStarterIncentive} from "./NFTEDA/extensions/NFTEDAStarterIncentive.sol";
 import {Ownable2Step} from "openzeppelin-contracts/access/Ownable2Step.sol";
 import {Multicallable} from "solady/utils/Multicallable.sol";
 
 import {PaprToken} from "./PaprToken.sol";
 import {UniswapOracleFundingRateController} from "./UniswapOracleFundingRateController.sol";
-import {ReservoirOracleUnderwriter} from "src/ReservoirOracleUnderwriter.sol";
-import {IPaprController} from "src/interfaces/IPaprController.sol";
-import {UniswapHelpers} from "src/libraries/UniswapHelpers.sol";
+import {ReservoirOracleUnderwriter} from "./ReservoirOracleUnderwriter.sol";
+import {IPaprController} from "./interfaces/IPaprController.sol";
+import {UniswapHelpers} from "./libraries/UniswapHelpers.sol";
 
 contract PaprController is
     IPaprController,

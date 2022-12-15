@@ -1,0 +1,14 @@
+@openzeppelin/=lib/openzeppelin-contracts/
+@reservoir/=lib/oracle/contracts/
+@uniswap/v3-core/=lib/v3-core/
+@uniswap/v3-periphery/=lib/v3-periphery/
+ds-test/=lib/forge-std/lib/ds-test/src/
+erc4626-tests/=lib/openzeppelin-contracts/lib/erc4626-tests/
+forge-std/=lib/forge-std/src/
+fullrange/=lib/fullrange/src/
+openzeppelin-contracts/=lib/openzeppelin-contracts/contracts/
+oracle/=lib/oracle/contracts/
+solady/=lib/solady/src/
+solmate/=lib/solmate/src/
+v3-core/=lib/v3-core/
+v3-periphery/=lib/v3-periphery/contracts/

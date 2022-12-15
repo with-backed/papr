@@ -3,7 +3,7 @@ pragma solidity ^0.8.17;
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
 
-import {UniswapOracleFundingRateController} from "src/UniswapOracleFundingRateController.sol";
+import {UniswapOracleFundingRateController} from "../../src/UniswapOracleFundingRateController.sol";
 
 contract MockFundingRateController is UniswapOracleFundingRateController {
     constructor(ERC20 _underlying, ERC20 _papr, uint256 _targetMarkRatioMax, uint256 _targetMarkRatioMin)

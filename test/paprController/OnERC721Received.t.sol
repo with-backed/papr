@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity ^0.8.17;
 
-import {BasePaprControllerTest} from "test/paprController/BasePaprController.ft.sol";
-import {IPaprController} from "src/interfaces/IPaprController.sol";
-import {PaprController} from "src/PaprController.sol";
+import {BasePaprControllerTest} from "./BasePaprController.ft.sol";
+import {IPaprController} from "../../src/interfaces/IPaprController.sol";
+import {PaprController} from "../../src/PaprController.sol";
 
 contract OnERC721ReceivedTest is BasePaprControllerTest {
     function testAddDebtAndSwap() public {

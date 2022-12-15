@@ -5,11 +5,11 @@ import "forge-std/Test.sol";
 import {ERC721} from "solmate/tokens/ERC721.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 
-import "src/NFTEDA/NFTEDA.sol";
-import {INFTEDA} from "src/NFTEDA/interfaces/INFTEDA.sol";
-import {TestERC721} from "test/NFTEDA/mocks/TestERC721.sol";
-import {TestERC20} from "test/NFTEDA/mocks/TestERC20.sol";
-import {INFTEDAPublic} from "test/NFTEDA/mocks/INFTEDAPublic.sol";
+import "../../src/NFTEDA/NFTEDA.sol";
+import {INFTEDA} from "../../src/NFTEDA/interfaces/INFTEDA.sol";
+import {TestERC721} from "./mocks/TestERC721.sol";
+import {TestERC20} from "./mocks/TestERC20.sol";
+import {INFTEDAPublic} from "./mocks/INFTEDAPublic.sol";
 
 abstract contract NFTEDATest is Test {
     INFTEDAPublic public auctionContract;

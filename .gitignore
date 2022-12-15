@@ -1,6 +1,7 @@
 # Compiler files
 cache/
 out/
+bin/
 
 # Ignores development broadcast logs
 !/broadcast
@@ -8,5 +9,4 @@ out/
 /broadcast/*/31337/
 
 .env
-.vscode
 .DS_Store
