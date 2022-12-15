@@ -3,12 +3,11 @@ pragma solidity ^0.8.17;
 
 import {stdError} from "forge-std/Test.sol";
 import {TickMath} from "fullrange/libraries/TickMath.sol";
-
-import {BasePaprControllerTest} from "test/paprController/BasePaprController.ft.sol";
-import {IPaprController} from "src/interfaces/IPaprController.sol";
-import {PaprController} from "src/PaprController.sol";
 import {ERC721} from "solmate/tokens/ERC721.sol";
-import {ReservoirOracleUnderwriter} from "src/ReservoirOracleUnderwriter.sol";
+
+import {BasePaprControllerTest} from "./BasePaprController.ft.sol";
+import {IPaprController} from "../../src/interfaces/IPaprController.sol";
+import {ReservoirOracleUnderwriter} from "../../src/ReservoirOracleUnderwriter.sol";
 
 contract IncreaseDebtTest is BasePaprControllerTest {
     event IncreaseDebt(address indexed account, ERC721 indexed collateralAddress, uint256 amount);

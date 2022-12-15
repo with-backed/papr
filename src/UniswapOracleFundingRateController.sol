@@ -5,12 +5,12 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {SafeCastLib} from "solmate/utils/SafeCastLib.sol";
 
-import {OracleLibrary} from "src/libraries/OracleLibrary.sol";
-import {UniswapHelpers} from "src/libraries/UniswapHelpers.sol";
+import {OracleLibrary} from "./libraries/OracleLibrary.sol";
+import {UniswapHelpers} from "./libraries/UniswapHelpers.sol";
 import {
     IUniswapOracleFundingRateController,
     IFundingRateController
-} from "src/interfaces/IUniswapOracleFundingRateController.sol";
+} from "./interfaces/IUniswapOracleFundingRateController.sol";
 
 contract UniswapOracleFundingRateController is IUniswapOracleFundingRateController {
     /// @inheritdoc IFundingRateController

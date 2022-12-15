@@ -3,7 +3,7 @@ pragma solidity ^0.8.17;
 
 import {IQuoter} from "v3-periphery/interfaces/IQuoter.sol";
 import {ISwapRouter} from "v3-periphery/interfaces/ISwapRouter.sol";
-import {INonfungiblePositionManager} from "test/mocks/uniswap/INonfungiblePositionManager.sol";
+import {INonfungiblePositionManager} from "../mocks/uniswap/INonfungiblePositionManager.sol";
 import {IUniswapV3Factory} from "v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 
 contract UniswapForking {

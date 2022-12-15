@@ -4,13 +4,13 @@ import "forge-std/Test.sol";
 import {IUniswapV3Factory} from "v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import {IUniswapV3Pool} from "v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
-import {PaprController} from "src/PaprController.sol";
-import {IPaprController} from "src/interfaces/IPaprController.sol";
-import {PaprToken} from "src/PaprToken.sol";
-import {TestERC721} from "test/mocks/TestERC721.sol";
-import {TestERC20} from "test/mocks/TestERC20.sol";
-import {MainnetForking} from "test/base/MainnetForking.sol";
-import {UniswapForking} from "test/base/UniswapForking.sol";
+import {PaprController} from "../../src/PaprController.sol";
+import {IPaprController} from "../../src/interfaces/IPaprController.sol";
+import {PaprToken} from "../../src/PaprToken.sol";
+import {TestERC721} from "../mocks/TestERC721.sol";
+import {TestERC20} from "../mocks/TestERC20.sol";
+import {MainnetForking} from "../base/MainnetForking.sol";
+import {UniswapForking} from "../base/UniswapForking.sol";
 
 contract OwnerFunctionsTest is MainnetForking, UniswapForking {
     TestERC721 nft = new TestERC721();

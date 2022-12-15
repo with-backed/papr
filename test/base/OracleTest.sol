@@ -6,9 +6,9 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 import {ERC721} from "solmate/tokens/ERC721.sol";
 
 import {ReservoirOracle} from "@reservoir/ReservoirOracle.sol";
-import {ReservoirOracleUnderwriter} from "src/ReservoirOracleUnderwriter.sol";
-import {IPaprController} from "src/interfaces/IPaprController.sol";
-import {OracleSigUtils} from "test/OracleSigUtils.sol";
+import {ReservoirOracleUnderwriter} from "../../src/ReservoirOracleUnderwriter.sol";
+import {IPaprController} from "../../src/interfaces/IPaprController.sol";
+import {OracleSigUtils} from "../OracleSigUtils.sol";
 
 contract OracleTest is Test {
     uint256 oraclePrice = 3e6;

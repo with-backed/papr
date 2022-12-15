@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity ^0.8.17;
 
-import {BasePaprControllerTest, TestERC721} from "test/paprController/BasePaprController.ft.sol";
-import {IPaprController, ERC721} from "src/interfaces/IPaprController.sol";
-import {PaprController} from "src/PaprController.sol";
-import {ReservoirOracleUnderwriter} from "src/ReservoirOracleUnderwriter.sol";
+import {BasePaprControllerTest, TestERC721} from "./BasePaprController.ft.sol";
+import {IPaprController, ERC721} from "../../src/interfaces/IPaprController.sol";
+import {PaprController} from "../../src/PaprController.sol";
+import {ReservoirOracleUnderwriter} from "../../src/ReservoirOracleUnderwriter.sol";
 
 contract RemoveCollateralTest is BasePaprControllerTest {
     event RemoveCollateral(address indexed account, ERC721 indexed collateralAddress, uint256 indexed tokenId);

@@ -3,7 +3,7 @@ pragma solidity >=0.8.0;
 
 import "forge-std/Test.sol";
 
-import {EDAPrice} from "src/NFTEDA/libraries/EDAPrice.sol";
+import {EDAPrice} from "../../../src/NFTEDA/libraries/EDAPrice.sol";
 
 contract NFTPriceTest is Test {
     function testCurrentPrice() public {

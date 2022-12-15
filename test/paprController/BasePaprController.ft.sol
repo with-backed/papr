@@ -7,16 +7,16 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 import {TickMath} from "fullrange/libraries/TickMath.sol";
 import {IUniswapV3Pool} from "v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
-import {PaprController} from "src/PaprController.sol";
-import {ReservoirOracleUnderwriter} from "src/ReservoirOracleUnderwriter.sol";
-import {IPaprController} from "src/interfaces/IPaprController.sol";
-import {ReservoirOracleUnderwriter} from "src/ReservoirOracleUnderwriter.sol";
-import {TestERC721} from "test/mocks/TestERC721.sol";
-import {TestERC20} from "test/mocks/TestERC20.sol";
-import {MainnetForking} from "test/base/MainnetForking.sol";
-import {UniswapForking} from "test/base/UniswapForking.sol";
-import {OracleTest} from "test/base/OracleTest.sol";
-import {INonfungiblePositionManager} from "test/mocks/uniswap/INonfungiblePositionManager.sol";
+import {PaprController} from "../../src/PaprController.sol";
+import {ReservoirOracleUnderwriter} from "../../src/ReservoirOracleUnderwriter.sol";
+import {IPaprController} from "../../src/interfaces/IPaprController.sol";
+import {ReservoirOracleUnderwriter} from "../../src/ReservoirOracleUnderwriter.sol";
+import {TestERC721} from "../mocks/TestERC721.sol";
+import {TestERC20} from "../mocks/TestERC20.sol";
+import {MainnetForking} from "../base/MainnetForking.sol";
+import {UniswapForking} from "../base/UniswapForking.sol";
+import {OracleTest} from "../base/OracleTest.sol";
+import {INonfungiblePositionManager} from "../mocks/uniswap/INonfungiblePositionManager.sol";
 
 contract BasePaprControllerTest is MainnetForking, UniswapForking, OracleTest {
     TestERC721 nft = new TestERC721();
