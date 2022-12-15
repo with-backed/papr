@@ -14,3 +14,9 @@ Papr is dual-licensed under the Business Source License 1.1 (BUSL-1.1) and MIT a
   - [0xTomyo fullrange](https://github.com/0xTomoyo/fullrange)
   
 See [`LICENSE`](https://github.com/with-backed/papr/blob/master/LICENSING.txt).
+
+# How to Try Papr
+You can try papr by visiting https://papr.wtf/tokens/paprTrash
+This is a Goerli testnet client for the protocol that allows you to lock up fake NFTs as collateral and mint papr tokens. To mint the fake NFTs that the protocol allows as collateral, visit https://papr.wtf/tokens/paprTrash/test
+
+This particular instance of the protocol uses a fake USDC as the underlying token, which you can also mint at the above URL. Finally, you can swap papr tokens for the underlying USDC at the Swap link on the site, as well as provide liquidity for the token pairs at the LP link on the site.
