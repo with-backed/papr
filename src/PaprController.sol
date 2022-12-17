@@ -223,7 +223,7 @@ contract PaprController is
         );
 
         if (hasFee) {
-            underlying.transfer(params.swapFeeTo, amountIn * params.swapFeeBips / BIPS_ONE);
+            underlying.safeTransferFrom(msg.sender, params.swapFeeTo, amountIn * params.swapFeeBips / BIPS_ONE);
         }
 
         _reduceDebt({account: account, asset: collateralAsset, burnFrom: msg.sender, amount: amountOut});

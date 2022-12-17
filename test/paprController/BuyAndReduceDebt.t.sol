@@ -26,14 +26,18 @@ contract BuyAndReduceDebt is BasePaprControllerTest {
         IPaprController.VaultInfo memory vaultInfo = controller.vaultInfo(borrower, collateral.addr);
         assertEq(vaultInfo.debt, debt);
         assertEq(underlyingOut, underlying.balanceOf(borrower));
-        uint256 fee;
-        underlying.approve(address(controller), underlyingOut + underlyingOut * fee / 1e4);
+        assertEq(0, underlying.balanceOf(address(controller)));
+        // ensure has enough balance to pay the amount + the fee
+        uint256 safeAmount = underlyingOut / 2;
+        uint256 feeBips = 100;
+        uint256 fee = safeAmount * feeBips / controller.BIPS_ONE();
+        underlying.approve(address(controller), underlyingOut);
         swapParams = IPaprController.SwapParams({
-            amount: underlyingOut,
+            amount: safeAmount,
             minOut: 1,
             sqrtPriceLimitX96: _maxSqrtPriceLimit({sellingPAPR: false}),
             swapFeeTo: address(5),
-            swapFeeBips: fee
+            swapFeeBips: feeBips
         });
         uint256 debtPaid = controller.buyAndReduceDebt(borrower, collateral.addr, swapParams);
         assertGt(debtPaid, 0);
