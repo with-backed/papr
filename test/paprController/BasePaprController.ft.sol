@@ -51,7 +51,7 @@ contract BasePaprControllerTest is MainnetForking, UniswapForking, OracleTest {
         debtToken = ERC20(controller.papr());
 
         IPaprController.CollateralAllowedConfig[] memory args = new IPaprController.CollateralAllowedConfig[](1);
-        args[0] = IPaprController.CollateralAllowedConfig(address(nft), true);
+        args[0] = IPaprController.CollateralAllowedConfig(nft, true);
         controller.setAllowedCollateral(args);
         nft.mint(borrower, collateralId);
         vm.prank(borrower);
