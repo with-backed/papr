@@ -267,13 +267,13 @@ contract PaprController is
         address sendTo,
         ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
     ) external override {
+        uint256 count = _vaultInfo[auction.nftOwner][auction.auctionAssetContract].count;
         uint256 collateralValueCached = underwritePriceForCollateral(
             auction.auctionAssetContract, ReservoirOracleUnderwriter.PriceKind.TWAP, oracleInfo
-        ) * _vaultInfo[auction.nftOwner][auction.auctionAssetContract].count;
-        bool isLastCollateral = collateralValueCached == 0;
+        ) * count;
 
         uint256 debtCached = _vaultInfo[auction.nftOwner][auction.auctionAssetContract].debt;
-        uint256 maxDebtCached = isLastCollateral ? debtCached : _maxDebt(collateralValueCached, updateTarget());
+        uint256 maxDebtCached = count == 0 ? 0 : _maxDebt(collateralValueCached, updateTarget());
         /// anything above what is needed to bring this vault under maxDebt is considered excess
         uint256 neededToSaveVault = maxDebtCached > debtCached ? 0 : debtCached - maxDebtCached;
         uint256 price = _purchaseNFTAndUpdateVaultIfNeeded(auction, maxPrice, sendTo);
@@ -287,7 +287,7 @@ contract PaprController is
             remaining = debtCached - price;
         }
 
-        if (isLastCollateral && remaining != 0) {
+        if (count == 0 && remaining != 0) {
             /// there will be debt left with no NFTs, set it to 0
             _reduceDebtWithoutBurn(auction.nftOwner, auction.auctionAssetContract, remaining);
         }
