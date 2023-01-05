@@ -6,6 +6,14 @@ import {IPaprController} from "../../src/interfaces/IPaprController.sol";
 import {PaprController} from "../../src/PaprController.sol";
 
 contract OnERC721ReceivedTest is BasePaprControllerTest {
+    function testCreditsOwnerWhenSentByOperator() public {
+        vm.prank(borrower);
+        nft.approve(address(0xb0b), collateralId);
+        vm.prank(address(0xb0b));
+        nft.safeTransferFrom(borrower, address(controller), collateralId, abi.encode(safeTransferReceivedArgs));
+        assertEq(controller.collateralOwner(nft, collateralId), borrower);
+    }
+
     function testAddDebtAndSwap() public {
         vm.startPrank(borrower);
         safeTransferReceivedArgs.swapParams.minOut = 1;

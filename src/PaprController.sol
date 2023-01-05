@@ -156,7 +156,7 @@ contract PaprController is
     /// @param _id the id of the NFT
     /// @param data encoded IPaprController.OnERC721ReceivedArgs
     /// @return selector indicating succesful receiving of the NFT
-    function onERC721Received(address from, address, uint256 _id, bytes calldata data)
+    function onERC721Received(address, address from, uint256 _id, bytes calldata data)
         external
         override
         returns (bytes4)
