@@ -84,9 +84,9 @@ contract PaprController is
 
         // initialize the pool at 1:1
         if (token0IsUnderlying) {
-            initSqrtRatio = UniswapHelpers.oneToOneSqrtRatio(underlyingONE, 10 ** 18);
+            initSqrtRatio = UniswapHelpers.oneToOneSqrtRatio(underlyingONE, 1e18);
         } else {
-            initSqrtRatio = UniswapHelpers.oneToOneSqrtRatio(10 ** 18, underlyingONE);
+            initSqrtRatio = UniswapHelpers.oneToOneSqrtRatio(1e18, underlyingONE);
         }
 
         address _pool = UniswapHelpers.deployAndInitPool(address(underlying), address(papr), 10000, initSqrtRatio);

@@ -72,9 +72,9 @@ contract OwnerFunctionsTest is MainnetForking, UniswapForking {
         uint256 underlyingONE = 10 ** underlying.decimals();
         uint160 initSqrtRatio;
         if (token0IsUnderlying) {
-            initSqrtRatio = UniswapHelpers.oneToOneSqrtRatio(underlyingONE, 10 ** 18);
+            initSqrtRatio = UniswapHelpers.oneToOneSqrtRatio(underlyingONE, 1e18);
         } else {
-            initSqrtRatio = UniswapHelpers.oneToOneSqrtRatio(10 ** 18, underlyingONE);
+            initSqrtRatio = UniswapHelpers.oneToOneSqrtRatio(1e18, underlyingONE);
         }
         pool.initialize(initSqrtRatio);
         vm.expectEmit(true, false, false, true);
