@@ -11,14 +11,30 @@ import {TestERC721} from "../mocks/TestERC721.sol";
 import {TestERC20} from "../mocks/TestERC20.sol";
 import {MainnetForking} from "../base/MainnetForking.sol";
 import {UniswapForking} from "../base/UniswapForking.sol";
+import {UniswapHelpers} from "../../src/libraries/UniswapHelpers.sol";
 
 contract OwnerFunctionsTest is MainnetForking, UniswapForking {
+    event AllowCollateral(address indexed collateral, bool isAllowed);
+    event FundingPeriodChange(uint256 newPeriod);
+    event PoolChange(address indexed newPool);
+    event LiquidationsLockChange(bool locked);
+
     TestERC721 nft = new TestERC721();
     TestERC20 underlying = new TestERC20();
     PaprController controller;
 
+    IUniswapV3Factory constant FACTORY = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
+
     function setUp() public {
-        controller = new PaprController("PUNKs Loans", "PL", 0.1e18, 2e18, 0.8e18, underlying, address(1));
+        controller = new PaprController(
+            "PUNKs Loans",
+            "PL",
+            0.1e18,
+            2e18,
+            0.8e18,
+            underlying,
+            address(1)
+        );
     }
 
     function testSetAllowedCollateralFailsIfNotOwner() public {
@@ -42,15 +58,40 @@ contract OwnerFunctionsTest is MainnetForking, UniswapForking {
         IPaprController.CollateralAllowedConfig[] memory args = new IPaprController.CollateralAllowedConfig[](1);
         args[0] = IPaprController.CollateralAllowedConfig(nft, true);
 
+        vm.expectEmit(true, false, false, true);
+        emit AllowCollateral(address(nft), true);
         controller.setAllowedCollateral(args);
 
         assertTrue(controller.isAllowed(nft));
+    }
+
+    function testSetPoolEmitsCorrectly() public {
+        address paprAddress = address(controller.papr());
+        bool token0IsUnderlying = address(underlying) < address(paprAddress);
+        IUniswapV3Pool pool = IUniswapV3Pool(FACTORY.createPool(address(underlying), address(paprAddress), 3000));
+        uint256 underlyingONE = 10 ** underlying.decimals();
+        uint160 initSqrtRatio;
+        if (token0IsUnderlying) {
+            initSqrtRatio = UniswapHelpers.oneToOneSqrtRatio(underlyingONE, 10 ** 18);
+        } else {
+            initSqrtRatio = UniswapHelpers.oneToOneSqrtRatio(10 ** 18, underlyingONE);
+        }
+        pool.initialize(initSqrtRatio);
+        vm.expectEmit(true, false, false, true);
+        emit PoolChange(address(pool));
+        controller.setPool(address(pool));
     }
 
     function testSetPoolRevertsIfNotOwner() public {
         vm.startPrank(address(1));
         vm.expectRevert("Ownable: caller is not the owner");
         controller.setPool(address(1));
+    }
+
+    function testSetFundingPeriodEmitsCorrectly() public {
+        vm.expectEmit(false, false, false, true);
+        emit FundingPeriodChange(90 days);
+        controller.setFundingPeriod(90 days);
     }
 
     function testSetFundingPeriodRevertsIfNotOwner() public {
@@ -110,6 +151,8 @@ contract OwnerFunctionsTest is MainnetForking, UniswapForking {
     }
 
     function testSetLiquidationsLockedUpdatesLiquidationsLocked() public {
+        vm.expectEmit(false, false, false, true);
+        emit LiquidationsLockChange(true);
         controller.setLiquidationsLocked(true);
         assertTrue(controller.liquidationsLocked());
     }

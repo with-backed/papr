@@ -349,16 +349,19 @@ contract PaprController is
     /// @inheritdoc IPaprController
     function setPool(address _pool) external override onlyOwner {
         _setPool(_pool);
+        emit PoolChange(_pool);
     }
 
     /// @inheritdoc IPaprController
     function setFundingPeriod(uint256 _fundingPeriod) external override onlyOwner {
         _setFundingPeriod(_fundingPeriod);
+        emit FundingPeriodChange(_fundingPeriod);
     }
 
     /// @inheritdoc IPaprController
     function setLiquidationsLocked(bool locked) external override onlyOwner {
         liquidationsLocked = locked;
+        emit LiquidationsLockChange(locked);
     }
 
     /// @inheritdoc IPaprController
