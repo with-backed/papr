@@ -15,9 +15,9 @@ import {UniswapHelpers} from "../../src/libraries/UniswapHelpers.sol";
 
 contract OwnerFunctionsTest is MainnetForking, UniswapForking {
     event AllowCollateral(address indexed collateral, bool isAllowed);
-    event FundingPeriodChange(uint256 newPeriod);
-    event PoolChange(address indexed newPool);
-    event LiquidationsLockChange(bool locked);
+    event UpdateFundingPeriod(uint256 newPeriod);
+    event UpdatePool(address indexed newPool);
+    event UpdateLiquidationsLock(bool locked);
 
     TestERC721 nft = new TestERC721();
     TestERC20 underlying = new TestERC20();
@@ -78,7 +78,7 @@ contract OwnerFunctionsTest is MainnetForking, UniswapForking {
         }
         pool.initialize(initSqrtRatio);
         vm.expectEmit(true, false, false, true);
-        emit PoolChange(address(pool));
+        emit UpdatePool(address(pool));
         controller.setPool(address(pool));
     }
 
@@ -90,7 +90,7 @@ contract OwnerFunctionsTest is MainnetForking, UniswapForking {
 
     function testSetFundingPeriodEmitsCorrectly() public {
         vm.expectEmit(false, false, false, true);
-        emit FundingPeriodChange(90 days);
+        emit UpdateFundingPeriod(90 days);
         controller.setFundingPeriod(90 days);
     }
 
@@ -152,7 +152,7 @@ contract OwnerFunctionsTest is MainnetForking, UniswapForking {
 
     function testSetLiquidationsLockedUpdatesLiquidationsLocked() public {
         vm.expectEmit(false, false, false, true);
-        emit LiquidationsLockChange(true);
+        emit UpdateLiquidationsLock(true);
         controller.setLiquidationsLocked(true);
         assertTrue(controller.liquidationsLocked());
     }

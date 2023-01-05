@@ -91,15 +91,15 @@ interface IPaprController {
 
     /// @notice emitted when the owner sets a new funding period for the controller
     /// @param newPeriod new funding period that was set, in seconds
-    event FundingPeriodChange(uint256 newPeriod);
+    event UpdateFundingPeriod(uint256 newPeriod);
 
     /// @notice emitted when the owner sets a new Uniswap V3 pool for the controller
     /// @param newPool address of the new Uniswap V3 pool that was set
-    event PoolChange(address indexed newPool);
+    event UpdatePool(address indexed newPool);
 
-    /// @notice emitted when the owner toggles whether or not liquidations for the controller are locked
+    /// @notice emitted when the owner sets whether or not liquidations for the controller are locked
     /// @param locked whether or not the owner set liquidations to be locked or not
-    event LiquidationsLockChange(bool locked);
+    event UpdateLiquidationsLock(bool locked);
 
     /// @param vaultDebt how much debt the vault has
     /// @param maxDebt the max debt the vault is allowed to have
