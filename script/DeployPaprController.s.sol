@@ -30,15 +30,15 @@ contract DeployPaprController is Base {
 
         IPaprController.CollateralAllowedConfig[] memory args = new IPaprController.CollateralAllowedConfig[](3);
         args[0] = IPaprController.CollateralAllowedConfig({
-            collateral: 0xb7D7fe7995D1E347916fAae8e16CFd6dD21a9bAE,
+            collateral: ERC721(0xb7D7fe7995D1E347916fAae8e16CFd6dD21a9bAE),
             allowed: true
         });
         args[1] = IPaprController.CollateralAllowedConfig({
-            collateral: 0x6EF2C9CB23F03014d18d7E4CeEAeC497dB00247C,
+            collateral: ERC721(0x6EF2C9CB23F03014d18d7E4CeEAeC497dB00247C),
             allowed: true
         });
         args[2] = IPaprController.CollateralAllowedConfig({
-            collateral: 0x8232c5Fd480C2a74d2f25d3362f262fF3511CE49,
+            collateral: ERC721(0x8232c5Fd480C2a74d2f25d3362f262fF3511CE49),
             allowed: true
         });
 

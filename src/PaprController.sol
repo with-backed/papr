@@ -57,7 +57,7 @@ contract PaprController is
     mapping(ERC721 => mapping(uint256 => address)) public override collateralOwner;
 
     /// @inheritdoc IPaprController
-    mapping(address => bool) public override isAllowed;
+    mapping(ERC721 => bool) public override isAllowed;
 
     /// @dev account => asset => vaultInfo
     mapping(address => mapping(ERC721 => IPaprController.VaultInfo)) private _vaultInfo;
@@ -368,7 +368,7 @@ contract PaprController is
         onlyOwner
     {
         for (uint256 i = 0; i < collateralConfigs.length;) {
-            if (collateralConfigs[i].collateral == address(0)) revert IPaprController.InvalidCollateral();
+            if (address(collateralConfigs[i].collateral) == address(0)) revert IPaprController.InvalidCollateral();
 
             isAllowed[collateralConfigs[i].collateral] = collateralConfigs[i].allowed;
             emit AllowCollateral(collateralConfigs[i].collateral, collateralConfigs[i].allowed);
@@ -411,7 +411,7 @@ contract PaprController is
     /// INTERNAL NON-VIEW ///
 
     function _addCollateralToVault(address account, IPaprController.Collateral memory collateral) internal {
-        if (!isAllowed[address(collateral.addr)]) {
+        if (!isAllowed[collateral.addr]) {
             revert IPaprController.InvalidCollateral();
         }
 
@@ -460,6 +460,10 @@ contract PaprController is
         uint256 amount,
         ReservoirOracleUnderwriter.OracleInfo memory oracleInfo
     ) internal {
+        if (!isAllowed[asset]) {
+            revert IPaprController.InvalidCollateral();
+        }
+
         uint256 cachedTarget = updateTarget();
 
         uint256 newDebt = _vaultInfo[account][asset].debt + amount;

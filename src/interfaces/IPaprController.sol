@@ -55,7 +55,7 @@ interface IPaprController {
 
     /// @notice parameters to change what collateral addresses can be used for a vault
     struct CollateralAllowedConfig {
-        address collateral;
+        ERC721 collateral;
         bool allowed;
     }
 
@@ -87,7 +87,7 @@ interface IPaprController {
     /// @notice emitted when the owner sets whether a token address is allowed to serve as collateral for a vault
     /// @param collateral address of the collateral token
     /// @param isAllowed whether the collateral is allowed
-    event AllowCollateral(address indexed collateral, bool isAllowed);
+    event AllowCollateral(ERC721 indexed collateral, bool isAllowed);
 
     /// @param vaultDebt how much debt the vault has
     /// @param maxDebt the max debt the vault is allowed to have
@@ -232,7 +232,7 @@ interface IPaprController {
 
     /// @notice returns whether a token address is allowed to serve as collateral for a vault
     /// @param collateral address of the collateral token
-    function isAllowed(address collateral) external view returns (bool);
+    function isAllowed(ERC721 collateral) external view returns (bool);
 
     /// @notice if liquidations are currently locked, meaning startLiquidationAuciton will revert
     /// @dev for use in case of emergencies
