@@ -90,7 +90,7 @@ interface IPaprController {
     event AllowCollateral(ERC721 indexed collateral, bool isAllowed);
 
     /// @notice emitted when the owner sets a new funding period for the controller
-    /// @param newPeriod new funding period that was set
+    /// @param newPeriod new funding period that was set, in seconds
     event FundingPeriodChange(uint256 newPeriod);
 
     /// @notice emitted when the owner sets a new Uniswap V3 pool for the controller
