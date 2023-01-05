@@ -9,6 +9,33 @@ import {PaprController} from "../../src/PaprController.sol";
 import {UniswapHelpers} from "../../src/libraries/UniswapHelpers.sol";
 
 contract BuyAndReduceDebt is BasePaprControllerTest {
+    function testBuyAndReduceSendsSwapProceedsToCaller() public {
+        safeTransferReceivedArgs.swapParams = IPaprController.SwapParams({
+            amount: debt,
+            minOut: 1,
+            sqrtPriceLimitX96: _maxSqrtPriceLimit({sellingPAPR: true}),
+            swapFeeTo: address(0),
+            swapFeeBips: 0
+        });
+        vm.prank(borrower);
+        nft.safeTransferFrom(borrower, address(controller), collateralId, abi.encode(safeTransferReceivedArgs));
+
+        address payer = address(333);
+        uint256 startBalance = 1e18;
+        underlying.mint(payer, startBalance);
+        IPaprController.SwapParams memory swapParams = IPaprController.SwapParams({
+            amount: startBalance,
+            minOut: 1,
+            sqrtPriceLimitX96: _maxSqrtPriceLimit({sellingPAPR: false}),
+            swapFeeTo: address(0),
+            swapFeeBips: 0
+        });
+        vm.startPrank(payer);
+        controller.underlying().approve(address(controller), startBalance);
+        controller.buyAndReduceDebt(borrower, collateral.addr, swapParams);
+        assertLt(controller.underlying().balanceOf(payer), startBalance);
+    }
+
     function testBuyAndReduceDebtReducesDebt() public {
         vm.startPrank(borrower);
         nft.approve(address(controller), collateralId);
