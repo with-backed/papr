@@ -22,8 +22,8 @@ contract SetPoolTest is BaseUniswapOracleFundingRateControllerTest, MainnetForki
 
     function testSetPoolUpdatesPool() public {
         address p = factory.createPool(address(underlying), address(papr), 3000);
-        fundingRateController.setPool(address(p));
-        assertEq(address(p), fundingRateController.pool());
+        fundingRateController.setPool(p);
+        assertEq(p, fundingRateController.pool());
     }
 
     function testSetPoolEmitsSetPool() public {

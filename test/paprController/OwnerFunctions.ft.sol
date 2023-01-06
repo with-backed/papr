@@ -66,20 +66,10 @@ contract OwnerFunctionsTest is MainnetForking, UniswapForking {
     }
 
     function testSetPoolEmitsCorrectly() public {
-        address paprAddress = address(controller.papr());
-        bool token0IsUnderlying = address(underlying) < address(paprAddress);
-        IUniswapV3Pool pool = IUniswapV3Pool(FACTORY.createPool(address(underlying), address(paprAddress), 3000));
-        uint256 underlyingONE = 10 ** underlying.decimals();
-        uint160 initSqrtRatio;
-        if (token0IsUnderlying) {
-            initSqrtRatio = UniswapHelpers.oneToOneSqrtRatio(underlyingONE, 1e18);
-        } else {
-            initSqrtRatio = UniswapHelpers.oneToOneSqrtRatio(1e18, underlyingONE);
-        }
-        pool.initialize(initSqrtRatio);
+        address p = factory.createPool(address(underlying), address(controller.papr()), 3000);
         vm.expectEmit(true, false, false, true);
-        emit UpdatePool(address(pool));
-        controller.setPool(address(pool));
+        emit UpdatePool(p);
+        controller.setPool(p);
     }
 
     function testSetPoolRevertsIfNotOwner() public {
