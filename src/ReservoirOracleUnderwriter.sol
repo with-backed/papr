@@ -46,7 +46,7 @@ contract ReservoirOracleUnderwriter {
     error IncorrectOracleSigner();
     error WrongIdentifierFromOracleMessage();
     error WrongCurrencyFromOracleMessage();
-    error OracleMessageTooOld();
+    error OracleMessageTimestampInvalid();
 
     constructor(address _oracleSigner, address _quoteCurrency) {
         oracleSigner = _oracleSigner;
@@ -105,7 +105,7 @@ contract ReservoirOracleUnderwriter {
         if (
             oracleInfo.message.timestamp > block.timestamp || oracleInfo.message.timestamp + VALID_FOR < block.timestamp
         ) {
-            revert OracleMessageTooOld();
+            revert OracleMessageTimestampInvalid();
         }
 
         (address oracleQuoteCurrency, uint256 oraclePrice) = abi.decode(oracleInfo.message.payload, (address, uint256));

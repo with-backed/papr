@@ -86,4 +86,19 @@ contract IncreaseDebtTest is BasePaprControllerTest {
         controller.increaseDebt(borrower, collateral.addr, debt, oracleInfo);
         vm.stopPrank();
     }
+
+    function testIncreaseDebtRevertsIfInvalidTimestampFromOracle() public {
+        vm.startPrank(borrower);
+        nft.approve(address(controller), collateralId);
+        IPaprController.Collateral[] memory c = new IPaprController.Collateral[](1);
+        c[0] = collateral;
+        controller.addCollateral(c);
+
+        timestamp = block.timestamp - 1 days;
+        oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
+
+        vm.expectRevert(ReservoirOracleUnderwriter.OracleMessageTimestampInvalid.selector);
+        controller.increaseDebt(borrower, collateral.addr, debt, oracleInfo);
+        vm.stopPrank();
+    }
 }

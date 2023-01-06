@@ -147,7 +147,7 @@ contract UniswapOracleFundingRateController is IUniswapOracleFundingRateControll
     }
 
     /// @notice The multiplier to apply to target() to get newTarget()
-    /// @dev Computes the funding rate for the time since _lastUpdates
+    /// @dev Computes the funding rate for the time since _lastUpdated
     /// 1 = 1e18, i.e.
     /// > 1e18 means positive funding rate
     /// < 1e18 means negative funding rate

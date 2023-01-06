@@ -173,7 +173,7 @@ interface IPaprController {
         ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
     ) external returns (uint256);
 
-    /// @notice removes debt from a vault and burns it by buying it on Uniswap in exchange for the controller's underlying token
+    /// @notice removes debt from a vault and burns it by swapping the controller's underlying token for Papr tokens using the Uniswap V3 pool
     /// @param account address reducing their debt
     /// @param collateralAsset address of the collateral token the user would like to remove debt from
     /// @param params parameters for the swap
