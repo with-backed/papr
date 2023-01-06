@@ -11,7 +11,6 @@ import {TestERC721} from "../mocks/TestERC721.sol";
 import {TestERC20} from "../mocks/TestERC20.sol";
 import {MainnetForking} from "../base/MainnetForking.sol";
 import {UniswapForking} from "../base/UniswapForking.sol";
-import {UniswapHelpers} from "../../src/libraries/UniswapHelpers.sol";
 
 contract OwnerFunctionsTest is MainnetForking, UniswapForking {
     event AllowCollateral(address indexed collateral, bool isAllowed);
@@ -22,8 +21,6 @@ contract OwnerFunctionsTest is MainnetForking, UniswapForking {
     TestERC721 nft = new TestERC721();
     TestERC20 underlying = new TestERC20();
     PaprController controller;
-
-    IUniswapV3Factory constant FACTORY = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
 
     function setUp() public {
         controller = new PaprController(
