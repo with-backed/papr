@@ -16,7 +16,7 @@ contract OwnerFunctionsTest is MainnetForking, UniswapForking {
     event AllowCollateral(address indexed collateral, bool isAllowed);
     event UpdateFundingPeriod(uint256 newPeriod);
     event UpdatePool(address indexed newPool);
-    event UpdateLiquidationsLock(bool locked);
+    event UpdateLiquidationsLocked(bool locked);
 
     TestERC721 nft = new TestERC721();
     TestERC20 underlying = new TestERC20();
@@ -64,7 +64,7 @@ contract OwnerFunctionsTest is MainnetForking, UniswapForking {
 
     function testSetPoolEmitsCorrectly() public {
         address p = factory.createPool(address(underlying), address(controller.papr()), 3000);
-        vm.expectEmit(true, false, false, true);
+        vm.expectEmit(true, false, false, false);
         emit UpdatePool(p);
         controller.setPool(p);
     }
@@ -139,7 +139,7 @@ contract OwnerFunctionsTest is MainnetForking, UniswapForking {
 
     function testSetLiquidationsLockedUpdatesLiquidationsLocked() public {
         vm.expectEmit(false, false, false, true);
-        emit UpdateLiquidationsLock(true);
+        emit UpdateLiquidationsLocked(true);
         controller.setLiquidationsLocked(true);
         assertTrue(controller.liquidationsLocked());
     }

@@ -361,7 +361,7 @@ contract PaprController is
     /// @inheritdoc IPaprController
     function setLiquidationsLocked(bool locked) external override onlyOwner {
         liquidationsLocked = locked;
-        emit UpdateLiquidationsLock(locked);
+        emit UpdateLiquidationsLocked(locked);
     }
 
     /// @inheritdoc IPaprController

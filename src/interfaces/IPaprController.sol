@@ -99,7 +99,7 @@ interface IPaprController {
 
     /// @notice emitted when the owner sets whether or not liquidations for the controller are locked
     /// @param locked whether or not the owner set liquidations to be locked or not
-    event UpdateLiquidationsLock(bool locked);
+    event UpdateLiquidationsLocked(bool locked);
 
     /// @param vaultDebt how much debt the vault has
     /// @param maxDebt the max debt the vault is allowed to have
