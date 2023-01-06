@@ -4,7 +4,6 @@ pragma solidity ^0.8.17;
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {ERC721, ERC721TokenReceiver} from "solmate/tokens/ERC721.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
-import {ReentrancyGuard} from "solmate/utils/ReentrancyGuard.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {INFTEDA, NFTEDAStarterIncentive} from "./NFTEDA/extensions/NFTEDAStarterIncentive.sol";
 import {Ownable2Step} from "openzeppelin-contracts/access/Ownable2Step.sol";
@@ -23,8 +22,7 @@ contract PaprController is
     Multicallable,
     Ownable2Step,
     ReservoirOracleUnderwriter,
-    NFTEDAStarterIncentive,
-    ReentrancyGuard
+    NFTEDAStarterIncentive
 {
     using SafeTransferLib for ERC20;
 
@@ -112,7 +110,7 @@ contract PaprController is
         address sendTo,
         IPaprController.Collateral[] calldata collateralArr,
         ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
-    ) external override nonReentrant {
+    ) external override {
         uint256 cachedTarget = updateTarget();
         uint256 oraclePrice;
         ERC721 collateralAddr;
@@ -300,7 +298,7 @@ contract PaprController is
         address account,
         IPaprController.Collateral calldata collateral,
         ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
-    ) external override nonReentrant returns (INFTEDA.Auction memory auction) {
+    ) external override returns (INFTEDA.Auction memory auction) {
         if (liquidationsLocked) {
             revert LiquidationsLocked();
         }
