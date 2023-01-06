@@ -4,6 +4,7 @@ pragma solidity ^0.8.17;
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {ERC721, ERC721TokenReceiver} from "solmate/tokens/ERC721.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
+import {ReentrancyGuard} from "solmate/utils/ReentrancyGuard.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {INFTEDA, NFTEDAStarterIncentive} from "./NFTEDA/extensions/NFTEDAStarterIncentive.sol";
 import {Ownable2Step} from "openzeppelin-contracts/access/Ownable2Step.sol";
@@ -22,7 +23,8 @@ contract PaprController is
     Multicallable,
     Ownable2Step,
     ReservoirOracleUnderwriter,
-    NFTEDAStarterIncentive
+    NFTEDAStarterIncentive,
+    ReentrancyGuard
 {
     using SafeTransferLib for ERC20;
 
@@ -110,7 +112,7 @@ contract PaprController is
         address sendTo,
         IPaprController.Collateral[] calldata collateralArr,
         ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
-    ) external override {
+    ) external override nonReentrant {
         uint256 cachedTarget = updateTarget();
         uint256 oraclePrice;
         ERC721 collateralAddr;
@@ -298,7 +300,7 @@ contract PaprController is
         address account,
         IPaprController.Collateral calldata collateral,
         ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
-    ) external override returns (INFTEDA.Auction memory auction) {
+    ) external override nonReentrant returns (INFTEDA.Auction memory auction) {
         if (liquidationsLocked) {
             revert LiquidationsLocked();
         }
@@ -442,16 +444,14 @@ contract PaprController is
             _vaultInfo[msg.sender][collateral.addr].count = newCount;
         }
 
-        // allows for onReceive hook to sell and repay debt before the
-        // debt check below
-        collateral.addr.safeTransferFrom(address(this), sendTo, collateral.id);
-
         uint256 debt = _vaultInfo[msg.sender][collateral.addr].debt;
         uint256 max = _maxDebt(oraclePrice * newCount, cachedTarget);
 
         if (debt > max) {
             revert IPaprController.ExceedsMaxDebt(debt, max);
         }
+
+        collateral.addr.safeTransferFrom(address(this), sendTo, collateral.id);
 
         emit RemoveCollateral(msg.sender, collateral.addr, collateral.id);
     }
