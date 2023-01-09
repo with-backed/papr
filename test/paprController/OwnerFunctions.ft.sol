@@ -13,12 +13,25 @@ import {MainnetForking} from "../base/MainnetForking.sol";
 import {UniswapForking} from "../base/UniswapForking.sol";
 
 contract OwnerFunctionsTest is MainnetForking, UniswapForking {
+    event AllowCollateral(address indexed collateral, bool isAllowed);
+    event UpdateFundingPeriod(uint256 newPeriod);
+    event UpdatePool(address indexed newPool);
+    event UpdateLiquidationsLocked(bool locked);
+
     TestERC721 nft = new TestERC721();
     TestERC20 underlying = new TestERC20();
     PaprController controller;
 
     function setUp() public {
-        controller = new PaprController("PUNKs Loans", "PL", 0.1e18, 2e18, 0.8e18, underlying, address(1));
+        controller = new PaprController(
+            "PUNKs Loans",
+            "PL",
+            0.1e18,
+            2e18,
+            0.8e18,
+            underlying,
+            address(1)
+        );
     }
 
     function testSetAllowedCollateralFailsIfNotOwner() public {
@@ -42,15 +55,30 @@ contract OwnerFunctionsTest is MainnetForking, UniswapForking {
         IPaprController.CollateralAllowedConfig[] memory args = new IPaprController.CollateralAllowedConfig[](1);
         args[0] = IPaprController.CollateralAllowedConfig(nft, true);
 
+        vm.expectEmit(true, false, false, true);
+        emit AllowCollateral(address(nft), true);
         controller.setAllowedCollateral(args);
 
         assertTrue(controller.isAllowed(nft));
+    }
+
+    function testSetPoolEmitsCorrectly() public {
+        address p = factory.createPool(address(underlying), address(controller.papr()), 3000);
+        vm.expectEmit(true, false, false, false);
+        emit UpdatePool(p);
+        controller.setPool(p);
     }
 
     function testSetPoolRevertsIfNotOwner() public {
         vm.startPrank(address(1));
         vm.expectRevert("Ownable: caller is not the owner");
         controller.setPool(address(1));
+    }
+
+    function testSetFundingPeriodEmitsCorrectly() public {
+        vm.expectEmit(false, false, false, true);
+        emit UpdateFundingPeriod(90 days);
+        controller.setFundingPeriod(90 days);
     }
 
     function testSetFundingPeriodRevertsIfNotOwner() public {
@@ -110,6 +138,8 @@ contract OwnerFunctionsTest is MainnetForking, UniswapForking {
     }
 
     function testSetLiquidationsLockedUpdatesLiquidationsLocked() public {
+        vm.expectEmit(false, false, false, true);
+        emit UpdateLiquidationsLocked(true);
         controller.setLiquidationsLocked(true);
         assertTrue(controller.liquidationsLocked());
     }
