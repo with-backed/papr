@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity ^0.8.17;
 
+import {ERC721TokenReceiver} from "solmate/tokens/ERC721.sol";
+
 import {BasePaprControllerTest, TestERC721} from "./BasePaprController.ft.sol";
 import {IPaprController, ERC721} from "../../src/interfaces/IPaprController.sol";
 import {PaprController} from "../../src/PaprController.sol";
@@ -54,6 +56,18 @@ contract RemoveCollateralTest is BasePaprControllerTest {
         controller.removeCollateral(borrower, collateralArr, oracleInfo);
     }
 
+    function testRemoveCollateralWithReentryPayDebtFails() public {
+        _addCollateral();
+        controller.increaseDebt(address(this), collateral.addr, 1, oracleInfo);
+        vm.expectRevert(abi.encodeWithSelector(IPaprController.ExceedsMaxDebt.selector, 1, 0));
+        controller.removeCollateral(address(this), collateralArr, oracleInfo);
+    }
+
+    function onERC721Received(address, address, uint256, bytes calldata) external returns (bytes4) {
+        controller.reduceDebt(borrower, collateral.addr, 1);
+        return ERC721TokenReceiver.onERC721Received.selector;
+    }
+
     function testRemoveCollateralFailsIfWrongOraclePriceType() public {
         _addCollateral();
         controller.increaseDebt(borrower, collateral.addr, 1, oracleInfo);
@@ -73,7 +87,6 @@ contract RemoveCollateralTest is BasePaprControllerTest {
 
     function testRemoveCollateralFailsIfDifferentCollateralAddresses() public {
         _addCollateral();
-        ERC721 newCollateral = new TestERC721();
         IPaprController.Collateral[] memory collateralArrLocal = new IPaprController.Collateral[](2);
         collateralArrLocal[0] = collateral;
         collateralArrLocal[1] = IPaprController.Collateral({addr: ERC721(address(1)), id: 1});

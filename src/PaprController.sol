@@ -442,16 +442,14 @@ contract PaprController is
             _vaultInfo[msg.sender][collateral.addr].count = newCount;
         }
 
-        // allows for onReceive hook to sell and repay debt before the
-        // debt check below
-        collateral.addr.safeTransferFrom(address(this), sendTo, collateral.id);
-
         uint256 debt = _vaultInfo[msg.sender][collateral.addr].debt;
         uint256 max = _maxDebt(oraclePrice * newCount, cachedTarget);
 
         if (debt > max) {
             revert IPaprController.ExceedsMaxDebt(debt, max);
         }
+
+        collateral.addr.safeTransferFrom(address(this), sendTo, collateral.id);
 
         emit RemoveCollateral(msg.sender, collateral.addr, collateral.id);
     }
