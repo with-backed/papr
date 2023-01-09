@@ -13,6 +13,7 @@ import {OracleSigUtils} from "../OracleSigUtils.sol";
 contract OracleTest is Test {
     uint256 oraclePrice = 3e6;
 
+    uint256 timestamp;
     uint256 internal oraclePrivateKey = 0xA11CE;
     address oracleAddress = vm.addr(oraclePrivateKey);
     ReservoirOracleUnderwriter.PriceKind priceKind = ReservoirOracleUnderwriter.PriceKind.LOWER;
@@ -24,7 +25,7 @@ contract OracleTest is Test {
         ReservoirOracle.Message memory message = ReservoirOracle.Message({
             id: _constructOracleId(collateral),
             payload: abi.encode(underlying, oraclePrice),
-            timestamp: block.timestamp,
+            timestamp: timestamp == 0 ? block.timestamp : timestamp,
             signature: "" // populated ourselves on the OracleInfo.Sig struct
         });
 
