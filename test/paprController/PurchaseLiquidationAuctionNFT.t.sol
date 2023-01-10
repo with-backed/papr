@@ -14,7 +14,6 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
     event Transfer(address indexed from, address indexed to, uint256 amount);
 
     INFTEDA.Auction auction;
-    IPaprController.PurchaseLiquidationAuctionArgs args;
     address purchaser = address(2);
 
     function setUp() public override {
@@ -37,19 +36,14 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         nft.safeTransferFrom(purchaser, address(controller), collateralId + 2, abi.encode(safeTransferReceivedArgs));
         nft.safeTransferFrom(purchaser, address(controller), collateralId + 3, abi.encode(safeTransferReceivedArgs));
         // purchaser now has 4.4... papr
-        args.sendTo = purchaser;
-        args.auction = auction;
-        args.oracleInfo = oracleInfo;
-        args.maxPrice = auction.startPrice;
     }
 
-    // /// when last NFT in vault
+    /// when last NFT in vault
 
     function testWhenLastNFTAndSurplus() public {
         /// https://www.wolframalpha.com/input?i=solve+4+%3D+8.999+*+0.3+%5E+%28x+%2F+86400%29
         vm.warp(block.timestamp + 58187);
         oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
-        args.oracleInfo = oracleInfo;
         IPaprController.VaultInfo memory info = controller.vaultInfo(borrower, collateral.addr);
         uint256 neededToSave = info.debt;
         uint256 excess = controller.auctionCurrentPrice(auction) - neededToSave;
@@ -67,7 +61,7 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         emit ReduceDebt(borrower, collateral.addr, info.debt);
         vm.expectEmit(true, true, false, true);
         emit Transfer(address(controller), address(0), info.debt);
-        controller.purchaseLiquidationAuctionNFT(args);
+        controller.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
         uint256 afterBalance = controller.papr().balanceOf(borrower);
         assertGt(afterBalance, beforeBalance);
         assertEq(afterBalance - beforeBalance, expectedPayout);
@@ -80,7 +74,6 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         vm.warp(block.timestamp + 128575);
         IPaprController.VaultInfo memory info = controller.vaultInfo(borrower, collateral.addr);
         oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
-        args.oracleInfo = oracleInfo;
         uint256 beforeBalance = controller.papr().balanceOf(borrower);
         controller.papr().approve(address(controller), auction.startPrice);
         uint256 price = controller.auctionCurrentPrice(auction);
@@ -93,7 +86,7 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         // burning debt not covered by auction
         vm.expectEmit(true, false, false, true);
         emit ReduceDebt(borrower, collateral.addr, info.debt - (price - penalty));
-        controller.purchaseLiquidationAuctionNFT(args);
+        controller.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
         uint256 afterBalance = controller.papr().balanceOf(borrower);
         assertEq(afterBalance, beforeBalance);
         info = controller.vaultInfo(borrower, collateral.addr);
@@ -117,7 +110,6 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         /// https://www.wolframalpha.com/input?i=solve+4+%3D+8.999+*+0.3+%5E+%28x+%2F+86400%29
         vm.warp(block.timestamp + 58187);
         oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
-        args.oracleInfo = oracleInfo;
         IPaprController.VaultInfo memory info = controller.vaultInfo(borrower, collateral.addr);
         uint256 neededToSave = info.debt - controller.maxDebt(oraclePrice);
         uint256 excess = controller.auctionCurrentPrice(auction) - neededToSave;
@@ -132,7 +124,7 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         emit ReduceDebt(borrower, collateral.addr, info.debt);
         vm.expectEmit(true, true, false, true);
         emit Transfer(address(controller), address(0), info.debt);
-        controller.purchaseLiquidationAuctionNFT(args);
+        controller.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
         uint256 afterBalance = controller.papr().balanceOf(borrower);
         assertGt(afterBalance, beforeBalance);
         assertEq(afterBalance - beforeBalance, expectedPayout);
@@ -157,7 +149,6 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         // https://www.wolframalpha.com/input?i=solve+1.5+%3D+8.999+*+0.3+%5E+%28x+%2F+86400%29
         vm.warp(block.timestamp + 128575);
         oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
-        args.oracleInfo = oracleInfo;
         IPaprController.VaultInfo memory beforeInfo = controller.vaultInfo(borrower, collateral.addr);
         uint256 beforeBalance = controller.papr().balanceOf(borrower);
         controller.papr().approve(address(controller), auction.startPrice);
@@ -171,7 +162,7 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         emit ReduceDebt(borrower, collateral.addr, credit);
         vm.expectEmit(true, true, false, true);
         emit Transfer(address(controller), address(0), credit);
-        controller.purchaseLiquidationAuctionNFT(args);
+        controller.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
         uint256 afterBalance = controller.papr().balanceOf(borrower);
         assertEq(afterBalance, beforeBalance);
         IPaprController.VaultInfo memory info = controller.vaultInfo(borrower, collateral.addr);
@@ -195,10 +186,9 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         vm.warp(block.timestamp + 128575);
         oraclePrice = 0;
         oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
-        args.oracleInfo = oracleInfo;
         uint256 price = controller.auctionCurrentPrice(auction);
         controller.papr().approve(address(controller), price);
-        controller.purchaseLiquidationAuctionNFT(args);
+        controller.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
         assertGt(controller.vaultInfo(borrower, collateral.addr).debt, 0);
     }
 
@@ -218,7 +208,6 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
 
         vm.warp(block.timestamp + 2 weeks);
         oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
-        args.oracleInfo = oracleInfo;
         IPaprController.VaultInfo memory beforeInfo = controller.vaultInfo(borrower, collateral.addr);
         uint256 neededToSave = beforeInfo.debt - controller.maxDebt(oraclePrice * beforeInfo.count);
         uint256 price = controller.auctionCurrentPrice(auction);
@@ -229,23 +218,23 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         emit ReduceDebt(borrower, collateral.addr, price);
         vm.expectEmit(true, true, false, true);
         emit Transfer(address(controller), address(0), price);
-        controller.purchaseLiquidationAuctionNFT(args);
+        controller.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
         IPaprController.VaultInfo memory afterInfo = controller.vaultInfo(borrower, collateral.addr);
         assertEq(beforeInfo.debt - afterInfo.debt, price);
     }
 
-    // /// @dev we do not test noExcess and last collateral because the contract considers any amount
-    // /// to be excess
+    /// @dev we do not test noExcess and last collateral because the contract considers any amount
+    /// to be excess
 
     function testResetsLatestAuctionStartTimeIfLatestAuction() public {
         vm.warp(block.timestamp + 58187);
-        args.oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
+        oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
         controller.papr().approve(address(controller), auction.startPrice);
-        controller.purchaseLiquidationAuctionNFT(args);
+        controller.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
         assertEq(0, controller.vaultInfo(borrower, collateral.addr).latestAuctionStartTime);
     }
 
-    function testDoesNotResetLatestAuctionStartTimeIfLatestAuction() public {
+    function testDoesNotResetLatestAuctionStartTimeIfNotLatestAuction() public {
         // add collateral
         uint256 tokenId = collateralId + 5;
         nft.mint(borrower, tokenId);
@@ -265,9 +254,9 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         vm.startPrank(purchaser);
         //
         vm.warp(block.timestamp + 58187);
-        args.oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
+        oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
         controller.papr().approve(address(controller), auction.startPrice);
-        controller.purchaseLiquidationAuctionNFT(args);
+        controller.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
         assertEq(expectedTimestamp, controller.vaultInfo(borrower, collateral.addr).latestAuctionStartTime);
     }
 
@@ -291,20 +280,19 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         vm.startPrank(purchaser);
         //
         vm.warp(block.timestamp + 58187);
-        args.oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
+        oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
         controller.papr().approve(address(controller), auction.startPrice);
-        controller.purchaseLiquidationAuctionNFT(args);
+        controller.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
         assertEq(expectedTimestamp, controller.vaultInfo(borrower, collateral.addr).latestAuctionStartTime);
-        assertGt(controller.vaultInfo(borrower, collateral.addr).debt, 0);
     }
 
     function testRevertsWhenWrongPriceTypeFromOracle() public {
         vm.warp(block.timestamp + 58187);
         priceKind = ReservoirOracleUnderwriter.PriceKind.LOWER;
-        args.oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
+        oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
         controller.papr().approve(address(controller), auction.startPrice);
         vm.expectRevert(ReservoirOracleUnderwriter.WrongIdentifierFromOracleMessage.selector);
-        controller.purchaseLiquidationAuctionNFT(args);
+        controller.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
     }
 
     /// @dev we want to prevent abuse of our clearing remaining debt when there is a shortfall
@@ -315,7 +303,7 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         vm.warp(block.timestamp + 128575);
         IPaprController.VaultInfo memory info = controller.vaultInfo(borrower, collateral.addr);
         uint256 beforeDebt = info.debt;
-        args.oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
+        oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
         uint256 beforeBalance = controller.papr().balanceOf(borrower);
         controller.papr().approve(address(controller), auction.startPrice);
         uint256 price = controller.auctionCurrentPrice(auction);
@@ -327,8 +315,7 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         emit ReduceDebt(borrower, collateral.addr, price - penalty);
         vm.expectEmit(true, true, false, true);
         emit Transfer(address(controller), address(0), price - penalty);
-        args.sendTo = address(this);
-        controller.purchaseLiquidationAuctionNFT(args);
+        controller.purchaseLiquidationAuctionNFT(auction, auction.startPrice, address(this), oracleInfo);
         uint256 afterBalance = controller.papr().balanceOf(borrower);
         assertEq(afterBalance, beforeBalance);
         info = controller.vaultInfo(borrower, collateral.addr);

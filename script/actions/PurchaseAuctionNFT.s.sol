@@ -23,8 +23,8 @@ contract PurchaseAuctionNFT is Base {
         uint256 price = controller.auctionCurrentPrice(auction);
         oraclePriceKind = ReservoirOracleUnderwriter.PriceKind.TWAP;
         vm.startBroadcast();
-        // controller.purchaseLiquidationAuctionNFT(
-        //     auction, price, deployer, _getOracleInfoForCollateral(address(auction.auctionAssetContract), 3e20)
-        // );
+        controller.purchaseLiquidationAuctionNFT(
+            auction, price, deployer, _getOracleInfoForCollateral(address(auction.auctionAssetContract), 3e20)
+        );
     }
 }
