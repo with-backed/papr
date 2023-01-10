@@ -267,6 +267,8 @@ contract PaprController is
         address sendTo,
         ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
     ) external override {
+        uint256 price = _purchaseNFTAndUpdateVaultIfNeeded(auction, maxPrice, sendTo);
+
         uint256 count = _vaultInfo[auction.nftOwner][auction.auctionAssetContract].count;
         uint256 collateralValueCached = underwritePriceForCollateral(
             auction.auctionAssetContract, ReservoirOracleUnderwriter.PriceKind.TWAP, oracleInfo
@@ -276,7 +278,6 @@ contract PaprController is
         uint256 maxDebtCached = count == 0 ? 0 : _maxDebt(collateralValueCached, updateTarget());
         /// anything above what is needed to bring this vault under maxDebt is considered excess
         uint256 neededToSaveVault = maxDebtCached > debtCached ? 0 : debtCached - maxDebtCached;
-        uint256 price = _purchaseNFTAndUpdateVaultIfNeeded(auction, maxPrice, sendTo);
         uint256 excess = price > neededToSaveVault ? price - neededToSaveVault : 0;
         uint256 remaining;
 

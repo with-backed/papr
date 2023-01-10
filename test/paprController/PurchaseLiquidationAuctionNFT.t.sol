@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity ^0.8.17;
 
-import {ERC721} from "solmate/tokens/ERC721.sol";
+import {ERC721, ERC721TokenReceiver} from "solmate/tokens/ERC721.sol";
 
 import {ReservoirOracleUnderwriter} from "../../src/ReservoirOracleUnderwriter.sol";
 import {INFTEDA} from "../../src/NFTEDA/extensions/NFTEDAStarterIncentive.sol";
@@ -17,6 +17,7 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
     address purchaser = address(2);
 
     function setUp() public override {
+        borrower = address(this);
         super.setUp();
         _openMaxLoanAndSwap();
         _makeMaxLoanLiquidatable();
@@ -260,10 +261,49 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
     }
 
     function testRevertsWhenWrongPriceTypeFromOracle() public {
+        vm.warp(block.timestamp + 58187);
         priceKind = ReservoirOracleUnderwriter.PriceKind.LOWER;
         oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
         controller.papr().approve(address(controller), auction.startPrice);
         vm.expectRevert(ReservoirOracleUnderwriter.WrongIdentifierFromOracleMessage.selector);
         controller.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
+    }
+
+    /// @dev we want to prevent abuse of our clearing remaining debt when there is a shortfall
+    /// but it is the borrowers last NFT
+    function testReentrancyOnLastNFTDoesNotClearDebt() public {
+        /// testWhenLastNFTAndShortfall
+        // https://www.wolframalpha.com/input?i=solve+1.5+%3D+8.999+*+0.3+%5E+%28x+%2F+86400%29
+        vm.warp(block.timestamp + 128575);
+        IPaprController.VaultInfo memory info = controller.vaultInfo(borrower, collateral.addr);
+        uint256 beforeDebt = info.debt;
+        oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
+        uint256 beforeBalance = controller.papr().balanceOf(borrower);
+        controller.papr().approve(address(controller), auction.startPrice);
+        uint256 price = controller.auctionCurrentPrice(auction);
+        // add 1 to count for reentry
+        uint256 neededToSave = info.debt - controller.maxDebt(oraclePrice * (info.count + 1));
+        uint256 excess = controller.auctionCurrentPrice(auction) - neededToSave;
+        uint256 penalty = excess * controller.liquidationPenaltyBips() / 1e4;
+        vm.expectEmit(true, false, false, true);
+        emit ReduceDebt(borrower, collateral.addr, price - penalty);
+        vm.expectEmit(true, true, false, true);
+        emit Transfer(address(controller), address(0), price - penalty);
+        controller.purchaseLiquidationAuctionNFT(auction, auction.startPrice, address(this), oracleInfo);
+        uint256 afterBalance = controller.papr().balanceOf(borrower);
+        assertEq(afterBalance, beforeBalance);
+        info = controller.vaultInfo(borrower, collateral.addr);
+        assertEq(info.debt, beforeDebt - (price - penalty));
+    }
+
+    function onERC721Received(address, address from, uint256, bytes calldata) external returns (bytes4) {
+        if (from == address(controller)) {
+            priceKind = ReservoirOracleUnderwriter.PriceKind.LOWER;
+            safeTransferReceivedArgs.oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
+            safeTransferReceivedArgs.debt = 0;
+            nft.safeTransferFrom(address(this), address(controller), collateralId, abi.encode(safeTransferReceivedArgs));
+        }
+
+        return ERC721TokenReceiver.onERC721Received.selector;
     }
 }
