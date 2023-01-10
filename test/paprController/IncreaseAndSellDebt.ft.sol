@@ -21,10 +21,24 @@ contract IncreaseDebtAndSellTest is BasePaprControllerTest {
             swapFeeTo: address(5),
             swapFeeBips: 100
         });
+        emit log_named_uint('target before swap', controller.newTarget());
         uint256 underlyingOut = controller.increaseDebtAndSell(borrower, collateral.addr, swapParams, oracleInfo);
         uint256 fee = (underlyingOut * swapParams.swapFeeBips) / 1e4;
         assertEq(underlying.balanceOf(swapParams.swapFeeTo), fee);
         assertEq(underlying.balanceOf(borrower), underlyingOut - fee);
         assertEq(debt, controller.vaultInfo(borrower, collateral.addr).debt);
+        uint256 t = controller.target();
+        emit log_named_uint('target after swap', controller.newTarget());
+        vm.warp(block.timestamp + 60);
+        emit log_named_uint('target 60 seconds swap', controller.newTarget());
+        vm.warp(block.timestamp + 10 minutes);
+        emit log_named_uint('target 10 minutes swap', controller.newTarget());
+        emit log_named_uint('APR (divide by 1e4 to get %)', (controller.newTarget() - t) * 1e18 / 10 minutes * 365 days / 1e18);
+        vm.warp(block.timestamp + 1 days);
+        emit log_named_uint('target 1 day after swap', controller.newTarget());
+        emit log_named_uint('APR (divide by 1e4 to get %)', (controller.newTarget() - t) * 1e18 / 1 days * 365 days / 1e18);
+        vm.warp(block.timestamp + 7 days);
+        emit log_named_uint('target 7 days after swap', controller.newTarget());
+        emit log_named_uint('APR (divide by 1e4 to get %)', (controller.newTarget() - t) * 1e18 / 8 days * 365 days / 1e18);
     }
 }
