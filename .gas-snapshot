@@ -45,7 +45,7 @@ OwnerFunctionsTest:testSetLiquidationsLockedRevertsIfCallerNotOwner() (gas: 1111
 OwnerFunctionsTest:testSetLiquidationsLockedUpdatesLiquidationsLocked() (gas: 35869)
 OwnerFunctionsTest:testSetPoolEmitsCorrectly() (gas: 4571798)
 OwnerFunctionsTest:testSetPoolRevertsIfNotOwner() (gas: 11165)
-PurchaseLiquidationAuctionNFT:testDoesNotClearDebtIfOtherAuctionOngoing() (gas: 335363)
+PurchaseLiquidationAuctionNFT:testDoesNotClearDebtIfOtherAuctionOngoing() (gas: 335365)
 PurchaseLiquidationAuctionNFT:testDoesNotClearDebtWhenNotLastNFTAndOracleValueZero() (gas: 302074)
 PurchaseLiquidationAuctionNFT:testDoesNotResetLatestAuctionStartTimeIfNotLatestAuction() (gas: 335381)
 PurchaseLiquidationAuctionNFT:testReentrancyOnLastNFTDoesNotClearDebt() (gas: 334336)

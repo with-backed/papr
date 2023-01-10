@@ -283,7 +283,7 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
         controller.papr().approve(address(controller), auction.startPrice);
         controller.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
-        assertEq(expectedTimestamp, controller.vaultInfo(borrower, collateral.addr).latestAuctionStartTime);
+        assertGt(controller.vaultInfo(borrower, collateral.addr).debt, 0);
     }
 
     function testRevertsWhenWrongPriceTypeFromOracle() public {
