@@ -234,7 +234,33 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         assertEq(0, controller.vaultInfo(borrower, collateral.addr).latestAuctionStartTime);
     }
 
-    function testDoesNotResetLatestAuctionStartTimeIfLatestAuction() public {
+    function testDoesNotResetLatestAuctionStartTimeIfNotLatestAuction() public {
+        // add collateral
+        uint256 tokenId = collateralId + 5;
+        nft.mint(borrower, tokenId);
+        vm.stopPrank();
+        vm.startPrank(borrower);
+        nft.approve(address(controller), tokenId);
+        collateral.id = tokenId;
+        IPaprController.Collateral[] memory c = new IPaprController.Collateral[](1);
+        c[0] = collateral;
+        controller.addCollateral(c);
+        // start new auction
+        uint256 expectedTimestamp = block.timestamp + 2 days;
+        vm.warp(expectedTimestamp); // min auction sapcing
+        oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
+        controller.startLiquidationAuction(borrower, collateral, oracleInfo);
+        vm.stopPrank();
+        vm.startPrank(purchaser);
+        //
+        vm.warp(block.timestamp + 58187);
+        oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
+        controller.papr().approve(address(controller), auction.startPrice);
+        controller.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
+        assertEq(expectedTimestamp, controller.vaultInfo(borrower, collateral.addr).latestAuctionStartTime);
+    }
+
+    function testDoesNotClearDebtIfOtherAuctionOngoing() public {
         // add collateral
         uint256 tokenId = collateralId + 5;
         nft.mint(borrower, tokenId);

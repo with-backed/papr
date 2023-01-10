@@ -13,7 +13,7 @@ contract IncreaseDebtTest is BasePaprControllerTest {
     event IncreaseDebt(address indexed account, ERC721 indexed collateralAddress, uint256 amount);
 
     function testFuzzIncreaseDebt(uint256 debt) public {
-        vm.assume(debt < type(uint200).max);
+        vm.assume(debt < type(uint184).max);
         vm.assume(debt < type(uint256).max / controller.maxLTV() / 2);
 
         oraclePrice = debt * 2;

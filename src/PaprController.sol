@@ -268,6 +268,7 @@ contract PaprController is
         ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
     ) external override {
         uint256 price = _purchaseNFTAndUpdateVaultIfNeeded(auction, maxPrice, sendTo);
+        --_vaultInfo[auction.nftOwner][auction.auctionAssetContract].auctionCount;
 
         uint256 count = _vaultInfo[auction.nftOwner][auction.auctionAssetContract].count;
         uint256 collateralValueCached = underwritePriceForCollateral(
@@ -288,7 +289,7 @@ contract PaprController is
             remaining = debtCached - price;
         }
 
-        if (count == 0 && remaining != 0) {
+        if (count == 0 && remaining != 0 && _vaultInfo[auction.nftOwner][auction.auctionAssetContract].auctionCount == 0) {
             /// there will be debt left with no NFTs, set it to 0
             _reduceDebtWithoutBurn(auction.nftOwner, auction.auctionAssetContract, remaining);
         }
@@ -324,7 +325,8 @@ contract PaprController is
         }
 
         info.latestAuctionStartTime = uint40(block.timestamp);
-        info.count -= 1;
+        --info.count;
+        ++info.auctionCount;
 
         emit RemoveCollateral(account, collateral.addr, collateral.id);
 
@@ -476,9 +478,9 @@ contract PaprController is
 
         if (newDebt > max) revert IPaprController.ExceedsMaxDebt(newDebt, max);
 
-        if (newDebt >= 1 << 200) revert IPaprController.DebtAmountExceedsUint200();
+        if (newDebt >= 1 << 184) revert IPaprController.DebtAmountExceedsUint184();
 
-        _vaultInfo[account][asset].debt = uint200(newDebt);
+        _vaultInfo[account][asset].debt = uint184(newDebt);
         PaprToken(address(papr)).mint(mintTo, amount);
 
         emit IncreaseDebt(account, asset, amount);
@@ -490,7 +492,7 @@ contract PaprController is
     }
 
     function _reduceDebtWithoutBurn(address account, ERC721 asset, uint256 amount) internal {
-        _vaultInfo[account][asset].debt = uint200(_vaultInfo[account][asset].debt - amount);
+        _vaultInfo[account][asset].debt = uint184(_vaultInfo[account][asset].debt - amount);
         emit ReduceDebt(account, asset, amount);
     }
 
