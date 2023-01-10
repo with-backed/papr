@@ -53,6 +53,13 @@ interface IPaprController {
         ReservoirOracleUnderwriter.OracleInfo oracleInfo;
     }
 
+    struct PurchaseLiquidationAuctionArgs {
+        INFTEDA.Auction auction;
+        uint256 maxPrice;
+        address sendTo;
+        ReservoirOracleUnderwriter.OracleInfo oracleInfo;
+    }
+
     /// @notice parameters to change what collateral addresses can be used for a vault
     struct CollateralAllowedConfig {
         ERC721 collateral;
@@ -184,15 +191,8 @@ interface IPaprController {
 
     /// @notice purchases a liquidation auction with the controller's papr token
     /// @dev oracleInfo price must be type TWAP
-    /// @param auction auction to purchase
-    /// @param maxPrice maximum price to pay for the auction
-    /// @param sendTo address to send the collateral to if auction is won
-    function purchaseLiquidationAuctionNFT(
-        INFTEDA.Auction calldata auction,
-        uint256 maxPrice,
-        address sendTo,
-        ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
-    ) external;
+    /// @param args TODO
+    function purchaseLiquidationAuctionNFT(PurchaseLiquidationAuctionArgs calldata args) external;
 
     /// @notice starts a liquidation auction for a vault if it is liquidatable
     /// @dev oracleInfo price must be type TWAP
