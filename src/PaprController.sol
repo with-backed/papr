@@ -146,7 +146,8 @@ contract PaprController is
 
     /// @inheritdoc IPaprController
     function reduceDebt(address account, ERC721 asset, uint256 amount) external override {
-        _reduceDebt({account: account, asset: asset, burnFrom: msg.sender, amount: amount});
+        uint256 debt = _vaultInfo[account][asset].debt;
+        _reduceDebt({account: account, asset: asset, burnFrom: msg.sender, amount: amount > debt ? debt : amount});
     }
 
     /// @notice Handler for safeTransferFrom of an NFT
@@ -226,7 +227,8 @@ contract PaprController is
             underlying.safeTransferFrom(msg.sender, params.swapFeeTo, amountIn * params.swapFeeBips / BIPS_ONE);
         }
 
-        _reduceDebt({account: account, asset: collateralAsset, burnFrom: msg.sender, amount: amountOut});
+        uint256 debt = _vaultInfo[account][collateralAsset].debt;
+        _reduceDebt({account: account, asset: collateralAsset, burnFrom: msg.sender, amount: amountOut > debt ? debt : amountOut});
 
         return amountOut;
     }
