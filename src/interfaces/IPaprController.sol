@@ -19,10 +19,12 @@ interface IPaprController {
     struct VaultInfo {
         /// @dev number of collateral tokens in the vault
         uint16 count;
+        /// @dev number of auctions on going for this vault
+        uint16 auctionCount;
         /// @dev start time of last auction the vault underwent, 0 if no auction has been started
         uint40 latestAuctionStartTime;
         /// @dev debt of the vault, expressed in papr token units
-        uint200 debt;
+        uint184 debt;
     }
 
     /// @notice parameters describing a swap
@@ -117,7 +119,7 @@ interface IPaprController {
 
     error OnlyCollateralOwner();
 
-    error DebtAmountExceedsUint200();
+    error DebtAmountExceedsUint184();
 
     error CollateralAddressesDoNotMatch();
 
