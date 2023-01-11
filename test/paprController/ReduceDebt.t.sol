@@ -14,15 +14,15 @@ contract ReduceDebtTest is BasePaprControllerTest {
 
     function testFuzzReduceDebt(uint256 debtToReduce) public {
         uint256 debt = _openMaxLoan();
-        vm.assume(debtToReduce <= debt);
 
         vm.prank(borrower);
         controller.reduceDebt(borrower, collateral.addr, debtToReduce);
 
         IPaprController.VaultInfo memory vaultInfo = controller.vaultInfo(borrower, collateral.addr);
 
-        assertEq(vaultInfo.debt, debt - debtToReduce);
-        assertEq(debt - debtToReduce, debtToken.balanceOf(borrower));
+        uint256 paid = debt < debtToReduce ? debt : debtToReduce;
+        assertEq(vaultInfo.debt, debt - paid);
+        assertEq(debt - paid, debtToken.balanceOf(borrower));
         vm.stopPrank();
     }
 

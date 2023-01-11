@@ -147,7 +147,13 @@ contract PaprController is
     /// @inheritdoc IPaprController
     function reduceDebt(address account, ERC721 asset, uint256 amount) external override {
         uint256 debt = _vaultInfo[account][asset].debt;
-        _reduceDebt({account: account, asset: asset, burnFrom: msg.sender, amount: amount > debt ? debt : amount});
+        _reduceDebt({
+            account: account,
+            asset: asset,
+            burnFrom: msg.sender,
+            accountDebt: debt,
+            amountToReduce: amount > debt ? debt : amount
+        });
     }
 
     /// @notice Handler for safeTransferFrom of an NFT
@@ -228,7 +234,13 @@ contract PaprController is
         }
 
         uint256 debt = _vaultInfo[account][collateralAsset].debt;
-        _reduceDebt({account: account, asset: collateralAsset, burnFrom: msg.sender, amount: amountOut > debt ? debt : amountOut});
+        _reduceDebt({
+            account: account,
+            asset: collateralAsset,
+            burnFrom: msg.sender,
+            accountDebt: debt,
+            amountToReduce: amountOut > debt ? debt : amountOut
+        });
 
         return amountOut;
     }
@@ -287,13 +299,15 @@ contract PaprController is
         if (excess > 0) {
             remaining = _handleExcess(excess, neededToSaveVault, debtCached, auction);
         } else {
-            _reduceDebt(auction.nftOwner, auction.auctionAssetContract, address(this), price);
+            _reduceDebt(auction.nftOwner, auction.auctionAssetContract, address(this), debtCached, price);
             remaining = debtCached - price;
         }
 
-        if (count == 0 && remaining != 0 && _vaultInfo[auction.nftOwner][auction.auctionAssetContract].auctionCount == 0) {
+        if (
+            count == 0 && remaining != 0 && _vaultInfo[auction.nftOwner][auction.auctionAssetContract].auctionCount == 0
+        ) {
             /// there will be debt left with no NFTs, set it to 0
-            _reduceDebtWithoutBurn(auction.nftOwner, auction.auctionAssetContract, remaining);
+            _reduceDebtWithoutBurn(auction.nftOwner, auction.auctionAssetContract, remaining, remaining);
         }
     }
 
@@ -488,14 +502,18 @@ contract PaprController is
         emit IncreaseDebt(account, asset, amount);
     }
 
-    function _reduceDebt(address account, ERC721 asset, address burnFrom, uint256 amount) internal {
-        _reduceDebtWithoutBurn(account, asset, amount);
-        PaprToken(address(papr)).burn(burnFrom, amount);
+    function _reduceDebt(address account, ERC721 asset, address burnFrom, uint256 accountDebt, uint256 amountToReduce)
+        internal
+    {
+        _reduceDebtWithoutBurn(account, asset, accountDebt, amountToReduce);
+        PaprToken(address(papr)).burn(burnFrom, amountToReduce);
     }
 
-    function _reduceDebtWithoutBurn(address account, ERC721 asset, uint256 amount) internal {
-        _vaultInfo[account][asset].debt = uint184(_vaultInfo[account][asset].debt - amount);
-        emit ReduceDebt(account, asset, amount);
+    function _reduceDebtWithoutBurn(address account, ERC721 asset, uint256 accountDebt, uint256 amountToReduce)
+        internal
+    {
+        _vaultInfo[account][asset].debt = uint184(accountDebt - amountToReduce);
+        emit ReduceDebt(account, asset, amountToReduce);
     }
 
     /// same as increaseDebtAndSell but takes args in memory
@@ -552,11 +570,11 @@ contract PaprController is
         if (totalOwed > debtCached) {
             // we owe them more papr than they have in debt
             // so we pay down debt and send them the rest
-            _reduceDebt(auction.nftOwner, auction.auctionAssetContract, address(this), debtCached);
+            _reduceDebt(auction.nftOwner, auction.auctionAssetContract, address(this), debtCached, debtCached);
             papr.transfer(auction.nftOwner, totalOwed - debtCached);
         } else {
             // reduce vault debt
-            _reduceDebt(auction.nftOwner, auction.auctionAssetContract, address(this), totalOwed);
+            _reduceDebt(auction.nftOwner, auction.auctionAssetContract, address(this), debtCached, totalOwed);
             remaining = debtCached - totalOwed;
         }
     }
