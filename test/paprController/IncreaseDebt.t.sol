@@ -16,7 +16,7 @@ contract IncreaseDebtTest is BasePaprControllerTest {
         vm.assume(debt < type(uint184).max);
         vm.assume(debt < type(uint256).max / controller.maxLTV() / 2);
 
-        oraclePrice = debt * 2;
+        oraclePrice = debt * 2 + 1;
         oracleInfo = _getOracleInfoForCollateral(nft, underlying);
 
         vm.startPrank(borrower);
@@ -59,7 +59,7 @@ contract IncreaseDebtTest is BasePaprControllerTest {
     }
 
     function testFuzzIncreaseDebtRevertsIfTooMuchDebt(uint200 debt) public {
-        vm.assume(debt > controller.maxDebt(oraclePrice));
+        vm.assume(debt >= controller.maxDebt(oraclePrice));
         vm.startPrank(borrower);
         nft.approve(address(controller), collateralId);
         IPaprController.Collateral[] memory c = new IPaprController.Collateral[](1);

@@ -234,6 +234,15 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         assertEq(0, controller.vaultInfo(borrower, collateral.addr).latestAuctionStartTime);
     }
 
+    function testDecreasesAuctionCount() public {
+        IPaprController.VaultInfo memory info = controller.vaultInfo(borrower, collateral.addr);
+        vm.warp(block.timestamp + 58187);
+        oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
+        controller.papr().approve(address(controller), auction.startPrice);
+        controller.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
+        assertEq(info.auctionCount - 1, controller.vaultInfo(borrower, collateral.addr).auctionCount);
+    }
+
     function testDoesNotResetLatestAuctionStartTimeIfNotLatestAuction() public {
         // add collateral
         uint256 tokenId = collateralId + 5;
