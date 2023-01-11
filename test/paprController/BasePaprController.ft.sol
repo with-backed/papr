@@ -129,7 +129,7 @@ contract BasePaprControllerTest is MainnetForking, UniswapForking, OracleTest {
     }
 
     function _openMaxLoanAndSwap() internal returns (uint256) {
-        uint256 debtAmount = controller.maxDebt(oraclePrice) - 2;
+        uint256 debtAmount = controller.maxDebt(oraclePrice) - 1;
         safeTransferReceivedArgs.swapParams.amount = debtAmount;
         safeTransferReceivedArgs.swapParams.minOut = 1;
         safeTransferReceivedArgs.swapParams.sqrtPriceLimitX96 = _maxSqrtPriceLimit(true);

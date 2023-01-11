@@ -56,6 +56,16 @@ contract RemoveCollateralTest is BasePaprControllerTest {
         controller.removeCollateral(borrower, collateralArr, oracleInfo);
     }
 
+    function testRemoveCollateralFailsIfMaxDebtEqual() public {
+        nft.mint(borrower, 2);
+        collateralArr.push(IPaprController.Collateral({addr: nft, id: 2}));
+        _addCollateral();
+        uint256 maxForOne = controller.maxDebt(oraclePrice);
+        controller.increaseDebt(borrower, collateral.addr, maxForOne, oracleInfo);
+        vm.expectRevert(abi.encodeWithSelector(IPaprController.ExceedsMaxDebt.selector, maxForOne, maxForOne));
+        controller.removeCollateral(borrower, collateralArr, oracleInfo);
+    }
+
     function testRemoveCollateralWithReentryPayDebtFails() public {
         _addCollateral();
         controller.increaseDebt(address(this), collateral.addr, 1, oracleInfo);

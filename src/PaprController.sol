@@ -332,7 +332,7 @@ contract PaprController is
 
         uint256 oraclePrice =
             underwritePriceForCollateral(collateral.addr, ReservoirOracleUnderwriter.PriceKind.TWAP, oracleInfo);
-        if (info.debt < _maxDebt(oraclePrice * info.count, cachedTarget)) {
+        if (!(info.debt > _maxDebt(oraclePrice * info.count, cachedTarget))) {
             revert IPaprController.NotLiquidatable();
         }
 
@@ -464,7 +464,7 @@ contract PaprController is
         uint256 debt = _vaultInfo[msg.sender][collateral.addr].debt;
         uint256 max = _maxDebt(oraclePrice * newCount, cachedTarget);
 
-        if (debt > max) {
+        if (debt != 0 && !(debt < max)) {
             revert IPaprController.ExceedsMaxDebt(debt, max);
         }
 
@@ -492,7 +492,7 @@ contract PaprController is
 
         uint256 max = _maxDebt(_vaultInfo[account][asset].count * oraclePrice, cachedTarget);
 
-        if (newDebt > max) revert IPaprController.ExceedsMaxDebt(newDebt, max);
+        if (!(newDebt < max)) revert IPaprController.ExceedsMaxDebt(newDebt, max);
 
         if (newDebt >= 1 << 184) revert IPaprController.DebtAmountExceedsUint184();
 

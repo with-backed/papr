@@ -31,13 +31,36 @@ contract StartLiquidationAuctionTest is BasePaprControllerTest {
         assertEq(info.latestAuctionStartTime, block.timestamp);
     }
 
+    function testIncreasesAuctionCount() public {
+        _makeMaxLoanLiquidatable();
+        IPaprController.VaultInfo memory info = controller.vaultInfo(borrower, collateral.addr);
+        controller.startLiquidationAuction(borrower, collateral, oracleInfo);
+        assertEq(info.auctionCount + 1, controller.vaultInfo(borrower, collateral.addr).auctionCount);
+    }
+
     function testDeletesOwnerRecord() public {
         _makeMaxLoanLiquidatable();
         controller.startLiquidationAuction(borrower, collateral, oracleInfo);
         assertEq(controller.collateralOwner(collateral.addr, collateral.id), address(0));
     }
 
-    function testRevertsIfNotLiquidatable() public {
+    function testRevertsIfDebtLessThanMax() public {
+        vm.expectRevert(IPaprController.NotLiquidatable.selector);
+        controller.startLiquidationAuction(borrower, collateral, oracleInfo);
+    }
+
+    function testRevertsIfDebtEqualToMax() public {
+        nft.mint(borrower, 2);
+        /// manually calc what maxDebt would be after 1 week
+        safeTransferReceivedArgs.debt = 1.494233107035849e18 - 45;
+        safeTransferReceivedArgs.swapParams.amount = 0;
+        safeTransferReceivedArgs.swapParams.minOut = 0;
+        vm.prank(borrower);
+        nft.safeTransferFrom(borrower, address(controller), 2, abi.encode(safeTransferReceivedArgs));
+        vm.warp(block.timestamp + 1 weeks);
+        oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
+        assertEq(controller.vaultInfo(borrower, collateral.addr).debt, controller.maxDebt(oraclePrice * 2));
+        assertEq(controller.vaultInfo(borrower, collateral.addr).count, 2);
         vm.expectRevert(IPaprController.NotLiquidatable.selector);
         controller.startLiquidationAuction(borrower, collateral, oracleInfo);
     }
