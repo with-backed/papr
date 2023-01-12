@@ -37,6 +37,7 @@ contract ReservoirOracleUnderwriter {
     /// @notice the maximum time a given signed oracle message is valid for
     uint256 constant VALID_FOR = 20 minutes;
 
+    /// @dev constant values used in checking signatures
     bytes32 constant MESSAGE = keccak256("Message(bytes32 id,bytes payload,uint256 timestamp)");
     bytes32 constant CONTRACT_WIDE_COLLECTION_PRICE = keccak256("ContractWideCollectionPrice(uint8 kind,uint256 twapSeconds,address contract)");
 
