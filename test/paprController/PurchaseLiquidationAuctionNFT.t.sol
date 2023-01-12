@@ -296,6 +296,18 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
     }
 
     function testRevertsWhenWrongPriceTypeFromOracle() public {
+        uint256 tokenId = collateralId + 5;
+        nft.mint(borrower, tokenId);
+        vm.stopPrank();
+        vm.startPrank(borrower);
+        nft.approve(address(controller), tokenId);
+        collateral.id = tokenId;
+        IPaprController.Collateral[] memory c = new IPaprController.Collateral[](1);
+        c[0] = collateral;
+        controller.addCollateral(c);
+        vm.stopPrank();
+        //
+        vm.startPrank(purchaser);
         vm.warp(block.timestamp + 58187);
         priceKind = ReservoirOracleUnderwriter.PriceKind.LOWER;
         oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);

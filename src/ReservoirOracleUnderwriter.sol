@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.17;
+pragma solidity >=0.8.0;
 
 import {ERC721} from "solmate/tokens/ERC721.sol";
 import {ReservoirOracle} from "@reservoir/ReservoirOracle.sol";
@@ -37,6 +37,10 @@ contract ReservoirOracleUnderwriter {
     /// @notice the maximum time a given signed oracle message is valid for
     uint256 constant VALID_FOR = 20 minutes;
 
+    /// @dev constant values used in checking signatures
+    bytes32 constant MESSAGE = keccak256("Message(bytes32 id,bytes payload,uint256 timestamp)");
+    bytes32 constant CONTRACT_WIDE_COLLECTION_PRICE = keccak256("ContractWideCollectionPrice(uint8 kind,uint256 twapSeconds,address contract)");
+
     /// @notice the signing address the contract expects from the oracle message
     address public immutable oracleSigner;
 
@@ -63,6 +67,7 @@ contract ReservoirOracleUnderwriter {
     /// @dev reverts if the oracle message is for the wrong ERC721 asset, wrong price kind, or wrong quote currency
     function underwritePriceForCollateral(ERC721 asset, PriceKind priceKind, OracleInfo memory oracleInfo)
         public
+        view
         returns (uint256)
     {
         address signerAddress = ecrecover(
@@ -72,7 +77,7 @@ contract ReservoirOracleUnderwriter {
                     // EIP-712 structured-data hash
                     keccak256(
                         abi.encode(
-                            keccak256("Message(bytes32 id,bytes payload,uint256 timestamp)"),
+                            MESSAGE,
                             oracleInfo.message.id,
                             keccak256(oracleInfo.message.payload),
                             oracleInfo.message.timestamp
@@ -91,7 +96,7 @@ contract ReservoirOracleUnderwriter {
 
         bytes32 expectedId = keccak256(
             abi.encode(
-                keccak256("ContractWideCollectionPrice(uint8 kind,uint256 twapSeconds,address contract)"),
+                CONTRACT_WIDE_COLLECTION_PRICE,
                 priceKind,
                 TWAP_SECONDS,
                 asset

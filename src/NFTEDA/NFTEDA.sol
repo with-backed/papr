@@ -108,6 +108,7 @@ abstract contract NFTEDA is INFTEDA {
     /// @notice Returns the current price of the passed auction, reverts if no such auction exists
     /// @dev startTime is passed, optimized for cases where the auctionId has already been computed
     /// @dev and startTime looked it up
+    /// @param id The ID of the auction
     /// @param startTime The start time of the auction
     /// @param auction The auction for which the caller wants to know the current price
     /// @return price the current amount required to purchase the NFT being sold in this auction

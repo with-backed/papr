@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: BUSL-1.1
-pragma solidity ^0.8.17;
+pragma solidity >=0.8.0;
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
@@ -90,26 +90,27 @@ contract UniswapOracleFundingRateController is IUniswapOracleFundingRateControll
     /// @notice initializes the controller, setting pool and target
     /// @dev assumes pool is initialized, does not check that pool tokens
     /// match papr and underlying
-    /// @param target the start value of target
+    /// @param _target_ the start value of target
     /// @param _pool the pool address to use
-    function _init(uint256 target, address _pool) internal {
+    function _init(uint256 _target_, address _pool) internal {
         if (_lastUpdated != 0) revert AlreadyInitialized();
 
         _setPool(_pool);
 
         _lastUpdated = uint48(block.timestamp);
-        _target = SafeCastLib.safeCastTo128(target);
+        _target = SafeCastLib.safeCastTo128(_target_);
         _lastCumulativeTick = OracleLibrary.latestCumulativeTick(pool);
         _lastTwapTick = UniswapHelpers.poolCurrentTick(pool);
 
-        emit UpdateTarget(target);
+        emit UpdateTarget(_target_);
     }
 
     /// @notice Updates `pool`
     /// @dev reverts if new pool does not have same token0 and token1 as `pool`
     /// @dev if pool = address(0), does NOT check that tokens match papr and underlying
     function _setPool(address _pool) internal {
-        if (pool != address(0) && !UniswapHelpers.poolsHaveSameTokens(pool, _pool)) revert PoolTokensDoNotMatch();
+        address currentPool = pool;
+        if (currentPool != address(0) && !UniswapHelpers.poolsHaveSameTokens(currentPool, _pool)) revert PoolTokensDoNotMatch();
         if (!UniswapHelpers.isUniswapPool(_pool)) revert InvalidUniswapV3Pool();
 
         pool = _pool;

@@ -33,7 +33,7 @@ library OracleLibrary {
     // adapted from https://github.com/Uniswap/v3-periphery/blob/main/contracts/libraries/OracleLibrary.sol#L30-L40
     function timeWeightedAverageTick(int56 startTick, int56 endTick, int56 twapDuration)
         internal
-        view
+        pure
         returns (int24 twat)
     {
         require(twapDuration != 0, "BP");

@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: BUSL-1.1
-pragma solidity ^0.8.17;
+pragma solidity =0.8.17;
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {ERC721, ERC721TokenReceiver} from "solmate/tokens/ERC721.sol";
@@ -206,8 +206,8 @@ contract PaprController is
 
         if (hasFee) {
             uint256 fee = amountOut * params.swapFeeBips / BIPS_ONE;
-            underlying.transfer(params.swapFeeTo, fee);
-            underlying.transfer(proceedsTo, amountOut - fee);
+            underlying.safeTransfer(params.swapFeeTo, fee);
+            underlying.safeTransfer(proceedsTo, amountOut - fee);
         }
     }
 
@@ -285,22 +285,33 @@ contract PaprController is
         --_vaultInfo[auction.nftOwner][auction.auctionAssetContract].auctionCount;
 
         uint256 count = _vaultInfo[auction.nftOwner][auction.auctionAssetContract].count;
-        uint256 collateralValueCached = underwritePriceForCollateral(
-            auction.auctionAssetContract, ReservoirOracleUnderwriter.PriceKind.TWAP, oracleInfo
-        ) * count;
+        uint256 collateralValueCached;
+
+        if (count != 0) {
+            collateralValueCached = underwritePriceForCollateral(
+                auction.auctionAssetContract, ReservoirOracleUnderwriter.PriceKind.TWAP, oracleInfo
+            ) * count;
+        }
 
         uint256 debtCached = _vaultInfo[auction.nftOwner][auction.auctionAssetContract].debt;
         uint256 maxDebtCached = count == 0 ? 0 : _maxDebt(collateralValueCached, updateTarget());
         /// anything above what is needed to bring this vault under maxDebt is considered excess
-        uint256 neededToSaveVault = maxDebtCached > debtCached ? 0 : debtCached - maxDebtCached;
-        uint256 excess = price > neededToSaveVault ? price - neededToSaveVault : 0;
+        uint256 neededToSaveVault;
+        uint256 excess;
+        unchecked {
+            neededToSaveVault = maxDebtCached > debtCached ? 0 : debtCached - maxDebtCached;
+            excess = price > neededToSaveVault ? price - neededToSaveVault : 0;
+        }
         uint256 remaining;
 
         if (excess > 0) {
             remaining = _handleExcess(excess, neededToSaveVault, debtCached, auction);
         } else {
             _reduceDebt(auction.nftOwner, auction.auctionAssetContract, address(this), debtCached, price);
-            remaining = debtCached - price;
+            // no excess, so debt cached <= price
+            unchecked {
+                remaining = debtCached - price;
+            }
         }
 
         if (
@@ -429,7 +440,7 @@ contract PaprController is
         }
 
         collateralOwner[collateral.addr][collateral.id] = account;
-        _vaultInfo[account][collateral.addr].count += 1;
+        ++_vaultInfo[account][collateral.addr].count;
 
         emit AddCollateral(account, collateral.addr, collateral.id);
     }
@@ -515,10 +526,10 @@ contract PaprController is
         ERC721 collateralAsset,
         IPaprController.SwapParams memory params,
         ReservoirOracleUnderwriter.OracleInfo memory oracleInfo
-    ) internal returns (uint256 amountOut) {
+    ) internal {
         bool hasFee = params.swapFeeBips != 0;
 
-        (amountOut,) = UniswapHelpers.swap(
+        (uint256 amountOut,) = UniswapHelpers.swap(
             pool,
             hasFee ? address(this) : proceedsTo,
             !token0IsUnderlying,
@@ -530,8 +541,8 @@ contract PaprController is
 
         if (hasFee) {
             uint256 fee = amountOut * params.swapFeeBips / BIPS_ONE;
-            underlying.transfer(params.swapFeeTo, fee);
-            underlying.transfer(proceedsTo, amountOut - fee);
+            underlying.safeTransfer(params.swapFeeTo, fee);
+            underlying.safeTransfer(proceedsTo, amountOut - fee);
         }
     }
 
@@ -553,7 +564,10 @@ contract PaprController is
         returns (uint256 remaining)
     {
         uint256 fee = excess * liquidationPenaltyBips / BIPS_ONE;
-        uint256 credit = excess - fee;
+        uint256 credit; 
+        unchecked {
+            credit = excess - fee;
+        }
         uint256 totalOwed = credit + neededToSaveVault;
 
         PaprToken(address(papr)).burn(address(this), fee);
@@ -562,11 +576,15 @@ contract PaprController is
             // we owe them more papr than they have in debt
             // so we pay down debt and send them the rest
             _reduceDebt(auction.nftOwner, auction.auctionAssetContract, address(this), debtCached, debtCached);
-            papr.transfer(auction.nftOwner, totalOwed - debtCached);
+            unchecked {
+                papr.transfer(auction.nftOwner, totalOwed - debtCached);
+            }
         } else {
             // reduce vault debt
             _reduceDebt(auction.nftOwner, auction.auctionAssetContract, address(this), debtCached, totalOwed);
-            remaining = debtCached - totalOwed;
+            unchecked {
+                remaining = debtCached - totalOwed;
+            }
         }
     }
 
