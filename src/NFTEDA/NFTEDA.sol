@@ -111,7 +111,7 @@ abstract contract NFTEDA is INFTEDA {
     /// @param startTime The start time of the auction
     /// @param auction The auction for which the caller wants to know the current price
     /// @return price the current amount required to purchase the NFT being sold in this auction
-    function _auctionCurrentPrice(uint256 id, uint256 startTime, INFTEDA.Auction memory auction)
+    function _auctionCurrentPrice(uint256, uint256 startTime, INFTEDA.Auction memory auction)
         internal
         view
         virtual
