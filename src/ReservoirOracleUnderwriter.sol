@@ -37,6 +37,9 @@ contract ReservoirOracleUnderwriter {
     /// @notice the maximum time a given signed oracle message is valid for
     uint256 constant VALID_FOR = 20 minutes;
 
+    bytes32 constant MESSAGE = keccak256("Message(bytes32 id,bytes payload,uint256 timestamp)");
+    bytes32 constant CONTRACT_WIDE_COLLECTION_PRICE = keccak256("ContractWideCollectionPrice(uint8 kind,uint256 twapSeconds,address contract)");
+
     /// @notice the signing address the contract expects from the oracle message
     address public immutable oracleSigner;
 
@@ -73,7 +76,7 @@ contract ReservoirOracleUnderwriter {
                     // EIP-712 structured-data hash
                     keccak256(
                         abi.encode(
-                            keccak256("Message(bytes32 id,bytes payload,uint256 timestamp)"),
+                            MESSAGE,
                             oracleInfo.message.id,
                             keccak256(oracleInfo.message.payload),
                             oracleInfo.message.timestamp
@@ -92,7 +95,7 @@ contract ReservoirOracleUnderwriter {
 
         bytes32 expectedId = keccak256(
             abi.encode(
-                keccak256("ContractWideCollectionPrice(uint8 kind,uint256 twapSeconds,address contract)"),
+                CONTRACT_WIDE_COLLECTION_PRICE,
                 priceKind,
                 TWAP_SECONDS,
                 asset
