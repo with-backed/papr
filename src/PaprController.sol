@@ -206,8 +206,8 @@ contract PaprController is
 
         if (hasFee) {
             uint256 fee = amountOut * params.swapFeeBips / BIPS_ONE;
-            underlying.transfer(params.swapFeeTo, fee);
-            underlying.transfer(proceedsTo, amountOut - fee);
+            underlying.safeTransfer(params.swapFeeTo, fee);
+            underlying.safeTransfer(proceedsTo, amountOut - fee);
         }
     }
 
@@ -530,8 +530,8 @@ contract PaprController is
 
         if (hasFee) {
             uint256 fee = amountOut * params.swapFeeBips / BIPS_ONE;
-            underlying.transfer(params.swapFeeTo, fee);
-            underlying.transfer(proceedsTo, amountOut - fee);
+            underlying.safeTransfer(params.swapFeeTo, fee);
+            underlying.safeTransfer(proceedsTo, amountOut - fee);
         }
     }
 
