@@ -285,9 +285,13 @@ contract PaprController is
         --_vaultInfo[auction.nftOwner][auction.auctionAssetContract].auctionCount;
 
         uint256 count = _vaultInfo[auction.nftOwner][auction.auctionAssetContract].count;
-        uint256 collateralValueCached = underwritePriceForCollateral(
-            auction.auctionAssetContract, ReservoirOracleUnderwriter.PriceKind.TWAP, oracleInfo
-        ) * count;
+        uint256 collateralValueCached;
+
+        if (count != 0) {
+            collateralValueCached = underwritePriceForCollateral(
+                auction.auctionAssetContract, ReservoirOracleUnderwriter.PriceKind.TWAP, oracleInfo
+            ) * count;
+        }
 
         uint256 debtCached = _vaultInfo[auction.nftOwner][auction.auctionAssetContract].debt;
         uint256 maxDebtCached = count == 0 ? 0 : _maxDebt(collateralValueCached, updateTarget());
@@ -304,7 +308,10 @@ contract PaprController is
             remaining = _handleExcess(excess, neededToSaveVault, debtCached, auction);
         } else {
             _reduceDebt(auction.nftOwner, auction.auctionAssetContract, address(this), debtCached, price);
-            remaining = debtCached - price;
+            // no excess, so debt cached <= price
+            unchecked {
+                remaining = debtCached - price;
+            }
         }
 
         if (
@@ -557,7 +564,10 @@ contract PaprController is
         returns (uint256 remaining)
     {
         uint256 fee = excess * liquidationPenaltyBips / BIPS_ONE;
-        uint256 credit = excess - fee;
+        uint256 credit; 
+        unchecked {
+            credit = excess - fee;
+        }
         uint256 totalOwed = credit + neededToSaveVault;
 
         PaprToken(address(papr)).burn(address(this), fee);
