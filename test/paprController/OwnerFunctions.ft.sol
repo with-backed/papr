@@ -87,56 +87,6 @@ contract OwnerFunctionsTest is MainnetForking, UniswapForking {
         controller.setFundingPeriod(1);
     }
 
-    function testSendPaprFromAuctionFeesWorksIfOwner() public {
-        PaprToken paprToken = PaprToken(address(controller.papr()));
-
-        vm.startPrank(address(controller));
-        paprToken.mint(address(controller), 1e18);
-        paprToken.approve(address(controller), 1e18);
-        vm.stopPrank();
-
-        assertEq(paprToken.balanceOf(address(controller)), 1e18);
-
-        controller.sendPaprFromAuctionFees(address(1), 1e18);
-        assertEq(paprToken.balanceOf(address(controller)), 0);
-        assertEq(paprToken.balanceOf(address(1)), 1e18);
-    }
-
-    function testSendPaprFromAuctionFeesRevertsIfNotOwner() public {
-        PaprToken paprToken = PaprToken(address(controller.papr()));
-
-        vm.startPrank(address(controller));
-        paprToken.mint(address(controller), 1e18);
-        paprToken.approve(address(controller), 1e18);
-        vm.stopPrank();
-
-        vm.startPrank(address(1));
-        vm.expectRevert("Ownable: caller is not the owner");
-        controller.sendPaprFromAuctionFees(address(1), 1e18);
-    }
-
-    function testBurnPaprFromAuctionFeesWorksIfOwner() public {
-        PaprToken paprToken = PaprToken(address(controller.papr()));
-
-        vm.startPrank(address(controller));
-        paprToken.mint(address(controller), 1e18);
-        paprToken.approve(address(controller), 1e18);
-        vm.stopPrank();
-
-        assertEq(paprToken.balanceOf(address(controller)), 1e18);
-        assertEq(paprToken.totalSupply(), 1e18);
-
-        controller.burnPaprFromAuctionFees(1e18);
-        assertEq(paprToken.balanceOf(address(controller)), 0);
-        assertEq(paprToken.totalSupply(), 0);
-    }
-
-    function testBurnPaprFromAuctionFeesRevertsIfNotOwner() public {
-        vm.startPrank(address(1));
-        vm.expectRevert("Ownable: caller is not the owner");
-        controller.burnPaprFromAuctionFees(1e18);
-    }
-
     function testSetLiquidationsLockedUpdatesLiquidationsLocked() public {
         vm.expectEmit(false, false, false, true);
         emit UpdateLiquidationsLocked(true);

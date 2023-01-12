@@ -227,18 +227,6 @@ interface IPaprController {
     /// @param collateralConfigs configuration settings indicating whether a collateral is allowed or not
     function setAllowedCollateral(IPaprController.CollateralAllowedConfig[] calldata collateralConfigs) external;
 
-    /// @notice transfers papr tokens held in controller from auction fees
-    /// @dev owner function
-    /// @param to address to send papr tokens to
-    /// @param amount amount of papr to send
-    /// @dev only controller owner will be able to execute this function
-    function sendPaprFromAuctionFees(address to, uint256 amount) external;
-
-    /// @notice burns papr tokens held in controller from auction fees
-    /// @param amount amount of papr to burn
-    /// @dev only controller owner will be able to execute this function
-    function burnPaprFromAuctionFees(uint256 amount) external;
-
     /// @notice returns who owns a collateral token in a vault
     /// @param collateral address of the collateral
     /// @param tokenId tokenId of the collateral
