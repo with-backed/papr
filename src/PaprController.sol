@@ -440,7 +440,7 @@ contract PaprController is
         }
 
         collateralOwner[collateral.addr][collateral.id] = account;
-        _vaultInfo[account][collateral.addr].count += 1;
+        ++_vaultInfo[account][collateral.addr].count;
 
         emit AddCollateral(account, collateral.addr, collateral.id);
     }
