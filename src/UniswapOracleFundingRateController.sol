@@ -90,19 +90,19 @@ contract UniswapOracleFundingRateController is IUniswapOracleFundingRateControll
     /// @notice initializes the controller, setting pool and target
     /// @dev assumes pool is initialized, does not check that pool tokens
     /// match papr and underlying
-    /// @param target the start value of target
+    /// @param _target_ the start value of target
     /// @param _pool the pool address to use
-    function _init(uint256 target, address _pool) internal {
+    function _init(uint256 _target_, address _pool) internal {
         if (_lastUpdated != 0) revert AlreadyInitialized();
 
         _setPool(_pool);
 
         _lastUpdated = uint48(block.timestamp);
-        _target = SafeCastLib.safeCastTo128(target);
+        _target = SafeCastLib.safeCastTo128(_target_);
         _lastCumulativeTick = OracleLibrary.latestCumulativeTick(pool);
         _lastTwapTick = UniswapHelpers.poolCurrentTick(pool);
 
-        emit UpdateTarget(target);
+        emit UpdateTarget(_target_);
     }
 
     /// @notice Updates `pool`
