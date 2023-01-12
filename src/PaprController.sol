@@ -292,8 +292,12 @@ contract PaprController is
         uint256 debtCached = _vaultInfo[auction.nftOwner][auction.auctionAssetContract].debt;
         uint256 maxDebtCached = count == 0 ? 0 : _maxDebt(collateralValueCached, updateTarget());
         /// anything above what is needed to bring this vault under maxDebt is considered excess
-        uint256 neededToSaveVault = maxDebtCached > debtCached ? 0 : debtCached - maxDebtCached;
-        uint256 excess = price > neededToSaveVault ? price - neededToSaveVault : 0;
+        uint256 neededToSaveVault;
+        uint256 excess;
+        unchecked {
+            neededToSaveVault = maxDebtCached > debtCached ? 0 : debtCached - maxDebtCached;
+            excess = price > neededToSaveVault ? price - neededToSaveVault : 0;
+        }
         uint256 remaining;
 
         if (excess > 0) {
@@ -562,11 +566,15 @@ contract PaprController is
             // we owe them more papr than they have in debt
             // so we pay down debt and send them the rest
             _reduceDebt(auction.nftOwner, auction.auctionAssetContract, address(this), debtCached, debtCached);
-            papr.transfer(auction.nftOwner, totalOwed - debtCached);
+            unchecked {
+                papr.transfer(auction.nftOwner, totalOwed - debtCached);
+            }
         } else {
             // reduce vault debt
             _reduceDebt(auction.nftOwner, auction.auctionAssetContract, address(this), debtCached, totalOwed);
-            remaining = debtCached - totalOwed;
+            unchecked {
+                remaining = debtCached - totalOwed;
+            }
         }
     }
 
