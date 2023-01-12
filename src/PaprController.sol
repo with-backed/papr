@@ -515,10 +515,10 @@ contract PaprController is
         ERC721 collateralAsset,
         IPaprController.SwapParams memory params,
         ReservoirOracleUnderwriter.OracleInfo memory oracleInfo
-    ) internal returns (uint256 amountOut) {
+    ) internal {
         bool hasFee = params.swapFeeBips != 0;
 
-        (amountOut,) = UniswapHelpers.swap(
+        (uint256 amountOut,) = UniswapHelpers.swap(
             pool,
             hasFee ? address(this) : proceedsTo,
             !token0IsUnderlying,
