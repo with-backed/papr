@@ -63,6 +63,7 @@ contract ReservoirOracleUnderwriter {
     /// @dev reverts if the oracle message is for the wrong ERC721 asset, wrong price kind, or wrong quote currency
     function underwritePriceForCollateral(ERC721 asset, PriceKind priceKind, OracleInfo memory oracleInfo)
         public
+        view
         returns (uint256)
     {
         address signerAddress = ecrecover(
