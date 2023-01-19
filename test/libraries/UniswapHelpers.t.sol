@@ -18,7 +18,7 @@ contract UniswapHelpersTest is Test {
         UniswapHelpers.swap(pool, address(1), false, 1e18, 0, 10, block.timestamp - 1, "");
     }
 
-    /// @dev not working do to an issue of using mockCall and expectRevert together.
+    /// @dev not working due to an issue of using mockCall and expectRevert together.
     /// Need to switch to a fork test if we want to work like this
     // function testSwapRevertsIfMintOutTooLittle() public {
     //     bytes memory mockCall =
