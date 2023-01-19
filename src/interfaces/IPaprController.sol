@@ -41,6 +41,8 @@ interface IPaprController {
         address swapFeeTo;
         /// @dev optional swap fee in bips
         uint256 swapFeeBips;
+        /// @dev timestamp after which the swap should not be executed
+        uint256 deadline;
     }
 
     /// @notice parameters to be encoded in safeTransferFrom collateral addition

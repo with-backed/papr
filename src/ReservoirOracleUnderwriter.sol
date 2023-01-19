@@ -39,7 +39,8 @@ contract ReservoirOracleUnderwriter {
 
     /// @dev constant values used in checking signatures
     bytes32 constant MESSAGE = keccak256("Message(bytes32 id,bytes payload,uint256 timestamp)");
-    bytes32 constant CONTRACT_WIDE_COLLECTION_PRICE = keccak256("ContractWideCollectionPrice(uint8 kind,uint256 twapSeconds,address contract)");
+    bytes32 constant CONTRACT_WIDE_COLLECTION_PRICE =
+        keccak256("ContractWideCollectionPrice(uint8 kind,uint256 twapSeconds,address contract)");
 
     /// @notice the signing address the contract expects from the oracle message
     address public immutable oracleSigner;
@@ -94,14 +95,7 @@ contract ReservoirOracleUnderwriter {
             revert IncorrectOracleSigner();
         }
 
-        bytes32 expectedId = keccak256(
-            abi.encode(
-                CONTRACT_WIDE_COLLECTION_PRICE,
-                priceKind,
-                TWAP_SECONDS,
-                asset
-            )
-        );
+        bytes32 expectedId = keccak256(abi.encode(CONTRACT_WIDE_COLLECTION_PRICE, priceKind, TWAP_SECONDS, asset));
 
         if (oracleInfo.message.id != expectedId) {
             revert WrongIdentifierFromOracleMessage();

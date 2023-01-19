@@ -201,6 +201,7 @@ contract PaprController is
             params.amount,
             params.minOut,
             params.sqrtPriceLimitX96,
+            params.deadline,
             abi.encode(msg.sender, collateralAsset, oracleInfo)
         );
 
@@ -226,6 +227,7 @@ contract PaprController is
             params.amount,
             params.minOut,
             params.sqrtPriceLimitX96,
+            params.deadline,
             abi.encode(msg.sender)
         );
 
@@ -536,6 +538,7 @@ contract PaprController is
             params.amount,
             params.minOut,
             params.sqrtPriceLimitX96,
+            params.deadline,
             abi.encode(account, collateralAsset, oracleInfo)
         );
 
@@ -564,7 +567,7 @@ contract PaprController is
         returns (uint256 remaining)
     {
         uint256 fee = excess * liquidationPenaltyBips / BIPS_ONE;
-        uint256 credit; 
+        uint256 credit;
         unchecked {
             credit = excess - fee;
         }

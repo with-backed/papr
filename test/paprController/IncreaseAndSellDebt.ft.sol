@@ -19,6 +19,7 @@ contract IncreaseDebtAndSellTest is BasePaprControllerTest {
             minOut: 982507,
             sqrtPriceLimitX96: _maxSqrtPriceLimit({sellingPAPR: true}),
             swapFeeTo: address(5),
+            deadline: block.timestamp,
             swapFeeBips: 100
         });
         uint256 underlyingOut = controller.increaseDebtAndSell(borrower, collateral.addr, swapParams, oracleInfo);

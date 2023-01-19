@@ -112,6 +112,7 @@ contract BasePaprControllerTest is MainnetForking, UniswapForking, OracleTest {
                 minOut: minOut,
                 sqrtPriceLimitX96: _viableSqrtPriceLimit({sellingPAPR: true}),
                 swapFeeTo: address(0),
+                deadline: block.timestamp,
                 swapFeeBips: 0
             }),
             oracleInfo: oracleInfo

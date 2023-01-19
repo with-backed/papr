@@ -45,6 +45,7 @@ contract MintNFTAndBorrowMax is Base {
                 minOut: 1,
                 sqrtPriceLimitX96: _maxSqrtPriceLimit(true),
                 swapFeeTo: address(0),
+                deadline: block.timestamp,
                 swapFeeBips: 0
             }),
             oracleInfo: _getOracleInfoForCollateral(address(nft), oraclePrice)

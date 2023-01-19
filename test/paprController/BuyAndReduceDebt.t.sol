@@ -15,6 +15,7 @@ contract BuyAndReduceDebt is BasePaprControllerTest {
             minOut: 1,
             sqrtPriceLimitX96: _maxSqrtPriceLimit({sellingPAPR: true}),
             swapFeeTo: address(0),
+            deadline: block.timestamp,
             swapFeeBips: 0
         });
         vm.prank(borrower);
@@ -28,6 +29,7 @@ contract BuyAndReduceDebt is BasePaprControllerTest {
             minOut: 1,
             sqrtPriceLimitX96: _maxSqrtPriceLimit({sellingPAPR: false}),
             swapFeeTo: address(0),
+            deadline: block.timestamp,
             swapFeeBips: 0
         });
         vm.startPrank(payer);
@@ -43,6 +45,7 @@ contract BuyAndReduceDebt is BasePaprControllerTest {
             minOut: 1,
             sqrtPriceLimitX96: _maxSqrtPriceLimit({sellingPAPR: true}),
             swapFeeTo: address(0),
+            deadline: block.timestamp,
             swapFeeBips: 0
         });
         vm.prank(borrower);
@@ -61,6 +64,7 @@ contract BuyAndReduceDebt is BasePaprControllerTest {
             minOut: 1e17,
             sqrtPriceLimitX96: _maxSqrtPriceLimit({sellingPAPR: false}),
             swapFeeTo: address(0),
+            deadline: block.timestamp,
             swapFeeBips: 0
         });
         vm.startPrank(payer);
@@ -80,6 +84,7 @@ contract BuyAndReduceDebt is BasePaprControllerTest {
             minOut: 982507,
             sqrtPriceLimitX96: _maxSqrtPriceLimit({sellingPAPR: true}),
             swapFeeTo: address(0),
+            deadline: block.timestamp,
             swapFeeBips: 0
         });
         uint256 underlyingOut = controller.increaseDebtAndSell(borrower, collateral.addr, swapParams, oracleInfo);
@@ -97,6 +102,7 @@ contract BuyAndReduceDebt is BasePaprControllerTest {
             minOut: 1,
             sqrtPriceLimitX96: _maxSqrtPriceLimit({sellingPAPR: false}),
             swapFeeTo: address(5),
+            deadline: block.timestamp,
             swapFeeBips: feeBips
         });
         uint256 debtPaid = controller.buyAndReduceDebt(borrower, collateral.addr, swapParams);
@@ -117,6 +123,7 @@ contract BuyAndReduceDebt is BasePaprControllerTest {
             minOut: 982507,
             sqrtPriceLimitX96: _maxSqrtPriceLimit({sellingPAPR: true}),
             swapFeeTo: address(0),
+            deadline: block.timestamp,
             swapFeeBips: 0
         });
         uint256 underlyingOut = controller.increaseDebtAndSell(borrower, collateral.addr, swapParams, oracleInfo);
@@ -135,6 +142,7 @@ contract BuyAndReduceDebt is BasePaprControllerTest {
             minOut: out + 1,
             sqrtPriceLimitX96: priceLimit,
             swapFeeTo: address(0),
+            deadline: block.timestamp,
             swapFeeBips: 0
         });
         uint256 debtPaid = controller.buyAndReduceDebt(borrower, collateral.addr, swapParams);

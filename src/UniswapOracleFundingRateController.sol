@@ -110,7 +110,9 @@ contract UniswapOracleFundingRateController is IUniswapOracleFundingRateControll
     /// @dev if pool = address(0), does NOT check that tokens match papr and underlying
     function _setPool(address _pool) internal {
         address currentPool = pool;
-        if (currentPool != address(0) && !UniswapHelpers.poolsHaveSameTokens(currentPool, _pool)) revert PoolTokensDoNotMatch();
+        if (currentPool != address(0) && !UniswapHelpers.poolsHaveSameTokens(currentPool, _pool)) {
+            revert PoolTokensDoNotMatch();
+        }
         if (!UniswapHelpers.isUniswapPool(_pool)) revert InvalidUniswapV3Pool();
 
         pool = _pool;
