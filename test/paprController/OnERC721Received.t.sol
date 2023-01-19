@@ -43,6 +43,7 @@ contract OnERC721ReceivedTest is BasePaprControllerTest {
         safeTransferReceivedArgs.swapParams.minOut = 1;
         uint160 priceLimit = _maxSqrtPriceLimit(true);
         safeTransferReceivedArgs.swapParams.sqrtPriceLimitX96 = priceLimit;
+        safeTransferReceivedArgs.swapParams.deadline = block.timestamp;
         uint256 expectedOut = quoter.quoteExactInputSingle({
             tokenIn: address(controller.papr()),
             tokenOut: address(underlying),

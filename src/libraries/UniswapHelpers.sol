@@ -16,6 +16,10 @@ library UniswapHelpers {
     /// @param actualOut The actual out amount the user received
     error TooLittleOut(uint256 minOut, uint256 actualOut);
 
+    /// @param deadline The minimum out amount the user wanted
+    /// @param currentTimestamp The actual out amount the user received
+    error PassedDeadline(uint256 deadline, uint256 currentTimestamp);
+
     IUniswapV3Factory constant FACTORY = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
 
     /// @notice executes a swap on the Uniswap
@@ -25,6 +29,7 @@ library UniswapHelpers {
     /// @param amountSpecified The amount of token0 or token1 to swap
     /// @param minOut The minimum amount of token0 or token1 to receive
     /// @param sqrtPriceLimitX96 The price limit for the swap
+    /// @param deadline timestamp after which the swap should revert
     /// @param data Any data to pass to the uniswap callback handler
     /// @return amountOut The amount of token0 or token1 received
     /// @return amountIn The amount of token0 or token1 sent
@@ -35,8 +40,11 @@ library UniswapHelpers {
         uint256 amountSpecified,
         uint256 minOut,
         uint160 sqrtPriceLimitX96,
+        uint256 deadline,
         bytes memory data
     ) internal returns (uint256 amountOut, uint256 amountIn) {
+        if (block.timestamp > deadline) revert PassedDeadline(deadline, block.timestamp);
+
         (int256 amount0, int256 amount1) = IUniswapV3Pool(pool).swap(
             recipient,
             zeroForOne,
