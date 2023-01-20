@@ -310,7 +310,7 @@ contract PaprController is
             remaining = _handleExcess(excess, neededToSaveVault, debtCached, auction);
         } else {
             _reduceDebt(auction.nftOwner, auction.auctionAssetContract, address(this), debtCached, price);
-            // no excess, so debt cached <= price
+            // no excess, so price <= neededToSaveVault, meaning debtCached >= price
             unchecked {
                 remaining = debtCached - price;
             }
@@ -568,6 +568,7 @@ contract PaprController is
     {
         uint256 fee = excess * liquidationPenaltyBips / BIPS_ONE;
         uint256 credit;
+        // excess is a % of fee and so is <= fee
         unchecked {
             credit = excess - fee;
         }
@@ -579,12 +580,14 @@ contract PaprController is
             // we owe them more papr than they have in debt
             // so we pay down debt and send them the rest
             _reduceDebt(auction.nftOwner, auction.auctionAssetContract, address(this), debtCached, debtCached);
+            // totalOwed > debtCached
             unchecked {
                 papr.transfer(auction.nftOwner, totalOwed - debtCached);
             }
         } else {
             // reduce vault debt
             _reduceDebt(auction.nftOwner, auction.auctionAssetContract, address(this), debtCached, totalOwed);
+            // debtCached >= totalOwed
             unchecked {
                 remaining = debtCached - totalOwed;
             }
