@@ -14,6 +14,7 @@ NFTEDAStarterIncentiveTest:testStartAuctionRevertsIfAlreadyStarted() (gas: 26596
 NFTEDAStarterIncentiveTest:testStartAuctionSavesStartTime() (gas: 56967)
 NFTEDAStarterIncentiveTest:testStartAuctionSavesStarter() (gas: 57389)
 NFTPriceTest:testCurrentPrice() (gas: 12601)
+ReservoirOracleUnderwriterTest:testRevertsIfIDIsWrong() (gas: 25892)
 UniswapHelpersTest:testSwapRevertsIfDeadlinePassed() (gas: 6050)
 AddCollateralTest:testAddCollateralEmitsAddCollateral() (gas: 111495)
 AddCollateralTest:testAddCollateralFailsIfInvalidCollateral() (gas: 784246)

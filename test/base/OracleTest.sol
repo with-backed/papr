@@ -20,6 +20,7 @@ contract OracleTest is Test {
 
     function _getOracleInfoForCollateral(ERC721 collateral, ERC20 underlying)
         internal
+        view
         returns (ReservoirOracleUnderwriter.OracleInfo memory oracleInfo)
     {
         ReservoirOracle.Message memory message = ReservoirOracle.Message({
