@@ -10,7 +10,7 @@ contract ReservoirOracleUnderwriter {
     /// @dev TWAP is the average weighted floor price over the last TWAP_SECONDS
     /// @dev LOWER is the minimum of SPOT and TWAP
     /// @dev UPPER is the maximum of SPOT and TWAP
-    /// @dev see https://docs.reservoir.tools/reference/getoraclecollectionsflooraskv4 for more details
+    /// @dev see https://docs.reservoir.tools/reference/getoraclecollectionstopbidv2 for more details
     enum PriceKind {
         SPOT,
         TWAP,
