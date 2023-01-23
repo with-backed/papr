@@ -13,6 +13,7 @@ library EDAPrice {
     /// @param secondsElapsed the seconds elapsed since auction start
     /// @param secondsInPeriod the seconds over which the price should decay perPeriodDecayPercentWad
     /// @param perPeriodDecayPercentWad the percent the price should decay during secondsInPeriod, 100% = 1e18
+    /// @return price the current auction price
     function currentPrice(
         uint256 startPrice,
         uint256 secondsElapsed,
