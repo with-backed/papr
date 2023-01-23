@@ -10,7 +10,7 @@ contract ReservoirOracleUnderwriter {
     /// @dev TWAP is the average weighted floor price over the last TWAP_SECONDS
     /// @dev LOWER is the minimum of SPOT and TWAP
     /// @dev UPPER is the maximum of SPOT and TWAP
-    /// @dev see https://docs.reservoir.tools/reference/getoraclecollectionsflooraskv4 for more details
+    /// @dev see https://docs.reservoir.tools/reference/getoraclecollectionstopbidv2 for more details
     enum PriceKind {
         SPOT,
         TWAP,
@@ -38,9 +38,9 @@ contract ReservoirOracleUnderwriter {
     uint256 constant VALID_FOR = 20 minutes;
 
     /// @dev constant values used in checking signatures
-    bytes32 constant MESSAGE = keccak256("Message(bytes32 id,bytes payload,uint256 timestamp)");
-    bytes32 constant CONTRACT_WIDE_COLLECTION_PRICE =
-        keccak256("ContractWideCollectionPrice(uint8 kind,uint256 twapSeconds,address contract)");
+    bytes32 constant MESSAGE_SIG_HASH = keccak256("Message(bytes32 id,bytes payload,uint256 timestamp)");
+    bytes32 constant TOP_BID_SIG_HASH =
+        keccak256("ContractWideCollectionTopBidPrice(uint8 kind,uint256 twapSeconds,address contract)");
 
     /// @notice the signing address the contract expects from the oracle message
     address public immutable oracleSigner;
@@ -78,7 +78,7 @@ contract ReservoirOracleUnderwriter {
                     // EIP-712 structured-data hash
                     keccak256(
                         abi.encode(
-                            MESSAGE,
+                            MESSAGE_SIG_HASH,
                             oracleInfo.message.id,
                             keccak256(oracleInfo.message.payload),
                             oracleInfo.message.timestamp
@@ -95,7 +95,7 @@ contract ReservoirOracleUnderwriter {
             revert IncorrectOracleSigner();
         }
 
-        bytes32 expectedId = keccak256(abi.encode(CONTRACT_WIDE_COLLECTION_PRICE, priceKind, TWAP_SECONDS, asset));
+        bytes32 expectedId = keccak256(abi.encode(TOP_BID_SIG_HASH, priceKind, TWAP_SECONDS, asset));
 
         if (oracleInfo.message.id != expectedId) {
             revert WrongIdentifierFromOracleMessage();
