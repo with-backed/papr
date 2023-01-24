@@ -42,7 +42,7 @@ contract OracleTest is Test {
             abi.encode(
                 keccak256("ContractWideCollectionTopBidPrice(uint8 kind,uint256 twapSeconds,address contract)"),
                 priceKind,
-                30 days,
+                7 days,
                 collectionAddress
             )
         );
