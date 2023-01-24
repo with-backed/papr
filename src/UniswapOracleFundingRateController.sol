@@ -123,8 +123,8 @@ contract UniswapOracleFundingRateController is IUniswapOracleFundingRateControll
     /// @notice Updates fundingPeriod
     /// @dev reverts if period is longer than 90 days or less than 7
     function _setFundingPeriod(uint256 _fundingPeriod) internal {
-        if (_fundingPeriod < 7 days) revert FundingPeriodTooShort();
-        if (_fundingPeriod > 90 days) revert FundingPeriodTooLong();
+        if (_fundingPeriod < 28 days) revert FundingPeriodTooShort();
+        if (_fundingPeriod > 365 days) revert FundingPeriodTooLong();
 
         fundingPeriod = _fundingPeriod;
 

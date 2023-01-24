@@ -32,7 +32,7 @@ contract ReservoirOracleUnderwriter {
     }
 
     /// @notice the amount of time to use for the TWAP
-    uint256 constant TWAP_SECONDS = 30 days;
+    uint256 constant TWAP_SECONDS = 7 days;
 
     /// @notice the maximum time a given signed oracle message is valid for
     uint256 constant VALID_FOR = 20 minutes;

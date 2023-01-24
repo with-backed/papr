@@ -17,11 +17,11 @@ contract SetFundingPeriodTest is BaseUniswapOracleFundingRateControllerTest {
 
     function testSetFundingPeriodRevertsIfPeriodTooShort() public {
         vm.expectRevert(IFundingRateController.FundingPeriodTooShort.selector);
-        fundingRateController.setFundingPeriod(5 days);
+        fundingRateController.setFundingPeriod(27 days);
     }
 
     function testSetFundingPeriodRevertsIfPeriodTooLong() public {
         vm.expectRevert(IFundingRateController.FundingPeriodTooLong.selector);
-        fundingRateController.setFundingPeriod(91 days);
+        fundingRateController.setFundingPeriod(366 days);
     }
 }

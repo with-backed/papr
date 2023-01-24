@@ -19,11 +19,11 @@ contract DeployPaprController is Base {
         vm.startBroadcast();
 
         controller = new PaprController(
-            "hero",
-            "HERO",
+            "trash",
+            "TRASH",
             5e17,
-            2e18,
-            0.8e18,
+            3e18,
+            0.5e18,
             underlying, // swap for phUSDC
             deployer
         );
