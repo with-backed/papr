@@ -307,49 +307,6 @@ contract PaprController is
         emit EndAuction(id, price);
     }
 
-    function _auctionPurchaseUpdateVaultBalances(
-        uint256 price,
-        address account,
-        ERC721 asset,
-        ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
-    ) internal {
-        --_vaultInfo[account][asset].auctionCount;
-
-        uint256 count = _vaultInfo[account][asset].count;
-        uint256 collateralValueCached;
-
-        if (count != 0) {
-            collateralValueCached =
-                underwritePriceForCollateral(asset, ReservoirOracleUnderwriter.PriceKind.TWAP, oracleInfo) * count;
-        }
-
-        uint256 debtCached = _vaultInfo[account][asset].debt;
-        uint256 maxDebtCached = count == 0 ? 0 : _maxDebt(collateralValueCached, updateTarget());
-        /// anything above what is needed to bring this vault under maxDebt is considered excess
-        uint256 neededToSaveVault;
-        uint256 excess;
-        unchecked {
-            neededToSaveVault = maxDebtCached > debtCached ? 0 : debtCached - maxDebtCached;
-            excess = price > neededToSaveVault ? price - neededToSaveVault : 0;
-        }
-        uint256 remaining;
-
-        if (excess > 0) {
-            remaining = _handleExcess(excess, neededToSaveVault, debtCached, account, asset);
-        } else {
-            _reduceDebt(account, asset, address(this), debtCached, price);
-            // no excess, so price <= neededToSaveVault, meaning debtCached >= price
-            unchecked {
-                remaining = debtCached - price;
-            }
-        }
-
-        if (count == 0 && remaining != 0 && _vaultInfo[account][asset].auctionCount == 0) {
-            /// there will be debt left with no NFTs, set it to 0
-            _reduceDebtWithoutBurn(account, asset, remaining, remaining);
-        }
-    }
-
     /// @inheritdoc IPaprController
     function startLiquidationAuction(
         address account,
@@ -575,17 +532,47 @@ contract PaprController is
         }
     }
 
-    function _purchaseNFTAndUpdateVaultIfNeeded(Auction calldata auction, uint256 maxPrice, address sendTo)
-        internal
-        returns (uint256)
-    {
-        (uint256 startTime, uint256 price) = _purchaseNFT(auction, maxPrice, sendTo);
+    function _auctionPurchaseUpdateVaultBalances(
+        uint256 price,
+        address account,
+        ERC721 asset,
+        ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
+    ) internal {
+        --_vaultInfo[account][asset].auctionCount;
 
-        if (startTime == _vaultInfo[auction.nftOwner][auction.auctionAssetContract].latestAuctionStartTime) {
-            _vaultInfo[auction.nftOwner][auction.auctionAssetContract].latestAuctionStartTime = 0;
+        uint256 count = _vaultInfo[account][asset].count;
+        uint256 collateralValueCached;
+
+        if (count != 0) {
+            collateralValueCached =
+                underwritePriceForCollateral(asset, ReservoirOracleUnderwriter.PriceKind.TWAP, oracleInfo) * count;
         }
 
-        return price;
+        uint256 debtCached = _vaultInfo[account][asset].debt;
+        uint256 maxDebtCached = count == 0 ? 0 : _maxDebt(collateralValueCached, updateTarget());
+        /// anything above what is needed to bring this vault under maxDebt is considered excess
+        uint256 neededToSaveVault;
+        uint256 excess;
+        unchecked {
+            neededToSaveVault = maxDebtCached > debtCached ? 0 : debtCached - maxDebtCached;
+            excess = price > neededToSaveVault ? price - neededToSaveVault : 0;
+        }
+        uint256 remaining;
+
+        if (excess > 0) {
+            remaining = _handleExcess(excess, neededToSaveVault, debtCached, account, asset);
+        } else {
+            _reduceDebt(account, asset, address(this), debtCached, price);
+            // no excess, so price <= neededToSaveVault, meaning debtCached >= price
+            unchecked {
+                remaining = debtCached - price;
+            }
+        }
+
+        if (count == 0 && remaining != 0 && _vaultInfo[account][asset].auctionCount == 0) {
+            /// there will be debt left with no NFTs, set it to 0
+            _reduceDebtWithoutBurn(account, asset, remaining, remaining);
+        }
     }
 
     function _handleExcess(uint256 excess, uint256 neededToSaveVault, uint256 debtCached, address account, ERC721 asset)
