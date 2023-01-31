@@ -283,45 +283,31 @@ contract PaprController is
         address sendTo,
         ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
     ) external override {
-        uint256 price = _purchaseNFTAndUpdateVaultIfNeeded(auction, maxPrice, sendTo);
-        --_vaultInfo[auction.nftOwner][auction.auctionAssetContract].auctionCount;
+        // This function is almost the same as NFTEDA._purchaseNFT
+        // however we inline so we can receive payment first
+        // and execute logic before sending NFT
+        uint256 id;
+        uint256 startTime;
+        uint256 price;
+        (id, startTime, price) = _checkAuctionAndReturnDetails(auction);
 
-        uint256 count = _vaultInfo[auction.nftOwner][auction.auctionAssetContract].count;
-        uint256 collateralValueCached;
-
-        if (count != 0) {
-            collateralValueCached = underwritePriceForCollateral(
-                auction.auctionAssetContract, ReservoirOracleUnderwriter.PriceKind.TWAP, oracleInfo
-            ) * count;
+        if (price > maxPrice) {
+            revert MaxPriceTooLow(price, maxPrice);
         }
 
-        uint256 debtCached = _vaultInfo[auction.nftOwner][auction.auctionAssetContract].debt;
-        uint256 maxDebtCached = count == 0 ? 0 : _maxDebt(collateralValueCached, updateTarget());
-        /// anything above what is needed to bring this vault under maxDebt is considered excess
-        uint256 neededToSaveVault;
-        uint256 excess;
-        unchecked {
-            neededToSaveVault = maxDebtCached > debtCached ? 0 : debtCached - maxDebtCached;
-            excess = price > neededToSaveVault ? price - neededToSaveVault : 0;
-        }
-        uint256 remaining;
+        _clearAuctionState(id);
 
-        if (excess > 0) {
-            remaining = _handleExcess(excess, neededToSaveVault, debtCached, auction);
-        } else {
-            _reduceDebt(auction.nftOwner, auction.auctionAssetContract, address(this), debtCached, price);
-            // no excess, so price <= neededToSaveVault, meaning debtCached >= price
-            unchecked {
-                remaining = debtCached - price;
-            }
+        if (startTime == _vaultInfo[auction.nftOwner][auction.auctionAssetContract].latestAuctionStartTime) {
+            _vaultInfo[auction.nftOwner][auction.auctionAssetContract].latestAuctionStartTime = 0;
         }
 
-        if (
-            count == 0 && remaining != 0 && _vaultInfo[auction.nftOwner][auction.auctionAssetContract].auctionCount == 0
-        ) {
-            /// there will be debt left with no NFTs, set it to 0
-            _reduceDebtWithoutBurn(auction.nftOwner, auction.auctionAssetContract, remaining, remaining);
-        }
+        auction.paymentAsset.safeTransferFrom(msg.sender, address(this), price);
+
+        _auctionPurchaseUpdateVault(price, auction.nftOwner, auction.auctionAssetContract, oracleInfo);
+
+        auction.auctionAssetContract.safeTransferFrom(address(this), sendTo, auction.auctionAssetID);
+
+        emit EndAuction(id, price);
     }
 
     /// @inheritdoc IPaprController
@@ -549,20 +535,51 @@ contract PaprController is
         }
     }
 
-    function _purchaseNFTAndUpdateVaultIfNeeded(Auction calldata auction, uint256 maxPrice, address sendTo)
-        internal
-        returns (uint256)
-    {
-        (uint256 startTime, uint256 price) = _purchaseNFT(auction, maxPrice, sendTo);
+    function _auctionPurchaseUpdateVault(
+        uint256 price,
+        address account,
+        ERC721 asset,
+        ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
+    ) internal {
+        --_vaultInfo[account][asset].auctionCount;
 
-        if (startTime == _vaultInfo[auction.nftOwner][auction.auctionAssetContract].latestAuctionStartTime) {
-            _vaultInfo[auction.nftOwner][auction.auctionAssetContract].latestAuctionStartTime = 0;
+        uint256 count = _vaultInfo[account][asset].count;
+        uint256 collateralValueCached;
+        uint256 maxDebtCached;
+
+        if (count != 0) {
+            collateralValueCached =
+                underwritePriceForCollateral(asset, ReservoirOracleUnderwriter.PriceKind.TWAP, oracleInfo) * count;
+            maxDebtCached = _maxDebt(collateralValueCached, updateTarget());
         }
 
-        return price;
+        uint256 debtCached = _vaultInfo[account][asset].debt;
+        /// anything above what is needed to bring this vault under maxDebt is considered excess
+        uint256 neededToSaveVault;
+        uint256 excess;
+        unchecked {
+            neededToSaveVault = maxDebtCached > debtCached ? 0 : debtCached - maxDebtCached;
+            excess = price > neededToSaveVault ? price - neededToSaveVault : 0;
+        }
+        uint256 remaining;
+
+        if (excess > 0) {
+            remaining = _handleExcess(excess, neededToSaveVault, debtCached, account, asset);
+        } else {
+            _reduceDebt(account, asset, address(this), debtCached, price);
+            // no excess, so price <= neededToSaveVault, meaning debtCached >= price
+            unchecked {
+                remaining = debtCached - price;
+            }
+        }
+
+        if (count == 0 && remaining != 0 && _vaultInfo[account][asset].auctionCount == 0) {
+            /// there will be debt left with no NFTs, set it to 0
+            _reduceDebtWithoutBurn(account, asset, remaining, remaining);
+        }
     }
 
-    function _handleExcess(uint256 excess, uint256 neededToSaveVault, uint256 debtCached, Auction calldata auction)
+    function _handleExcess(uint256 excess, uint256 neededToSaveVault, uint256 debtCached, address account, ERC721 asset)
         internal
         returns (uint256 remaining)
     {
@@ -579,14 +596,14 @@ contract PaprController is
         if (totalOwed > debtCached) {
             // we owe them more papr than they have in debt
             // so we pay down debt and send them the rest
-            _reduceDebt(auction.nftOwner, auction.auctionAssetContract, address(this), debtCached, debtCached);
+            _reduceDebt(account, asset, address(this), debtCached, debtCached);
             // totalOwed > debtCached
             unchecked {
-                papr.transfer(auction.nftOwner, totalOwed - debtCached);
+                papr.transfer(account, totalOwed - debtCached);
             }
         } else {
             // reduce vault debt
-            _reduceDebt(auction.nftOwner, auction.auctionAssetContract, address(this), debtCached, totalOwed);
+            _reduceDebt(account, asset, address(this), debtCached, totalOwed);
             // debtCached >= totalOwed
             unchecked {
                 remaining = debtCached - totalOwed;

@@ -74,13 +74,8 @@ abstract contract NFTEDA is INFTEDA {
         virtual
         returns (uint256 startTime, uint256 price)
     {
-        uint256 id = auctionID(auction);
-        startTime = auctionStartTime(id);
-
-        if (startTime == 0) {
-            revert InvalidAuction();
-        }
-        price = _auctionCurrentPrice(id, startTime, auction);
+        uint256 id;
+        (id, startTime, price) = _checkAuctionAndReturnDetails(auction);
 
         if (price > maxPrice) {
             revert MaxPriceTooLow(price, maxPrice);
@@ -93,6 +88,20 @@ abstract contract NFTEDA is INFTEDA {
         auction.paymentAsset.safeTransferFrom(msg.sender, address(this), price);
 
         emit EndAuction(id, price);
+    }
+
+    function _checkAuctionAndReturnDetails(INFTEDA.Auction memory auction)
+        internal
+        view
+        returns (uint256 id, uint256 startTime, uint256 price)
+    {
+        id = auctionID(auction);
+        startTime = auctionStartTime(id);
+
+        if (startTime == 0) {
+            revert InvalidAuction();
+        }
+        price = _auctionCurrentPrice(id, startTime, auction);
     }
 
     /// @notice Sets the time at which the auction was started
