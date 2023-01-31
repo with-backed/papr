@@ -7,7 +7,7 @@ import {EDAPrice, FixedPointMathLib} from "../../../src/NFTEDA/libraries/EDAPric
 
 contract EDAPriceTest is Test {
     function testCurrentPrice() public {
-        uint256 price = EDAPrice.currentPrice(1e18, 0, 1 days, 0.9e18);
+        uint256 price = EDAPrice.currentPrice(2500e18, 30, 1 days, 0.7e18);
         assertEq(price, 1e18);
         price = EDAPrice.currentPrice(1e18, 1 days, 1 days, 0.9e18);
         // off by 1, precise 1e17
