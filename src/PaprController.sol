@@ -545,14 +545,15 @@ contract PaprController is
 
         uint256 count = _vaultInfo[account][asset].count;
         uint256 collateralValueCached;
+        uint256 maxDebtCached;
 
         if (count != 0) {
             collateralValueCached =
                 underwritePriceForCollateral(asset, ReservoirOracleUnderwriter.PriceKind.TWAP, oracleInfo) * count;
+            maxDebtCached = _maxDebt(collateralValueCached, updateTarget());
         }
 
         uint256 debtCached = _vaultInfo[account][asset].debt;
-        uint256 maxDebtCached = count == 0 ? 0 : _maxDebt(collateralValueCached, updateTarget());
         /// anything above what is needed to bring this vault under maxDebt is considered excess
         uint256 neededToSaveVault;
         uint256 excess;
