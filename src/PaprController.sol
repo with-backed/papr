@@ -283,6 +283,9 @@ contract PaprController is
         address sendTo,
         ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
     ) external override {
+        // This function is almost the same as NFTEDA._purchaseNFT
+        // however we inline so we can receive payment first
+        // and execute logic before sending NFT
         uint256 id;
         uint256 startTime;
         uint256 price;
@@ -300,7 +303,7 @@ contract PaprController is
 
         auction.paymentAsset.safeTransferFrom(msg.sender, address(this), price);
 
-        _auctionPurchaseUpdateVaultBalances(price, auction.nftOwner, auction.auctionAssetContract, oracleInfo);
+        _auctionPurchaseUpdateVault(price, auction.nftOwner, auction.auctionAssetContract, oracleInfo);
 
         auction.auctionAssetContract.safeTransferFrom(address(this), sendTo, auction.auctionAssetID);
 
@@ -532,7 +535,7 @@ contract PaprController is
         }
     }
 
-    function _auctionPurchaseUpdateVaultBalances(
+    function _auctionPurchaseUpdateVault(
         uint256 price,
         address account,
         ERC721 asset,

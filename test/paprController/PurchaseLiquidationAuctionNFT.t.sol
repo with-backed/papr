@@ -316,30 +316,6 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         controller.purchaseLiquidationAuctionNFT(auction, auction.startPrice, purchaser, oracleInfo);
     }
 
-    /// TODO remove this test, leaving for now to show that now the NFT is added after auction settles
-    /// and so has not affect on accounting
-    /// @dev we want to prevent abuse of our clearing remaining debt when there is a shortfall
-    /// but it is the borrowers last NFT
-    function testReentrancyOnLastNFTDoesNotClearDebt() public {
-        /// testWhenLastNFTAndShortfall
-        // https://www.wolframalpha.com/input?i=solve+1.5+%3D+8.999+*+0.3+%5E+%28x+%2F+86400%29
-        vm.warp(block.timestamp + 128575);
-        IPaprController.VaultInfo memory info = controller.vaultInfo(borrower, collateral.addr);
-        oracleInfo = _getOracleInfoForCollateral(collateral.addr, underlying);
-        uint256 beforeBalance = controller.papr().balanceOf(borrower);
-        controller.papr().approve(address(controller), auction.startPrice);
-        uint256 price = controller.auctionCurrentPrice(auction);
-        vm.expectEmit(true, false, false, true);
-        emit ReduceDebt(borrower, collateral.addr, price);
-        vm.expectEmit(true, true, false, true);
-        emit Transfer(address(controller), address(0), price);
-        controller.purchaseLiquidationAuctionNFT(auction, auction.startPrice, address(this), oracleInfo);
-        uint256 afterBalance = controller.papr().balanceOf(borrower);
-        assertEq(afterBalance, beforeBalance);
-        info = controller.vaultInfo(borrower, collateral.addr);
-        assertEq(info.debt, 0);
-    }
-
     function onERC721Received(address, address from, uint256, bytes calldata) external returns (bytes4) {
         if (from == address(controller)) {
             priceKind = ReservoirOracleUnderwriter.PriceKind.LOWER;
