@@ -38,7 +38,7 @@ contract UniswapOracleFundingRateController is IUniswapOracleFundingRateControll
         targetMarkRatioMax = _targetMarkRatioMax;
         targetMarkRatioMin = _targetMarkRatioMin;
 
-        _setFundingPeriod(4 weeks);
+        _setFundingPeriod(90 days);
     }
 
     /// @inheritdoc IFundingRateController

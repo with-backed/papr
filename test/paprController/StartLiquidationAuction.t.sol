@@ -52,7 +52,7 @@ contract StartLiquidationAuctionTest is BasePaprControllerTest {
     function testRevertsIfDebtEqualToMax() public {
         nft.mint(borrower, 2);
         /// manually calc what maxDebt would be after 1 week
-        safeTransferReceivedArgs.debt = 1.494233107035849e18 - 45;
+        safeTransferReceivedArgs.debt = 1.498207072170842e18 - 163;
         safeTransferReceivedArgs.swapParams.amount = 0;
         safeTransferReceivedArgs.swapParams.minOut = 0;
         vm.prank(borrower);
