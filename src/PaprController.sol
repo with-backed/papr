@@ -480,7 +480,7 @@ contract PaprController is
         uint256 oraclePrice =
             underwritePriceForCollateral(asset, ReservoirOracleUnderwriter.PriceKind.LOWER, oracleInfo);
 
-        _checkOraclePrice(asset, oraclePrice);
+        oraclePrice = _priceOrMaxPrice(asset, oraclePrice);
 
         uint256 max = _maxDebt(_vaultInfo[account][asset].count * oraclePrice, cachedTarget);
 
@@ -505,18 +505,18 @@ contract PaprController is
 
     error PriceGrowthTooFast();
 
-    function _checkOraclePrice(ERC721 asset, uint256 price) internal {
+    function _priceOrMaxPrice(ERC721 asset, uint256 price) internal returns (uint256) {
         CachedPrice memory cached = cachedPriceForAsset[asset];
         if (cached.price != 0 && cached.price < price) {
-            if (
-                ((price - cached.price) / cached.price) / (block.timestamp - cached.timestamp)
-                    > MAX_PER_SECOND_PRICE_GROWTH
-            ) {
-                revert PriceGrowthTooFast();
+            uint256 max = FixedPointMathLib.mulWadDown(cached.price, (MAX_PER_SECOND_PRICE_GROWTH / (block.timestamp - cached.timestamp)) + FixedPointMathLib.WAD);
+            if (price > max) {
+                price = max;
             }
         }
 
         cachedPriceForAsset[asset] = CachedPrice({timestamp: uint40(block.timestamp), price: uint216(price)});
+
+        return price;
     }
 
     function _reduceDebt(address account, ERC721 asset, address burnFrom, uint256 accountDebt, uint256 amountToReduce)

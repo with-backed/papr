@@ -101,4 +101,32 @@ contract IncreaseDebtTest is BasePaprControllerTest {
         controller.increaseDebt(borrower, collateral.addr, debt, oracleInfo);
         vm.stopPrank();
     }
+
+    function testUsesMaxPriceIfOraclePriceTooHigh() public {
+        vm.startPrank(borrower);
+        nft.approve(address(controller), collateralId);
+        IPaprController.Collateral[] memory c = new IPaprController.Collateral[](1);
+        c[0] = collateral;
+        controller.addCollateral(c);
+        // cache
+        controller.increaseDebt(borrower, collateral.addr, debt, oracleInfo);
+        controller.reduceDebt(borrower, collateral.addr, debt);
+        (uint40 t, uint216 p) = controller.cachedPriceForAsset(collateral.addr);
+        assertEq(p, oraclePrice);
+        emit log_uint(t);
+        emit log_uint(p);
+        
+        vm.warp(block.timestamp + 1 days);
+        uint256 max = oraclePrice * 15 / 10; 
+        oraclePrice = max * 2;
+        oracleInfo = _getOracleInfoForCollateral(collateral.addr, controller.underlying());
+        emit log_uint(max);
+        emit log_uint(oraclePrice / 2);
+        controller.increaseDebt(borrower, collateral.addr, oraclePrice / 2, oracleInfo);
+        (t, p) = controller.cachedPriceForAsset(collateral.addr);
+        emit log_uint(t);
+        emit log_uint(p);
+        assertEq(p, max);
+
+    }
 }
