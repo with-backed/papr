@@ -507,7 +507,7 @@ contract PaprController is
 
     function _checkOraclePrice(ERC721 asset, uint256 price) internal {
         CachedPrice memory cached = cachedPriceForAsset[asset];
-        if (cached.price < price) {
+        if (cached.price != 0 && cached.price < price) {
             if (
                 ((price - cached.price) / cached.price) / (block.timestamp - cached.timestamp)
                     > MAX_PER_SECOND_PRICE_GROWTH
