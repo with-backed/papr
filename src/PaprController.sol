@@ -29,9 +29,6 @@ contract PaprController is
     /// @dev what 1 = 100% is in basis points (bips)
     uint256 public constant BIPS_ONE = 1e4;
 
-    /// @inheritdoc IPaprController
-    uint256 public constant MAX_PER_SECOND_PRICE_GROWTH = 0.5e18 / uint256(1 days);
-
     bool public override liquidationsLocked;
 
     /// @inheritdoc IPaprController
@@ -61,9 +58,6 @@ contract PaprController is
 
     /// @inheritdoc IPaprController
     mapping(ERC721 => bool) public override isAllowed;
-
-    /// @inheritdoc IPaprController
-    mapping(ERC721 => CachedPrice) public cachedPriceForAsset;
 
     /// @dev account => asset => vaultInfo
     mapping(address => mapping(ERC721 => IPaprController.VaultInfo)) private _vaultInfo;
@@ -124,8 +118,9 @@ contract PaprController is
         for (uint256 i = 0; i < collateralArr.length;) {
             if (i == 0) {
                 collateralAddr = collateralArr[i].addr;
-                oraclePrice =
-                    underwritePriceForCollateral(collateralAddr, ReservoirOracleUnderwriter.PriceKind.LOWER, oracleInfo);
+                oraclePrice = underwritePriceForCollateral(
+                    collateralAddr, ReservoirOracleUnderwriter.PriceKind.LOWER, oracleInfo, true
+                );
             } else {
                 if (collateralAddr != collateralArr[i].addr) {
                     revert CollateralAddressesDoNotMatch();
@@ -336,7 +331,7 @@ contract PaprController is
         }
 
         uint256 oraclePrice =
-            underwritePriceForCollateral(collateral.addr, ReservoirOracleUnderwriter.PriceKind.TWAP, oracleInfo);
+            underwritePriceForCollateral(collateral.addr, ReservoirOracleUnderwriter.PriceKind.TWAP, oracleInfo, false);
         if (!(info.debt > _maxDebt(oraclePrice * info.count, cachedTarget))) {
             revert IPaprController.NotLiquidatable();
         }
@@ -484,9 +479,7 @@ contract PaprController is
 
         uint256 newDebt = _vaultInfo[account][asset].debt + amount;
         uint256 oraclePrice =
-            underwritePriceForCollateral(asset, ReservoirOracleUnderwriter.PriceKind.LOWER, oracleInfo);
-
-        oraclePrice = _cacheAndReturnPriceOrMaxPrice(asset, oraclePrice);
+            underwritePriceForCollateral(asset, ReservoirOracleUnderwriter.PriceKind.LOWER, oracleInfo, true);
 
         uint256 max = _maxDebt(_vaultInfo[account][asset].count * oraclePrice, cachedTarget);
 
@@ -498,32 +491,6 @@ contract PaprController is
         PaprToken(address(papr)).mint(mintTo, amount);
 
         emit IncreaseDebt(account, asset, amount);
-    }
-
-    /// @notice caches and returns the minimum of the passed price and the max price as well as the timestamp
-    /// @dev max price computed by MAX_PER_SECOND_PRICE_GROWTH * time elapsed since the cache was last updated
-    /// @dev time elapsed maxes at 2 days such that price can never grow by more than 100% between two successive
-    ///      increase debt events for the same asset
-    function _cacheAndReturnPriceOrMaxPrice(ERC721 asset, uint256 price) internal returns (uint256) {
-        CachedPrice memory cached = cachedPriceForAsset[asset];
-        if (cached.price != 0 && cached.price < price) {
-            uint256 timeElapsed = block.timestamp - cached.timestamp;
-            if (timeElapsed > 2 days) {
-                timeElapsed = 2 days;
-            }
-            uint256 max = FixedPointMathLib.mulWadDown(
-                cached.price, (MAX_PER_SECOND_PRICE_GROWTH * timeElapsed) + FixedPointMathLib.WAD
-            );
-            if (price > max) {
-                price = max;
-            }
-        }
-
-        // We are OK with not checking for price overflow when casting to uint216
-        // as we do not consider values greater than this to be a practical possibility
-        cachedPriceForAsset[asset] = CachedPrice({timestamp: uint40(block.timestamp), price: uint216(price)});
-
-        return price;
     }
 
     function _reduceDebt(address account, ERC721 asset, address burnFrom, uint256 accountDebt, uint256 amountToReduce)
@@ -582,8 +549,9 @@ contract PaprController is
         uint256 maxDebtCached;
 
         if (count != 0) {
-            collateralValueCached =
-                underwritePriceForCollateral(asset, ReservoirOracleUnderwriter.PriceKind.TWAP, oracleInfo) * count;
+            collateralValueCached = underwritePriceForCollateral(
+                asset, ReservoirOracleUnderwriter.PriceKind.TWAP, oracleInfo, false
+            ) * count;
             maxDebtCached = _maxDebt(collateralValueCached, updateTarget());
         }
 

@@ -2,6 +2,7 @@
 pragma solidity >=0.8.0;
 
 import {ERC721} from "solmate/tokens/ERC721.sol";
+import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {ReservoirOracle} from "@reservoir/ReservoirOracle.sol";
 
 contract ReservoirOracleUnderwriter {
@@ -31,6 +32,20 @@ contract ReservoirOracleUnderwriter {
         Sig sig;
     }
 
+    /// @notice Describes a cached oracle price for a given NFT collection
+    /// @dev used to constrain how quickly price can grow and guard against oracle attacks
+    struct CachedPrice {
+        // the timestamp the price was cached
+        uint40 timestamp;
+        // the oracle price of the NFT collection
+        uint216 price;
+    }
+
+    error IncorrectOracleSigner();
+    error WrongIdentifierFromOracleMessage();
+    error WrongCurrencyFromOracleMessage();
+    error OracleMessageTimestampInvalid();
+
     /// @notice the amount of time to use for the TWAP
     uint256 constant TWAP_SECONDS = 7 days;
 
@@ -42,16 +57,18 @@ contract ReservoirOracleUnderwriter {
     bytes32 constant TOP_BID_SIG_HASH =
         keccak256("ContractWideCollectionTopBidPrice(uint8 kind,uint256 twapSeconds,address contract)");
 
+    /// @notice The max per second price appreciation allowed for any collateral asset
+    /// @dev used to guard against oracle attacks
+    uint256 public constant MAX_PER_SECOND_PRICE_GROWTH = 0.5e18 / uint256(1 days);
+
     /// @notice the signing address the contract expects from the oracle message
     address public immutable oracleSigner;
 
     /// @notice address of the currency we are receiving oracle prices in
     address public immutable quoteCurrency;
 
-    error IncorrectOracleSigner();
-    error WrongIdentifierFromOracleMessage();
-    error WrongCurrencyFromOracleMessage();
-    error OracleMessageTimestampInvalid();
+    /// @notice returns the cached timestamp and price for asset
+    mapping(ERC721 => CachedPrice) public cachedPriceForAsset;
 
     constructor(address _oracleSigner, address _quoteCurrency) {
         oracleSigner = _oracleSigner;
@@ -59,16 +76,16 @@ contract ReservoirOracleUnderwriter {
     }
 
     /// @notice returns the price of an asset from a signed oracle message
-    /// @param asset the address of the ERC721 asset to underwrite the price for
-    /// @param priceKind the kind of price the function expects the oracle message to contain
-    /// @param oracleInfo the message and signature from our oracle signer
-    /// @return oraclePrice the price of the asset, expressed in quoteCurrency units
     /// @dev reverts if the signer of the oracle message is incorrect
     /// @dev reverts if the oracle message was signed longer than VALID_FOR ago
     /// @dev reverts if the oracle message is for the wrong ERC721 asset, wrong price kind, or wrong quote currency
-    function underwritePriceForCollateral(ERC721 asset, PriceKind priceKind, OracleInfo memory oracleInfo)
+    /// @param asset the address of the ERC721 asset to underwrite the price for
+    /// @param priceKind the kind of price the function expects the oracle message to contain
+    /// @param oracleInfo the message and signature from our oracle signer
+    /// @param guard whether to use a guard to constrain price appreciation
+    /// @return oraclePrice the price of the asset, expressed in quoteCurrency units
+    function underwritePriceForCollateral(ERC721 asset, PriceKind priceKind, OracleInfo memory oracleInfo, bool guard)
         public
-        view
         returns (uint256)
     {
         address signerAddress = ecrecover(
@@ -112,6 +129,32 @@ contract ReservoirOracleUnderwriter {
             revert WrongCurrencyFromOracleMessage();
         }
 
-        return oraclePrice;
+        return guard ? _cacheAndReturnPriceOrMaxPrice(asset, oraclePrice) : oraclePrice;
+    }
+
+    /// @notice caches and returns the minimum of the passed price and the max price as well as the timestamp
+    /// @dev max price computed by MAX_PER_SECOND_PRICE_GROWTH * time elapsed since the cache was last updated
+    /// @dev time elapsed maxes at 2 days such that price can never grow by more than 100% between two successive
+    ///      increase debt events for the same asset
+    function _cacheAndReturnPriceOrMaxPrice(ERC721 asset, uint256 price) internal returns (uint256) {
+        CachedPrice memory cached = cachedPriceForAsset[asset];
+        if (cached.price != 0 && cached.price < price) {
+            uint256 timeElapsed = block.timestamp - cached.timestamp;
+            if (timeElapsed > 2 days) {
+                timeElapsed = 2 days;
+            }
+            uint256 max = FixedPointMathLib.mulWadDown(
+                cached.price, (MAX_PER_SECOND_PRICE_GROWTH * timeElapsed) + FixedPointMathLib.WAD
+            );
+            if (price > max) {
+                price = max;
+            }
+        }
+
+        // We are OK with not checking for price overflow when casting to uint216
+        // as we do not consider values greater than this to be a practical possibility
+        cachedPriceForAsset[asset] = CachedPrice({timestamp: uint40(block.timestamp), price: uint216(price)});
+
+        return price;
     }
 }

@@ -115,6 +115,29 @@ contract RemoveCollateralTest is BasePaprControllerTest {
         assertEq(controller.collateralOwner(collateral.addr, 5), address(0));
     }
 
+    function testRevertsIfDebtExeedsMaxPrice() public {
+        nft.mint(borrower, 5);
+        collateralArr.push(IPaprController.Collateral({addr: nft, id: 5}));
+        _addCollateral();
+        // uint256 originalPrice = oraclePrice;
+        debt = controller.maxDebt(oraclePrice * 2) - 1;
+        // cache
+        controller.increaseDebt(borrower, collateral.addr, debt, oracleInfo);
+        (, uint216 p) = controller.cachedPriceForAsset(collateral.addr);
+
+        uint256 passedTime = 1 days;
+        vm.warp(block.timestamp + passedTime);
+        uint256 maxPerSecond = 0.5e18 / uint256(1 days);
+        uint256 max = p * ((maxPerSecond * passedTime) + 1e18) / 1e18;
+        oraclePrice = max * 2;
+        oracleInfo = _getOracleInfoForCollateral(collateral.addr, controller.underlying());
+        uint256 maxPapr = controller.maxDebt(max);
+        IPaprController.Collateral[] memory arr = new IPaprController.Collateral[](1);
+        arr[0] = collateral;
+        vm.expectRevert(abi.encodeWithSelector(IPaprController.ExceedsMaxDebt.selector, debt, maxPapr));
+        controller.removeCollateral(borrower, arr, oracleInfo);
+    }
+
     function _addCollateral() internal {
         vm.startPrank(borrower);
         for (uint256 i = 0; i < collateralArr.length; i++) {
