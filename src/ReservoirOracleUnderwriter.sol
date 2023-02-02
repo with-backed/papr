@@ -83,7 +83,8 @@ contract ReservoirOracleUnderwriter {
     /// @param priceKind the kind of price the function expects the oracle message to contain
     /// @param oracleInfo the message and signature from our oracle signer
     /// @param guard whether to use a guard to constrain price appreciation
-    /// @return oraclePrice the price of the asset, expressed in quoteCurrency units
+    /// @return oraclePrice the price of the asset, expressed in quoteCurrency units. Price is max allowed price given 
+    ///         MAX_PER_SECOND_PRICE_GROWTH if guard = true and oracleInfo price > max
     function underwritePriceForCollateral(ERC721 asset, PriceKind priceKind, OracleInfo memory oracleInfo, bool guard)
         public
         returns (uint256)
