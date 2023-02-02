@@ -29,8 +29,7 @@ contract PaprController is
     /// @dev what 1 = 100% is in basis points (bips)
     uint256 public constant BIPS_ONE = 1e4;
 
-    /// @dev how quickly the oracle price for a given NFT collection can grow per second
-    /// @dev used in _increaseDebt only
+    /// @inheritdoc IPaprController
     uint256 public constant MAX_PER_SECOND_PRICE_GROWTH = 0.5e18 / uint256(1 days);
 
     bool public override liquidationsLocked;
