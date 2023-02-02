@@ -63,6 +63,15 @@ interface IPaprController {
         bool allowed;
     }
 
+    /// @notice Describes a cached oracle price for a given NFT collection
+    /// @dev used to constrain how quickly price can grow and guard against oracle attacks
+    struct CachedPrice {
+        // the timestamp the price was cached
+        uint40 timestamp;
+        // the oracle price of the NFT collection
+        uint216 price;
+    }
+
     /// @notice emitted when an address increases the debt balance of their vault
     /// @param account address increasing their debt
     /// @param collateralAddress address of the collateral token
@@ -229,6 +238,11 @@ interface IPaprController {
     /// @param collateralConfigs configuration settings indicating whether a collateral is allowed or not
     function setAllowedCollateral(IPaprController.CollateralAllowedConfig[] calldata collateralConfigs) external;
 
+    /// @notice The max per second price appreciation, measured between increaseDebt calls, allowed for any collateral asset
+    /// @dev used only when new papr is being minted
+    /// @dev used to guard against oracle attacks
+    function MAX_PER_SECOND_PRICE_GROWTH() external returns (uint256);
+
     /// @notice returns who owns a collateral token in a vault
     /// @param collateral address of the collateral
     /// @param tokenId tokenId of the collateral
@@ -237,6 +251,10 @@ interface IPaprController {
     /// @notice returns whether a token address is allowed to serve as collateral for a vault
     /// @param collateral address of the collateral token
     function isAllowed(ERC721 collateral) external view returns (bool);
+
+    /// @notice returns the cached timestamp and price for asset
+    /// @param asset address of the ERC721 token
+    function cachedPriceForAsset(ERC721 asset) external view returns (uint40, uint216);
 
     /// @notice if liquidations are currently locked, meaning startLiquidationAuciton will revert
     /// @dev for use in case of emergencies

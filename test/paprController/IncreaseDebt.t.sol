@@ -106,7 +106,7 @@ contract IncreaseDebtTest is BasePaprControllerTest {
         (uint40 t, uint216 p) = controller.cachedPriceForAsset(collateral.addr);
         assertEq(t, 0);
         assertEq(p, 0);
-         vm.startPrank(borrower);
+        vm.startPrank(borrower);
         nft.approve(address(controller), collateralId);
         IPaprController.Collateral[] memory c = new IPaprController.Collateral[](1);
         c[0] = collateral;
@@ -127,7 +127,7 @@ contract IncreaseDebtTest is BasePaprControllerTest {
         controller.increaseDebt(borrower, collateral.addr, debt, oracleInfo);
         controller.reduceDebt(borrower, collateral.addr, debt);
         (uint40 t, uint216 p) = controller.cachedPriceForAsset(collateral.addr);
-        
+
         uint256 passedTime = 1 days;
         vm.warp(block.timestamp + passedTime);
         uint256 maxPerSecond = 0.5e18 / uint256(1 days);
@@ -149,7 +149,7 @@ contract IncreaseDebtTest is BasePaprControllerTest {
         controller.increaseDebt(borrower, collateral.addr, debt, oracleInfo);
         controller.reduceDebt(borrower, collateral.addr, debt);
         (uint40 t, uint216 p) = controller.cachedPriceForAsset(collateral.addr);
-        
+
         uint256 passedTime = 3 days;
         vm.warp(block.timestamp + passedTime);
         uint256 maxPerSecond = 0.5e18 / uint256(1 days);
@@ -171,14 +171,14 @@ contract IncreaseDebtTest is BasePaprControllerTest {
         controller.increaseDebt(borrower, collateral.addr, debt, oracleInfo);
         controller.reduceDebt(borrower, collateral.addr, debt);
         (uint40 t, uint216 p) = controller.cachedPriceForAsset(collateral.addr);
-        
+
         uint256 passedTime = 1 days;
         vm.warp(block.timestamp + passedTime);
         uint256 maxPerSecond = 0.5e18 / uint256(1 days);
         uint256 max = p * ((maxPerSecond * passedTime) + 1e18) / 1e18;
         oraclePrice = max * 2;
         oracleInfo = _getOracleInfoForCollateral(collateral.addr, controller.underlying());
-        debt =controller.maxDebt(oraclePrice) - 1;
+        debt = controller.maxDebt(oraclePrice) - 1;
         uint256 maxPapr = controller.maxDebt(max);
         vm.expectRevert(abi.encodeWithSelector(IPaprController.ExceedsMaxDebt.selector, debt, maxPapr));
         controller.increaseDebt(borrower, collateral.addr, debt, oracleInfo);
