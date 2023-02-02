@@ -508,7 +508,11 @@ contract PaprController is
     function _priceOrMaxPrice(ERC721 asset, uint256 price) internal returns (uint256) {
         CachedPrice memory cached = cachedPriceForAsset[asset];
         if (cached.price != 0 && cached.price < price) {
-            uint256 max = FixedPointMathLib.mulWadDown(cached.price, (MAX_PER_SECOND_PRICE_GROWTH / (block.timestamp - cached.timestamp)) + FixedPointMathLib.WAD);
+            uint256 timeElapsed = block.timestamp - cached.timestamp;
+            if (timeElapsed > 2 days) {
+                timeElapsed = 2 days;
+            }
+            uint256 max = FixedPointMathLib.mulWadDown(cached.price, (MAX_PER_SECOND_PRICE_GROWTH * timeElapsed) + FixedPointMathLib.WAD);
             if (price > max) {
                 price = max;
             }
