@@ -118,8 +118,9 @@ contract PaprController is
         for (uint256 i = 0; i < collateralArr.length;) {
             if (i == 0) {
                 collateralAddr = collateralArr[i].addr;
-                oraclePrice =
-                    underwritePriceForCollateral(collateralAddr, ReservoirOracleUnderwriter.PriceKind.LOWER, oracleInfo);
+                oraclePrice = underwritePriceForCollateral(
+                    collateralAddr, ReservoirOracleUnderwriter.PriceKind.LOWER, oracleInfo, true
+                );
             } else {
                 if (collateralAddr != collateralArr[i].addr) {
                     revert CollateralAddressesDoNotMatch();
@@ -330,7 +331,7 @@ contract PaprController is
         }
 
         uint256 oraclePrice =
-            underwritePriceForCollateral(collateral.addr, ReservoirOracleUnderwriter.PriceKind.TWAP, oracleInfo);
+            underwritePriceForCollateral(collateral.addr, ReservoirOracleUnderwriter.PriceKind.TWAP, oracleInfo, false);
         if (!(info.debt > _maxDebt(oraclePrice * info.count, cachedTarget))) {
             revert IPaprController.NotLiquidatable();
         }
@@ -478,7 +479,7 @@ contract PaprController is
 
         uint256 newDebt = _vaultInfo[account][asset].debt + amount;
         uint256 oraclePrice =
-            underwritePriceForCollateral(asset, ReservoirOracleUnderwriter.PriceKind.LOWER, oracleInfo);
+            underwritePriceForCollateral(asset, ReservoirOracleUnderwriter.PriceKind.LOWER, oracleInfo, true);
 
         uint256 max = _maxDebt(_vaultInfo[account][asset].count * oraclePrice, cachedTarget);
 
@@ -548,8 +549,9 @@ contract PaprController is
         uint256 maxDebtCached;
 
         if (count != 0) {
-            collateralValueCached =
-                underwritePriceForCollateral(asset, ReservoirOracleUnderwriter.PriceKind.TWAP, oracleInfo) * count;
+            collateralValueCached = underwritePriceForCollateral(
+                asset, ReservoirOracleUnderwriter.PriceKind.TWAP, oracleInfo, false
+            ) * count;
             maxDebtCached = _maxDebt(collateralValueCached, updateTarget());
         }
 
