@@ -11,26 +11,48 @@ import "openzeppelin-contracts/utils/Strings.sol";
 import {Base} from "script/actions/Base.s.sol";
 
 contract DeployPaprController is Base {
-    ERC20 underlying = ERC20(0x3089B47853df1b82877bEef6D904a0ce98a12553);
+    // WETH
+    ERC20 underlying = ERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
     function setUp() public {}
 
     function run() public {
         vm.startBroadcast();
 
-        ERC721[] memory collateral = new ERC721[](3);
-        collateral[0] = ERC721(0xb7D7fe7995D1E347916fAae8e16CFd6dD21a9bAE);
-        collateral[1] = ERC721(0x6EF2C9CB23F03014d18d7E4CeEAeC497dB00247C);
-        collateral[2] = ERC721(0x8232c5Fd480C2a74d2f25d3362f262fF3511CE49);
+        ERC721[] memory collateral = new ERC721[](10);
+        // dickbutts
+        collateral[0] = ERC721(0x42069ABFE407C60cf4ae4112bEDEaD391dBa1cdB);
+        // penguins
+        collateral[1] = ERC721(0xBd3531dA5CF5857e7CfAA92426877b022e612cf8);
+        // mfers
+        collateral[2] = ERC721(0x79FCDEF22feeD20eDDacbB2587640e45491b757f);
+        // wassies
+        collateral[3] = ERC721(0x1D20A51F088492A0f1C57f047A9e30c9aB5C07Ea);
+        // wizards
+        collateral[4] = ERC721(0x521f9C7505005CFA19A8E5786a9c3c9c9F5e6f42);
+        // cool cats
+        collateral[5] = ERC721(0x1A92f7381B9F03921564a437210bB9396471050C);
+        // goblins 
+        collateral[6] = ERC721(0xbCe3781ae7Ca1a5e050Bd9C4c77369867eBc307e);
+        // loot 
+        collateral[7] = ERC721(0xFF9C1b15B16263C61d017ee9F65C50e4AE0113D7);
+        // toadz
+        collateral[8] = ERC721(0x1CB1A5e65610AEFF2551A50f76a87a7d3fB649C6);
+        // milady
+        collateral[9] = ERC721(0x5Af0D9827E0c53E4799BB226655A1de152A425a5);
 
         controller = new PaprController(
-            "trash",
-            "TRASH",
+            "meme",
+            "MEME",
             5e17,
-            underlying, // swap for phUSDC
+            underlying,
             deployer,
             collateral
         );
+
+        address admin;
+
+        controller.transferOwnership(admin);
 
         vm.stopBroadcast();
     }
