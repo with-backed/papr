@@ -1,5 +1,5 @@
 # papr Fix Review
-papr engaged Usmann Khan to conduct a fix review of their changes made in response to findings from their [Code4rena contest](https://code4rena.com/contests/2022-12-papr-contest). papr has sufficiently resolved most of the identified issues. 
+papr engaged Usmann Khan to conduct a fix review of their changes made in response to findings from their [Code4rena contest](https://code4rena.com/contests/2022-12-papr-contest). papr has sufficiently resolved all of the identified issues. 
 
 ## Project Methodology
 Work involved in the fix review involved:
@@ -11,7 +11,7 @@ Work involved in the fix review involved:
 
 papr Protocol
  - Repo: https://github.com/with-backed/papr/
- - Commit [`4b5feea30d4e596077e24af008c7f0226b93fe1d`](https://github.com/with-backed/papr/tree/4b5feea30d4e596077e24af008c7f0226b93fe1d)
+ - Commit [`1e6edd629012266b6ff8b041f3070ece7f520da9`](https://github.com/with-backed/papr/tree/1e6edd629012266b6ff8b041f3070ece7f520da9)
 
 ## Summary of Fix Review Results
 
@@ -69,7 +69,7 @@ The `collateralValueCached` value is multiplied by the `count` variable which is
 The issue has been [resolved](https://github.com/with-backed/papr/pull/103). The papr team updated the `VaultInfo` struct to add an `auctionCount` variable. Decrements to the original `count` value are now accumulated into `auctionCount` and only reduced from there when an auction ends. Debt is now summarily cleared only when the final auction ends.
 
 ## [H-02] PaprController is vulnerable to reentrancy attacks
-## Status: Resolved 🟢*
+## Status: Resolved 🟢
 ### Description
 
 There were several instances where an `ERC721` was `safeTransfer`red in the middle of a series of guards and state-changing operations. This created the opportunity for reentrancy attacks, as the `safeTransfer` operation transfers control to a callback on the receiver.
