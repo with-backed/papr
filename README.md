@@ -3,11 +3,6 @@ We *very strongly* encourage everyone to read our [whitepaper](https://backed.mi
 ## Running code 
 `foundryup` + `forge install` + `forge test` will get you up and going. (More info on Foundry [here](https://github.com/foundry-rs/foundry)). Most of the PaprController tests are forking tests: relying on real chain state. To get these working, add an RPC url value (e.g. from Alchemy or Infura) for `MAINNET_RPC_URL` in a `.env` file. 
 
-## Try it on Goerli 
-A PaprController has been deployed on Goelri at `0x6df74b0653ba2b622d911ef5680d1776d850ace9`. You can try interacting with it by visiting https://papr.wtf/tokens/paprTrash. This is a Goerli testnet client for the protocol that allows you to lock up fake NFTs as collateral and mint papr tokens. To mint the fake NFTs that the protocol allows as collateral and fake USDC that serves as underlying, visit https://papr.wtf/tokens/paprTrash/test.
-
-This particular instance of the protocol uses a fake USDC as the underlying token, which you can also mint at the above URL. Finally, you can swap papr tokens for the underlying USDC at the Swap link on the site, as well as provide liquidity for the token pairs at the LP link on the site.
-
 ## Licensing 
 
 Papr is dual-licensed under the Business Source License 1.1 (BUSL-1.1) and MIT as follows:
