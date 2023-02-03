@@ -252,15 +252,6 @@ interface IPaprController {
     /// @notice minimum time that must pass before consecutive collateral is liquidated from the same vault
     function liquidationAuctionMinSpacing() external view returns (uint256);
 
-    /// @notice amount the price of an auction decreases by per auctionDecayPeriod, expressed as a decimal scaled by 1e18
-    function perPeriodAuctionDecayWAD() external view returns (uint256);
-
-    /// @notice amount of time that perPeriodAuctionDecayWAD is applied to, expressed in seconds
-    function auctionDecayPeriod() external view returns (uint256);
-
-    /// @notice the multiplier for the starting price of an auction, applied to the current price of the collateral in papr tokens
-    function auctionStartPriceMultiplier() external view returns (uint256);
-
     /// @notice fee paid by the vault owner when their vault is liquidated if there was excess debt credited to their vault, in bips
     function liquidationPenaltyBips() external view returns (uint256);
 

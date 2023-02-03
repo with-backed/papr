@@ -40,14 +40,11 @@ contract PaprController is
     /// @inheritdoc IPaprController
     uint256 public immutable override liquidationAuctionMinSpacing = 2 days;
 
-    /// @inheritdoc IPaprController
-    uint256 public immutable override perPeriodAuctionDecayWAD = 0.7e18;
+    uint256 private immutable perPeriodAuctionDecayWAD = 0.7e18;
 
-    /// @inheritdoc IPaprController
-    uint256 public immutable override auctionDecayPeriod = 1 days;
+    uint256 private immutable auctionDecayPeriod = 1 days;
 
-    /// @inheritdoc IPaprController
-    uint256 public immutable override auctionStartPriceMultiplier = 3;
+    uint256 private immutable auctionStartPriceMultiplier = 3;
 
     /// @inheritdoc IPaprController
     /// @dev Set to 10%
