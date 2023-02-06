@@ -26,14 +26,14 @@ contract DeployPaprController is Base {
         collateral[1] = ERC721(0xBd3531dA5CF5857e7CfAA92426877b022e612cf8);
         // mfers
         collateral[2] = ERC721(0x79FCDEF22feeD20eDDacbB2587640e45491b757f);
-        // wassies
-        collateral[3] = ERC721(0x1D20A51F088492A0f1C57f047A9e30c9aB5C07Ea);
+        // tubby cats
+        collateral[3] = ERC721(0xCa7cA7BcC765F77339bE2d648BA53ce9c8a262bD);
         // wizards
         collateral[4] = ERC721(0x521f9C7505005CFA19A8E5786a9c3c9c9F5e6f42);
         // cool cats
         collateral[5] = ERC721(0x1A92f7381B9F03921564a437210bB9396471050C);
-        // goblins 
-        collateral[6] = ERC721(0xbCe3781ae7Ca1a5e050Bd9C4c77369867eBc307e);
+        // beanz 
+        collateral[6] = ERC721(0x306b1ea3ecdf94aB739F1910bbda052Ed4A9f949);
         // loot 
         collateral[7] = ERC721(0xFF9C1b15B16263C61d017ee9F65C50e4AE0113D7);
         // toadz
