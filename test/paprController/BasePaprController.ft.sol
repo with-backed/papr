@@ -11,7 +11,7 @@ import {PaprController} from "../../src/PaprController.sol";
 import {ReservoirOracleUnderwriter} from "../../src/ReservoirOracleUnderwriter.sol";
 import {IPaprController} from "../../src/interfaces/IPaprController.sol";
 import {ReservoirOracleUnderwriter} from "../../src/ReservoirOracleUnderwriter.sol";
-import {TestERC721} from "../mocks/TestERC721.sol";
+import {TestERC721, ERC721} from "../mocks/TestERC721.sol";
 import {TestERC20} from "../mocks/TestERC20.sol";
 import {MainnetForking} from "../base/MainnetForking.sol";
 import {UniswapForking} from "../base/UniswapForking.sol";
@@ -37,8 +37,10 @@ contract BasePaprControllerTest is MainnetForking, UniswapForking, OracleTest {
     uint160 sqrtPriceLimitX96;
     ReservoirOracleUnderwriter.OracleInfo oracleInfo;
 
-    //
     function setUp() public virtual {
+        ERC721[] memory collateralArr = new ERC721[](1);
+        collateralArr[0] = nft;
+
         controller = new PaprController(
             "PUNKs Loans",
             "PL",
@@ -46,13 +48,11 @@ contract BasePaprControllerTest is MainnetForking, UniswapForking, OracleTest {
             2e18,
             0.8e18,
             underlying,
-            oracleAddress
+            oracleAddress,
+            collateralArr
         );
         debtToken = ERC20(controller.papr());
 
-        IPaprController.CollateralAllowedConfig[] memory args = new IPaprController.CollateralAllowedConfig[](1);
-        args[0] = IPaprController.CollateralAllowedConfig(nft, true);
-        controller.setAllowedCollateral(args);
         nft.mint(borrower, collateralId);
         vm.prank(borrower);
         nft.approve(address(controller), collateralId);
@@ -70,7 +70,7 @@ contract BasePaprControllerTest is MainnetForking, UniswapForking, OracleTest {
         int24 tickLower = currentTick;
         int24 tickUpper = currentTick;
 
-        if (controller.token0IsUnderlying()) {
+        if (controller.underlying() < controller.papr()) {
             token0Amount = amount;
             tickLower += 200;
             tickUpper += 400;
@@ -149,20 +149,24 @@ contract BasePaprControllerTest is MainnetForking, UniswapForking, OracleTest {
         (uint160 sqrtPrice,,,,,,) = IUniswapV3Pool(controller.pool()).slot0();
         int24 tick = TickMath.getTickAtSqrtRatio(sqrtPrice);
 
+        bool token0IsUnderlying = controller.underlying() < controller.papr();
+
         if (sellingPAPR) {
-            controller.token0IsUnderlying() ? tick += 1 : tick -= 1;
+            token0IsUnderlying ? tick += 1 : tick -= 1;
         } else {
-            controller.token0IsUnderlying() ? tick -= 1 : tick += 1;
+            token0IsUnderlying ? tick -= 1 : tick += 1;
         }
 
         return TickMath.getSqrtRatioAtTick(tick);
     }
 
     function _maxSqrtPriceLimit(bool sellingPAPR) internal view returns (uint160) {
+        bool token0IsUnderlying = controller.underlying() < controller.papr();
+
         if (sellingPAPR) {
-            return !controller.token0IsUnderlying() ? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1;
+            return !token0IsUnderlying ? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1;
         } else {
-            return controller.token0IsUnderlying() ? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1;
+            return token0IsUnderlying ? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1;
         }
     }
 }

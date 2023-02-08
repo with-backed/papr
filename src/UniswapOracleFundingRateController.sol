@@ -22,21 +22,21 @@ contract UniswapOracleFundingRateController is IUniswapOracleFundingRateControll
     /// @inheritdoc IUniswapOracleFundingRateController
     address public pool;
     /// @dev the max value of target / mark, used as a guard in _multiplier
-    uint256 public immutable targetMarkRatioMax;
+    uint256 internal immutable _targetMarkRatioMax;
     /// @dev the min value of target / mark, used as a guard in _multiplier
-    uint256 public immutable targetMarkRatioMin;
+    uint256 internal immutable _targetMarkRatioMin;
     // single slot, write together
     uint128 internal _target;
     int56 internal _lastCumulativeTick;
     uint48 internal _lastUpdated;
     int24 internal _lastTwapTick;
 
-    constructor(ERC20 _underlying, ERC20 _papr, uint256 _targetMarkRatioMax, uint256 _targetMarkRatioMin) {
+    constructor(ERC20 _underlying, ERC20 _papr, uint256 _targetMarkRatioMax_, uint256 _targetMarkRatioMin_) {
         underlying = _underlying;
         papr = _papr;
 
-        targetMarkRatioMax = _targetMarkRatioMax;
-        targetMarkRatioMin = _targetMarkRatioMin;
+        _targetMarkRatioMax = _targetMarkRatioMax_;
+        _targetMarkRatioMin = _targetMarkRatioMin_;
 
         _setFundingPeriod(90 days);
     }
@@ -161,13 +161,13 @@ contract UniswapOracleFundingRateController is IUniswapOracleFundingRateControll
         uint256 periodRatio = FixedPointMathLib.divWadDown(period, fundingPeriod);
         uint256 targetMarkRatio;
         if (_mark_ == 0) {
-            targetMarkRatio = targetMarkRatioMax;
+            targetMarkRatio = _targetMarkRatioMax;
         } else {
             targetMarkRatio = FixedPointMathLib.divWadDown(cachedTarget, _mark_);
-            if (targetMarkRatio > targetMarkRatioMax) {
-                targetMarkRatio = targetMarkRatioMax;
-            } else if (targetMarkRatio < targetMarkRatioMin) {
-                targetMarkRatio = targetMarkRatioMin;
+            if (targetMarkRatio > _targetMarkRatioMax) {
+                targetMarkRatio = _targetMarkRatioMax;
+            } else if (targetMarkRatio < _targetMarkRatioMin) {
+                targetMarkRatio = _targetMarkRatioMin;
             }
         }
 

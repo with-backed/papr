@@ -65,14 +65,14 @@ contract ReservoirOracleUnderwriter {
     address public immutable oracleSigner;
 
     /// @notice address of the currency we are receiving oracle prices in
-    address public immutable quoteCurrency;
+    address internal immutable _quoteCurrency;
 
     /// @notice returns the cached timestamp and price for asset
     mapping(ERC721 => CachedPrice) public cachedPriceForAsset;
 
-    constructor(address _oracleSigner, address _quoteCurrency) {
+    constructor(address _oracleSigner, address _quoteCurrency_) {
         oracleSigner = _oracleSigner;
-        quoteCurrency = _quoteCurrency;
+        _quoteCurrency = _quoteCurrency_;
     }
 
     /// @notice returns the price of an asset from a signed oracle message
@@ -83,7 +83,7 @@ contract ReservoirOracleUnderwriter {
     /// @param priceKind the kind of price the function expects the oracle message to contain
     /// @param oracleInfo the message and signature from our oracle signer
     /// @param guard whether to use a guard to constrain price appreciation
-    /// @return oraclePrice the price of the asset, expressed in quoteCurrency units. Price is max allowed price given 
+    /// @return oraclePrice the price of the asset, expressed in _quoteCurrency units. Price is max allowed price given
     ///         MAX_PER_SECOND_PRICE_GROWTH if guard = true and oracleInfo price > max
     function underwritePriceForCollateral(ERC721 asset, PriceKind priceKind, OracleInfo memory oracleInfo, bool guard)
         public
@@ -126,7 +126,7 @@ contract ReservoirOracleUnderwriter {
         }
 
         (address oracleQuoteCurrency, uint256 oraclePrice) = abi.decode(oracleInfo.message.payload, (address, uint256));
-        if (oracleQuoteCurrency != quoteCurrency) {
+        if (oracleQuoteCurrency != _quoteCurrency) {
             revert WrongCurrencyFromOracleMessage();
         }
 

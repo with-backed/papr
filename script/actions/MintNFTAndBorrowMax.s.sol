@@ -54,10 +54,11 @@ contract MintNFTAndBorrowMax is Base {
     }
 
     function _maxSqrtPriceLimit(bool sellingPAPR) internal view returns (uint160) {
+        bool token0IsUnderlying = controller.underlying() < controller.papr();
         if (sellingPAPR) {
-            return !controller.token0IsUnderlying() ? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1;
+            return !token0IsUnderlying ? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1;
         } else {
-            return controller.token0IsUnderlying() ? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1;
+            return token0IsUnderlying ? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1;
         }
     }
 }

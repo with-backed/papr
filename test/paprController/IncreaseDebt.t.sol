@@ -52,7 +52,9 @@ contract IncreaseDebtTest is BasePaprControllerTest {
 
         IPaprController.CollateralAllowedConfig[] memory args = new IPaprController.CollateralAllowedConfig[](1);
         args[0] = IPaprController.CollateralAllowedConfig(collateral.addr, false);
-        controller.setAllowedCollateral(args);
+        ERC721[] memory collateralToRemove = new ERC721[](1);
+        collateralToRemove[0] = collateral.addr;
+        controller.removeAllowedCollateral(collateralToRemove);
 
         vm.expectRevert(IPaprController.InvalidCollateral.selector);
         controller.increaseDebt(borrower, collateral.addr, debt, oracleInfo);

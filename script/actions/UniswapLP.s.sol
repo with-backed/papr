@@ -26,7 +26,9 @@ contract UniswapLP is Base {
         int24 tickLower;
         int24 tickUpper;
 
-        if (controller.token0IsUnderlying()) {
+        bool token0IsUnderlying = controller.underlying() < controller.papr();
+
+        if (token0IsUnderlying) {
             token0Amount = amount;
             tickUpper = 200;
         } else {

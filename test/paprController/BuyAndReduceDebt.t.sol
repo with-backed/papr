@@ -95,7 +95,7 @@ contract BuyAndReduceDebt is BasePaprControllerTest {
         // ensure has enough balance to pay the amount + the fee
         uint256 safeAmount = underlyingOut / 2;
         uint256 feeBips = 100;
-        uint256 fee = safeAmount * feeBips / controller.BIPS_ONE();
+        uint256 fee = safeAmount * feeBips / 1e4;
         underlying.approve(address(controller), underlyingOut);
         swapParams = IPaprController.SwapParams({
             amount: safeAmount,
