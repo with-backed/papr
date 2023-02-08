@@ -81,7 +81,7 @@ contract StartLiquidationAuctionTest is BasePaprControllerTest {
         );
 
         uint256 maxPerSecondChange = 0.5e18 / uint256(1 days);
-        uint256 min = p * (maxPerSecondChange * 1 days) / 1e18;
+        uint256 min = p * (1e18 - (maxPerSecondChange * 1 days)) / 1e18;
         assertEq(auction.startPrice, min);
         (t, p) = controller.lastAuctionStartPrice(collateral.addr);
         assertEq(min, p);

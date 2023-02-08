@@ -356,7 +356,7 @@ contract PaprController is
             if (timeElapsed > 1 days) {
                 timeElapsed = 1 days;
             }
-            uint256 min = FixedPointMathLib.mulWadDown(cached.price, MAX_PER_SECOND_PRICE_CHANGE * timeElapsed);
+            uint256 min = FixedPointMathLib.mulWadDown(cached.price, FixedPointMathLib.WAD - (MAX_PER_SECOND_PRICE_CHANGE * timeElapsed));
             if (price < min) {
                 price = min;
             }
