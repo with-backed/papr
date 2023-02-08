@@ -28,11 +28,11 @@ contract InitableFundingRateController is UniswapOracleFundingRateController {
         return _lastTwapTick;
     }
 
-    function targetMarkRatioMax() external view returns(uint256) {
+    function targetMarkRatioMax() external view returns (uint256) {
         return _targetMarkRatioMax;
     }
 
-    function targetMarkRatioMin() external view returns(uint256) {
+    function targetMarkRatioMin() external view returns (uint256) {
         return _targetMarkRatioMin;
     }
 }

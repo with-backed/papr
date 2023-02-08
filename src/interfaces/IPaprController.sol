@@ -109,6 +109,12 @@ interface IPaprController {
     /// @param maxDebt the max debt the vault is allowed to have
     error ExceedsMaxDebt(uint256 vaultDebt, uint256 maxDebt);
 
+    /// @param asset proposed to be added as allowed collateral
+    event ProposeAllowedCollateral(ERC721 indexed asset);
+
+    /// @param asset the asset that was proposed to be added to allowed collateral and is now being cancelled
+    event CancelProposedAllowedCollateral(ERC721 indexed asset);
+
     error InvalidCollateral();
 
     error MinAuctionSpacing();
@@ -126,6 +132,10 @@ interface IPaprController {
     error CollateralAddressesDoNotMatch();
 
     error LiquidationsLocked();
+
+    error ProposalPeriodNotComplete();
+
+    error AssetNotProposed();
 
     /// @notice adds collateral to msg.senders vault for collateral.addr
     /// @dev use safeTransferFrom to save gas if only sending one NFT
@@ -238,6 +248,10 @@ interface IPaprController {
     /// @param collateral address of the collateral token
     function isAllowed(ERC721 collateral) external view returns (bool);
 
+    /// @notice returns the timestamp at which an asset was proposed to be added as allowed collateral
+    /// @param asset address of the ERC721 token
+    function proposedTimestamp(ERC721 asset) external view returns (uint256);
+
     /// @notice if liquidations are currently locked, meaning startLiquidationAuciton will revert
     /// @dev for use in case of emergencies
     /// @return liquidationsLocked whether liquidations are locked
@@ -248,7 +262,6 @@ interface IPaprController {
 
     /// @notice minimum time that must pass before consecutive collateral is liquidated from the same vault
     function liquidationAuctionMinSpacing() external view returns (uint256);
-
 
     /// @notice returns the maximum debt that can be minted for a given collateral value
     /// @param totalCollateraValue total value of the collateral

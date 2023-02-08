@@ -52,6 +52,9 @@ contract PaprController is
     /// @inheritdoc IPaprController
     mapping(ERC721 => bool) public override isAllowed;
 
+    /// @inheritdoc IPaprController
+    mapping(ERC721 => uint256) public proposedTimestamp;
+
     /// @dev account => asset => vaultInfo
     mapping(address => mapping(ERC721 => IPaprController.VaultInfo)) private _vaultInfo;
 
@@ -87,7 +90,7 @@ contract PaprController is
 
         _init(underlyingONE, _pool);
 
-        for(uint i = 0; i < startingCollateral.length; i++) {
+        for (uint256 i = 0; i < startingCollateral.length; i++) {
             _allowCollateral(startingCollateral[i]);
         }
     }
@@ -361,6 +364,17 @@ contract PaprController is
         );
     }
 
+    function acceptProposedCollateral(ERC721 asset) external {
+        uint256 proposedTime = proposedTimestamp[asset];
+        if (proposedTime == 0) revert AssetNotProposed();
+
+        if (proposedTime + _newCollateralProposalPeriod > block.timestamp) revert ProposalPeriodNotComplete();
+
+        delete proposedTimestamp[asset];
+
+        _allowCollateral(asset);
+    }
+
     /// OWNER FUNCTIONS ///
 
     /// @inheritdoc IPaprController
@@ -381,10 +395,6 @@ contract PaprController is
         emit UpdateLiquidationsLocked(locked);
     }
 
-    mapping(ERC721 => uint256) proposedTimestamp;
-    event ProposeAllowedCollateral(ERC721 indexed asset);
-    event CancelAllowedCollateral(ERC721 indexed asset);
-
     function proposeAllowedCollateral(ERC721 asset) external onlyOwner {
         proposedTimestamp[asset] = block.timestamp;
 
@@ -394,24 +404,7 @@ contract PaprController is
     function cancelProposedCollateral(ERC721 asset) external onlyOwner {
         delete proposedTimestamp[asset];
 
-        emit CancelAllowedCollateral(asset);
-    }
-
-    error ProposalPeriodNotComplete();
-
-    function acceptProposedCollateral(ERC721 asset) external {
-        if (proposedTimestamp[asset] + _newCollateralProposalPeriod < block.timestamp) {
-            revert ProposalPeriodNotComplete();
-        }
-        delete proposedTimestamp[asset];
-        
-        _allowCollateral(asset);
-    }
-
-    function _allowCollateral(ERC721 asset) internal {
-        isAllowed[asset] = true;
-
-        emit AllowCollateral(asset, true);
+        emit CancelProposedAllowedCollateral(asset);
     }
 
     function removeAllowedCollateral(ERC721[] calldata assets) external onlyOwner {
@@ -446,6 +439,12 @@ contract PaprController is
     }
 
     /// INTERNAL NON-VIEW ///
+
+    function _allowCollateral(ERC721 asset) internal {
+        isAllowed[asset] = true;
+
+        emit AllowCollateral(asset, true);
+    }
 
     function _addCollateralToVault(address account, IPaprController.Collateral memory collateral) internal {
         if (!isAllowed[collateral.addr]) {
