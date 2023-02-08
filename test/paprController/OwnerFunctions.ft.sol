@@ -16,7 +16,6 @@ contract OwnerFunctionsTest is MainnetForking, UniswapForking {
     event AllowCollateral(ERC721 indexed collateral, bool isAllowed);
     event UpdateFundingPeriod(uint256 newPeriod);
     event UpdatePool(address indexed newPool);
-    event UpdateLiquidationsLocked(bool locked);
     event ProposeAllowedCollateral(ERC721 indexed asset);
     event CancelProposedAllowedCollateral(ERC721 indexed asset);
 

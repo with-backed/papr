@@ -101,10 +101,6 @@ interface IPaprController {
     /// @param newPool address of the new Uniswap V3 pool that was set
     event UpdatePool(address indexed newPool);
 
-    /// @notice emitted when the owner sets whether or not liquidations for the controller are locked
-    /// @param locked whether or not the owner set liquidations to be locked or not
-    event UpdateLiquidationsLocked(bool locked);
-
     /// @param vaultDebt how much debt the vault has
     /// @param maxDebt the max debt the vault is allowed to have
     error ExceedsMaxDebt(uint256 vaultDebt, uint256 maxDebt);
