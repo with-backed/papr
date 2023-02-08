@@ -47,7 +47,7 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         IPaprController.VaultInfo memory info = controller.vaultInfo(borrower, collateral.addr);
         uint256 neededToSave = info.debt;
         uint256 excess = controller.auctionCurrentPrice(auction) - neededToSave;
-        uint256 penalty = excess * controller.liquidationPenaltyBips() / 1e4;
+        uint256 penalty = excess * 1000 / 1e4;
         uint256 credit = excess - penalty;
         uint256 expectedPayout = credit - (info.debt - neededToSave);
         uint256 beforeBalance = controller.papr().balanceOf(borrower);
@@ -113,7 +113,7 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         IPaprController.VaultInfo memory info = controller.vaultInfo(borrower, collateral.addr);
         uint256 neededToSave = info.debt - controller.maxDebt(oraclePrice);
         uint256 excess = controller.auctionCurrentPrice(auction) - neededToSave;
-        uint256 penalty = excess * controller.liquidationPenaltyBips() / 1e4;
+        uint256 penalty = excess * 1000 / 1e4;
         uint256 credit = excess - penalty;
         uint256 expectedPayout = credit - (info.debt - neededToSave);
         uint256 beforeBalance = controller.papr().balanceOf(borrower);
@@ -154,7 +154,7 @@ contract PurchaseLiquidationAuctionNFT is BasePaprControllerTest {
         controller.papr().approve(address(controller), auction.startPrice);
         uint256 neededToSave = beforeInfo.debt - controller.maxDebt(oraclePrice * beforeInfo.count);
         uint256 excess = controller.auctionCurrentPrice(auction) - neededToSave;
-        uint256 penalty = excess * controller.liquidationPenaltyBips() / 1e4;
+        uint256 penalty = excess * 1000 / 1e4;
         uint256 credit = excess - penalty + neededToSave;
         vm.expectEmit(true, true, false, true);
         emit Transfer(address(controller), address(0), penalty);

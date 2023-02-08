@@ -7,7 +7,7 @@ import {IUniswapV3Pool} from "v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {PaprController} from "../../src/PaprController.sol";
 import {IPaprController} from "../../src/interfaces/IPaprController.sol";
 import {PaprToken} from "../../src/PaprToken.sol";
-import {TestERC721} from "../mocks/TestERC721.sol";
+import {TestERC721, ERC721} from "../mocks/TestERC721.sol";
 import {TestERC20} from "../mocks/TestERC20.sol";
 import {MainnetForking} from "../base/MainnetForking.sol";
 import {UniswapForking} from "../base/UniswapForking.sol";
@@ -23,6 +23,9 @@ contract OwnerFunctionsTest is MainnetForking, UniswapForking {
     PaprController controller;
 
     function setUp() public {
+        ERC721[] memory collateralArr = new ERC721[](1);
+        collateralArr[0] = nft;
+
         controller = new PaprController(
             "PUNKs Loans",
             "PL",
@@ -30,37 +33,38 @@ contract OwnerFunctionsTest is MainnetForking, UniswapForking {
             2e18,
             0.8e18,
             underlying,
-            address(1)
+            address(1),
+            collateralArr
         );
     }
 
-    function testSetAllowedCollateralFailsIfNotOwner() public {
-        IPaprController.CollateralAllowedConfig[] memory args = new IPaprController.CollateralAllowedConfig[](1);
-        args[0] = IPaprController.CollateralAllowedConfig(nft, true);
+    // function testSetAllowedCollateralFailsIfNotOwner() public {
+    //     IPaprController.CollateralAllowedConfig[] memory args = new IPaprController.CollateralAllowedConfig[](1);
+    //     args[0] = IPaprController.CollateralAllowedConfig(nft, true);
 
-        vm.startPrank(address(1));
-        vm.expectRevert("Ownable: caller is not the owner");
-        controller.setAllowedCollateral(args);
-    }
+    //     vm.startPrank(address(1));
+    //     vm.expectRevert("Ownable: caller is not the owner");
+    //     controller.setAllowedCollateral(args);
+    // }
 
-    function testSetAllowedCollateralRevertsIfCollateralZeroAddress() public {
-        IPaprController.CollateralAllowedConfig[] memory args = new IPaprController.CollateralAllowedConfig[](1);
-        args[0] = IPaprController.CollateralAllowedConfig(TestERC721(address(0)), true);
+    // function testSetAllowedCollateralRevertsIfCollateralZeroAddress() public {
+    //     IPaprController.CollateralAllowedConfig[] memory args = new IPaprController.CollateralAllowedConfig[](1);
+    //     args[0] = IPaprController.CollateralAllowedConfig(TestERC721(address(0)), true);
 
-        vm.expectRevert(IPaprController.InvalidCollateral.selector);
-        controller.setAllowedCollateral(args);
-    }
+    //     vm.expectRevert(IPaprController.InvalidCollateral.selector);
+    //     controller.setAllowedCollateral(args);
+    // }
 
-    function testSetAllowedCollateralWorksIfOwner() public {
-        IPaprController.CollateralAllowedConfig[] memory args = new IPaprController.CollateralAllowedConfig[](1);
-        args[0] = IPaprController.CollateralAllowedConfig(nft, true);
+    // function testSetAllowedCollateralWorksIfOwner() public {
+    //     IPaprController.CollateralAllowedConfig[] memory args = new IPaprController.CollateralAllowedConfig[](1);
+    //     args[0] = IPaprController.CollateralAllowedConfig(nft, true);
 
-        vm.expectEmit(true, false, false, true);
-        emit AllowCollateral(address(nft), true);
-        controller.setAllowedCollateral(args);
+    //     vm.expectEmit(true, false, false, true);
+    //     emit AllowCollateral(address(nft), true);
+    //     controller.setAllowedCollateral(args);
 
-        assertTrue(controller.isAllowed(nft));
-    }
+    //     assertTrue(controller.isAllowed(nft));
+    // }
 
     function testSetPoolEmitsCorrectly() public {
         address p = factory.createPool(address(underlying), address(controller.papr()), 3000);

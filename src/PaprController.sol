@@ -26,13 +26,9 @@ contract PaprController is
 {
     using SafeTransferLib for ERC20;
 
-    /// @dev what 1 = 100% is in basis points (bips)
-    uint256 public constant BIPS_ONE = 1e4;
-
     bool public override liquidationsLocked;
 
-    /// @inheritdoc IPaprController
-    bool public immutable override token0IsUnderlying;
+    bool internal immutable _token0IsUnderlying;
 
     /// @inheritdoc IPaprController
     uint256 public immutable override maxLTV;
@@ -40,15 +36,15 @@ contract PaprController is
     /// @inheritdoc IPaprController
     uint256 public immutable override liquidationAuctionMinSpacing = 2 days;
 
-    uint256 private immutable perPeriodAuctionDecayWAD = 0.7e18;
+    uint256 internal immutable _perPeriodAuctionDecayWAD = 0.7e18;
 
-    uint256 private immutable auctionDecayPeriod = 1 days;
+    uint256 internal immutable _auctionDecayPeriod = 1 days;
 
-    uint256 private immutable auctionStartPriceMultiplier = 3;
+    uint256 internal immutable _auctionStartPriceMultiplier = 3;
 
-    /// @inheritdoc IPaprController
-    /// @dev Set to 10%
-    uint256 public immutable override liquidationPenaltyBips = 1000;
+    uint256 internal immutable _newCollateralProposalPeriod = 5 days;
+
+    uint256 internal immutable _liquidationPenaltyBips = 1000;
 
     /// @inheritdoc IPaprController
     mapping(ERC721 => mapping(uint256 => address)) public override collateralOwner;
@@ -68,19 +64,20 @@ contract PaprController is
         uint256 indexMarkRatioMax,
         uint256 indexMarkRatioMin,
         ERC20 underlying,
-        address oracleSigner
+        address oracleSigner,
+        ERC721[] memory startingCollateral
     )
         NFTEDAStarterIncentive(1e17)
         UniswapOracleFundingRateController(underlying, new PaprToken(name, symbol), indexMarkRatioMax, indexMarkRatioMin)
         ReservoirOracleUnderwriter(oracleSigner, address(underlying))
     {
         maxLTV = _maxLTV;
-        token0IsUnderlying = address(underlying) < address(papr);
+        _token0IsUnderlying = address(underlying) < address(papr);
         uint256 underlyingONE = 10 ** underlying.decimals();
         uint160 initSqrtRatio;
 
         // initialize the pool at 1:1
-        if (token0IsUnderlying) {
+        if (_token0IsUnderlying) {
             initSqrtRatio = UniswapHelpers.oneToOneSqrtRatio(underlyingONE, 1e18);
         } else {
             initSqrtRatio = UniswapHelpers.oneToOneSqrtRatio(1e18, underlyingONE);
@@ -89,6 +86,10 @@ contract PaprController is
         address _pool = UniswapHelpers.deployAndInitPool(address(underlying), address(papr), 10000, initSqrtRatio);
 
         _init(underlyingONE, _pool);
+
+        for(uint i = 0; i < startingCollateral.length; i++) {
+            _allowCollateral(startingCollateral[i]);
+        }
     }
 
     /// @inheritdoc IPaprController
@@ -195,7 +196,7 @@ contract PaprController is
         (amountOut,) = UniswapHelpers.swap(
             pool,
             hasFee ? address(this) : proceedsTo,
-            !token0IsUnderlying,
+            !_token0IsUnderlying,
             params.amount,
             params.minOut,
             params.sqrtPriceLimitX96,
@@ -204,7 +205,7 @@ contract PaprController is
         );
 
         if (hasFee) {
-            uint256 fee = amountOut * params.swapFeeBips / BIPS_ONE;
+            uint256 fee = amountOut * params.swapFeeBips / 1e4;
             underlying.safeTransfer(params.swapFeeTo, fee);
             underlying.safeTransfer(proceedsTo, amountOut - fee);
         }
@@ -221,7 +222,7 @@ contract PaprController is
         (uint256 amountOut, uint256 amountIn) = UniswapHelpers.swap(
             pool,
             msg.sender,
-            token0IsUnderlying,
+            _token0IsUnderlying,
             params.amount,
             params.minOut,
             params.sqrtPriceLimitX96,
@@ -230,7 +231,7 @@ contract PaprController is
         );
 
         if (hasFee) {
-            underlying.safeTransferFrom(msg.sender, params.swapFeeTo, amountIn * params.swapFeeBips / BIPS_ONE);
+            underlying.safeTransferFrom(msg.sender, params.swapFeeTo, amountIn * params.swapFeeBips / 1e4);
         }
 
         uint256 debt = _vaultInfo[account][collateralAsset].debt;
@@ -254,12 +255,12 @@ contract PaprController is
         uint256 amountToPay;
         if (amount0Delta > 0) {
             amountToPay = uint256(amount0Delta);
-            isUnderlyingIn = token0IsUnderlying;
+            isUnderlyingIn = _token0IsUnderlying;
         } else {
             require(amount1Delta > 0); // swaps entirely within 0-liquidity regions are not supported
 
             amountToPay = uint256(amount1Delta);
-            isUnderlyingIn = !(token0IsUnderlying);
+            isUnderlyingIn = !(_token0IsUnderlying);
         }
 
         if (isUnderlyingIn) {
@@ -350,11 +351,11 @@ contract PaprController is
                 nftOwner: account,
                 auctionAssetID: collateral.id,
                 auctionAssetContract: collateral.addr,
-                perPeriodDecayPercentWad: perPeriodAuctionDecayWAD,
-                secondsInPeriod: auctionDecayPeriod,
-                // start price is frozen price * auctionStartPriceMultiplier,
+                perPeriodDecayPercentWad: _perPeriodAuctionDecayWAD,
+                secondsInPeriod: _auctionDecayPeriod,
+                // start price is frozen price * _auctionStartPriceMultiplier,
                 // converted to papr value at the current contract price
-                startPrice: (oraclePrice * auctionStartPriceMultiplier) * FixedPointMathLib.WAD / cachedTarget,
+                startPrice: (oraclePrice * _auctionStartPriceMultiplier) * FixedPointMathLib.WAD / cachedTarget,
                 paymentAsset: papr
             })
         );
@@ -380,17 +381,43 @@ contract PaprController is
         emit UpdateLiquidationsLocked(locked);
     }
 
-    /// @inheritdoc IPaprController
-    function setAllowedCollateral(IPaprController.CollateralAllowedConfig[] calldata collateralConfigs)
-        external
-        override
-        onlyOwner
-    {
-        for (uint256 i = 0; i < collateralConfigs.length;) {
-            if (address(collateralConfigs[i].collateral) == address(0)) revert IPaprController.InvalidCollateral();
+    mapping(ERC721 => uint256) proposedTimestamp;
+    event ProposeAllowedCollateral(ERC721 indexed asset);
+    event CancelAllowedCollateral(ERC721 indexed asset);
 
-            isAllowed[collateralConfigs[i].collateral] = collateralConfigs[i].allowed;
-            emit AllowCollateral(collateralConfigs[i].collateral, collateralConfigs[i].allowed);
+    function proposeAllowedCollateral(ERC721 asset) external onlyOwner {
+        proposedTimestamp[asset] = block.timestamp;
+
+        emit ProposeAllowedCollateral(asset);
+    }
+
+    function cancelProposedCollateral(ERC721 asset) external onlyOwner {
+        delete proposedTimestamp[asset];
+
+        emit CancelAllowedCollateral(asset);
+    }
+
+    error ProposalPeriodNotComplete();
+
+    function acceptProposedCollateral(ERC721 asset) external {
+        if (proposedTimestamp[asset] + _newCollateralProposalPeriod < block.timestamp) {
+            revert ProposalPeriodNotComplete();
+        }
+        delete proposedTimestamp[asset];
+        
+        _allowCollateral(asset);
+    }
+
+    function _allowCollateral(ERC721 asset) internal {
+        isAllowed[asset] = true;
+
+        emit AllowCollateral(asset, true);
+    }
+
+    function removeAllowedCollateral(ERC721[] calldata assets) external onlyOwner {
+        for (uint256 i = 0; i < assets.length;) {
+            isAllowed[assets[i]] = false;
+            emit AllowCollateral(assets[i], false);
             unchecked {
                 ++i;
             }
@@ -518,7 +545,7 @@ contract PaprController is
         (uint256 amountOut,) = UniswapHelpers.swap(
             pool,
             hasFee ? address(this) : proceedsTo,
-            !token0IsUnderlying,
+            !_token0IsUnderlying,
             params.amount,
             params.minOut,
             params.sqrtPriceLimitX96,
@@ -527,7 +554,7 @@ contract PaprController is
         );
 
         if (hasFee) {
-            uint256 fee = amountOut * params.swapFeeBips / BIPS_ONE;
+            uint256 fee = amountOut * params.swapFeeBips / 1e4;
             underlying.safeTransfer(params.swapFeeTo, fee);
             underlying.safeTransfer(proceedsTo, amountOut - fee);
         }
@@ -582,7 +609,7 @@ contract PaprController is
         internal
         returns (uint256 remaining)
     {
-        uint256 fee = excess * liquidationPenaltyBips / BIPS_ONE;
+        uint256 fee = excess * _liquidationPenaltyBips / 1e4;
         uint256 credit;
         // excess is a % of fee and so is <= fee
         unchecked {

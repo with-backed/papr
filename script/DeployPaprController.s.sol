@@ -18,6 +18,8 @@ contract DeployPaprController is Base {
     function run() public {
         vm.startBroadcast();
 
+        ERC721[] memory collateral = new ERC721[](10);
+
         controller = new PaprController(
             "trash",
             "TRASH",
@@ -25,7 +27,8 @@ contract DeployPaprController is Base {
             3e18,
             0.5e18,
             underlying, // swap for phUSDC
-            deployer
+            deployer,
+            collateral
         );
 
         IPaprController.CollateralAllowedConfig[] memory args = new IPaprController.CollateralAllowedConfig[](3);
@@ -42,7 +45,7 @@ contract DeployPaprController is Base {
             allowed: true
         });
 
-        controller.setAllowedCollateral(args);
+        // controller.setAllowedCollateral(args);
 
         vm.stopBroadcast();
     }

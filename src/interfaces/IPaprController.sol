@@ -224,10 +224,10 @@ interface IPaprController {
     /// @param locked new value for liquidationsLocked
     function setLiquidationsLocked(bool locked) external;
 
-    /// @notice sets whether a collateral is allowed to be used to mint debt
-    /// @dev owner function
-    /// @param collateralConfigs configuration settings indicating whether a collateral is allowed or not
-    function setAllowedCollateral(IPaprController.CollateralAllowedConfig[] calldata collateralConfigs) external;
+    // /// @notice sets whether a collateral is allowed to be used to mint debt
+    // /// @dev owner function
+    // /// @param collateralConfigs configuration settings indicating whether a collateral is allowed or not
+    // function setAllowedCollateral(IPaprController.CollateralAllowedConfig[] calldata collateralConfigs) external;
 
     /// @notice returns who owns a collateral token in a vault
     /// @param collateral address of the collateral
@@ -243,17 +243,12 @@ interface IPaprController {
     /// @return liquidationsLocked whether liquidations are locked
     function liquidationsLocked() external view returns (bool);
 
-    /// @notice boolean indicating whether token0 in pool is the underlying token
-    function token0IsUnderlying() external view returns (bool);
-
     /// @notice maximum LTV a vault can have, expressed as a decimal scaled by 1e18
     function maxLTV() external view returns (uint256);
 
     /// @notice minimum time that must pass before consecutive collateral is liquidated from the same vault
     function liquidationAuctionMinSpacing() external view returns (uint256);
 
-    /// @notice fee paid by the vault owner when their vault is liquidated if there was excess debt credited to their vault, in bips
-    function liquidationPenaltyBips() external view returns (uint256);
 
     /// @notice returns the maximum debt that can be minted for a given collateral value
     /// @param totalCollateraValue total value of the collateral

@@ -27,6 +27,14 @@ contract InitableFundingRateController is UniswapOracleFundingRateController {
     function lastTwapTick() external view returns (int24) {
         return _lastTwapTick;
     }
+
+    function targetMarkRatioMax() external view returns(uint256) {
+        return _targetMarkRatioMax;
+    }
+
+    function targetMarkRatioMin() external view returns(uint256) {
+        return _targetMarkRatioMin;
+    }
 }
 
 contract InitTest is MainnetForking, UniswapForking {

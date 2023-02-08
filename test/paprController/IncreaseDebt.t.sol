@@ -45,14 +45,14 @@ contract IncreaseDebtTest is BasePaprControllerTest {
     function testIncreaseDebtRevertsIfCollateralNotAllowed() public {
         vm.startPrank(borrower);
         nft.approve(address(controller), collateralId);
-        IPaprController.Collateral[] memory c = new IPaprController.Collateral[](1);
-        c[0] = collateral;
-        controller.addCollateral(c);
+        ERC721[] memory c = new ERC721[](1);
+        c[0] = collateral.addr;
+        // controller.addCollateral(c);
         vm.stopPrank();
 
         IPaprController.CollateralAllowedConfig[] memory args = new IPaprController.CollateralAllowedConfig[](1);
         args[0] = IPaprController.CollateralAllowedConfig(collateral.addr, false);
-        controller.setAllowedCollateral(args);
+        controller.removeAllowedCollateral(c);
 
         vm.expectRevert(IPaprController.InvalidCollateral.selector);
         controller.increaseDebt(borrower, collateral.addr, debt, oracleInfo);
