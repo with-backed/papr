@@ -138,19 +138,6 @@ contract ReservoirOracleUnderwriter {
     /// @dev time elapsed maxes at 2 days such that price can never grow by more than 100% between two successive
     ///      increase debt events for the same asset
     function _cacheAndReturnPriceOrMaxPrice(ERC721 asset, uint256 price) internal returns (uint256) {
-        // CachedPrice memory cached = cachedPriceForAsset[asset];
-        // if (cached.price != 0 && cached.price < price) {
-        //     uint256 timeElapsed = block.timestamp - cached.timestamp;
-        //     if (timeElapsed > 2 days) {
-        //         timeElapsed = 2 days;
-        //     }
-        //     uint256 max = FixedPointMathLib.mulWadDown(
-        //         cached.price, (MAX_PER_SECOND_PRICE_CHANGE * timeElapsed) + FixedPointMathLib.WAD
-        //     );
-        //     if (price > max) {
-        //         price = max;
-        //     }
-        // }
         price = _priceOrNextAllowedPrice(price, cachedPriceForAsset[asset], true);
 
         // We are OK with not checking for price overflow when casting to uint216

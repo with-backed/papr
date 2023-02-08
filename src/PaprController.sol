@@ -354,19 +354,6 @@ contract PaprController is
         // start price is frozen price * auctionStartPriceMultiplier,
         // converted to papr value at the current contract price
         uint256 startPrice = (oraclePrice * auctionStartPriceMultiplier) * FixedPointMathLib.WAD / cachedTarget;
-        // CachedPrice memory lastPrice = lastAuctionStartPrice[collateral.addr];
-        // if (lastPrice.price != 0 && lastPrice.price > startPrice) {
-        //     uint256 timeElapsed = block.timestamp - lastPrice.timestamp;
-        //     if (timeElapsed > 2 days) {
-        //         timeElapsed = 2 days;
-        //     }
-        //     uint256 max = FixedPointMathLib.mulWadDown(
-        //             lastPrice.price, MAX_PER_SECOND_PRICE_CHANGE * timeElapsed
-        //         );
-        //     if (max < startPrice) {
-        //         startPrice = max;
-        //     }
-        // }
         startPrice = _priceOrNextAllowedPrice(startPrice, lastAuctionStartPrice[collateral.addr], false);
         lastAuctionStartPrice[collateral.addr] = CachedPrice({timestamp: uint40(block.timestamp), price: uint216(startPrice)});
 
