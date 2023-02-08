@@ -234,6 +234,10 @@ interface IPaprController {
     /// @param tokenId tokenId of the collateral
     function collateralOwner(ERC721 collateral, uint256 tokenId) external view returns (address);
 
+    /// @notice returns the last auction timestamp and price for a given asset
+    /// @param asset address of the ERC721 token
+    function lastAuctionStartPrice(ERC721 asset) external view returns (uint40, uint216);
+
     /// @notice returns whether a token address is allowed to serve as collateral for a vault
     /// @param collateral address of the collateral token
     function isAllowed(ERC721 collateral) external view returns (bool);

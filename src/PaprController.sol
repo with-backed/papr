@@ -48,6 +48,9 @@ contract PaprController is
     mapping(ERC721 => mapping(uint256 => address)) public override collateralOwner;
 
     /// @inheritdoc IPaprController
+    mapping(ERC721 => CachedPrice) public lastAuctionStartPrice;
+
+    /// @inheritdoc IPaprController
     mapping(ERC721 => bool) public override isAllowed;
 
     /// @inheritdoc IPaprController
@@ -310,8 +313,6 @@ contract PaprController is
         emit EndAuction(id, price);
     }
 
-    mapping(ERC721 => CachedPrice) public lastAuctionStartPrice;
-
     /// @inheritdoc IPaprController
     function startLiquidationAuction(
         address account,
@@ -355,15 +356,14 @@ contract PaprController is
             if (timeElapsed > 1 days) {
                 timeElapsed = 1 days;
             }
-            uint256 min = FixedPointMathLib.mulWadDown(
-                cached.price, MAX_PER_SECOND_PRICE_CHANGE * timeElapsed
-            );
+            uint256 min = FixedPointMathLib.mulWadDown(cached.price, MAX_PER_SECOND_PRICE_CHANGE * timeElapsed);
             if (price < min) {
                 price = min;
             }
         }
 
-        lastAuctionStartPrice[collateral.addr] = CachedPrice({timestamp: uint40(block.timestamp), price: uint216(price)});
+        lastAuctionStartPrice[collateral.addr] =
+            CachedPrice({timestamp: uint40(block.timestamp), price: uint216(price)});
 
         _startAuction(
             auction = Auction({
