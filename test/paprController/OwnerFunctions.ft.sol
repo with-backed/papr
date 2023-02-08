@@ -106,7 +106,7 @@ contract OwnerFunctionsTest is MainnetForking, UniswapForking {
         controller.removeAllowedCollateral(assets);
     }
 
-    // not an owner function but easier to test here
+    // test acceptProposedCollateral - not an owner function but easier to test here
 
     function testAcceptProposedCollateralRevertsIfNotProposed() public {
         vm.expectRevert(IPaprController.AssetNotProposed.selector);
@@ -139,6 +139,8 @@ contract OwnerFunctionsTest is MainnetForking, UniswapForking {
         emit AllowCollateral(newCollateral, true);
         controller.acceptProposedCollateral(newCollateral);
     }
+
+    // end test acceptProposedCollateral
 
     function testSetPoolEmitsCorrectly() public {
         address p = factory.createPool(address(underlying), address(controller.papr()), 3000);
