@@ -50,7 +50,7 @@ contract DeployPaprController is Base {
             collateral
         );
 
-        address admin;
+        address admin = 0x6aFFF2C21676a9790390a0f7518adC59B849B7c7;
 
         controller.transferOwnership(admin);
 
