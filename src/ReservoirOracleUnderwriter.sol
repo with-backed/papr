@@ -59,7 +59,7 @@ contract ReservoirOracleUnderwriter {
 
     /// @notice The max per second price appreciation allowed for any collateral asset
     /// @dev used to guard against oracle attacks
-    uint256 public constant MAX_PER_SECOND_PRICE_GROWTH = 0.5e18 / uint256(1 days);
+    uint256 public constant MAX_PER_SECOND_PRICE_CHANGE = 0.5e18 / uint256(1 days);
 
     /// @notice the signing address the contract expects from the oracle message
     address public immutable oracleSigner;
@@ -84,7 +84,7 @@ contract ReservoirOracleUnderwriter {
     /// @param oracleInfo the message and signature from our oracle signer
     /// @param guard whether to use a guard to constrain price appreciation
     /// @return oraclePrice the price of the asset, expressed in _quoteCurrency units. Price is max allowed price given
-    ///         MAX_PER_SECOND_PRICE_GROWTH if guard = true and oracleInfo price > max
+    ///         MAX_PER_SECOND_PRICE_CHANGE if guard = true and oracleInfo price > max
     function underwritePriceForCollateral(ERC721 asset, PriceKind priceKind, OracleInfo memory oracleInfo, bool guard)
         public
         returns (uint256)
@@ -134,28 +134,45 @@ contract ReservoirOracleUnderwriter {
     }
 
     /// @notice caches and returns the minimum of the passed price and the max price as well as the timestamp
-    /// @dev max price computed by MAX_PER_SECOND_PRICE_GROWTH * time elapsed since the cache was last updated
+    /// @dev max price computed by MAX_PER_SECOND_PRICE_CHANGE * time elapsed since the cache was last updated
     /// @dev time elapsed maxes at 2 days such that price can never grow by more than 100% between two successive
     ///      increase debt events for the same asset
     function _cacheAndReturnPriceOrMaxPrice(ERC721 asset, uint256 price) internal returns (uint256) {
-        CachedPrice memory cached = cachedPriceForAsset[asset];
-        if (cached.price != 0 && cached.price < price) {
-            uint256 timeElapsed = block.timestamp - cached.timestamp;
-            if (timeElapsed > 2 days) {
-                timeElapsed = 2 days;
-            }
-            uint256 max = FixedPointMathLib.mulWadDown(
-                cached.price, (MAX_PER_SECOND_PRICE_GROWTH * timeElapsed) + FixedPointMathLib.WAD
-            );
-            if (price > max) {
-                price = max;
-            }
-        }
+        // CachedPrice memory cached = cachedPriceForAsset[asset];
+        // if (cached.price != 0 && cached.price < price) {
+        //     uint256 timeElapsed = block.timestamp - cached.timestamp;
+        //     if (timeElapsed > 2 days) {
+        //         timeElapsed = 2 days;
+        //     }
+        //     uint256 max = FixedPointMathLib.mulWadDown(
+        //         cached.price, (MAX_PER_SECOND_PRICE_CHANGE * timeElapsed) + FixedPointMathLib.WAD
+        //     );
+        //     if (price > max) {
+        //         price = max;
+        //     }
+        // }
+        price = _priceOrNextAllowedPrice(price, cachedPriceForAsset[asset], true);
 
         // We are OK with not checking for price overflow when casting to uint216
         // as we do not consider values greater than this to be a practical possibility
         cachedPriceForAsset[asset] = CachedPrice({timestamp: uint40(block.timestamp), price: uint216(price)});
 
+        return price;
+    }
+
+    function _priceOrNextAllowedPrice(uint256 price, CachedPrice memory cachedPrice, bool guardUp) internal view returns (uint256) {
+        if (cachedPrice.price != 0 && cachedPrice.price < price) {
+            uint256 timeElapsed = block.timestamp - cachedPrice.timestamp;
+            if (timeElapsed > 2 days) {
+                timeElapsed = 2 days;
+            }
+            uint256 max = FixedPointMathLib.mulWadDown(
+                cachedPrice.price, (MAX_PER_SECOND_PRICE_CHANGE * timeElapsed) + (guardUp ? FixedPointMathLib.WAD : 0)
+            );
+            if (price > max) {
+                price = max;
+            }
+        }
         return price;
     }
 }

@@ -312,6 +312,8 @@ contract PaprController is
         emit EndAuction(id, price);
     }
 
+    mapping(ERC721 => CachedPrice) lastAuctionStartPrice;
+
     /// @inheritdoc IPaprController
     function startLiquidationAuction(
         address account,
@@ -349,6 +351,25 @@ contract PaprController is
 
         delete collateralOwner[collateral.addr][collateral.id];
 
+        // start price is frozen price * auctionStartPriceMultiplier,
+        // converted to papr value at the current contract price
+        uint256 startPrice = (oraclePrice * auctionStartPriceMultiplier) * FixedPointMathLib.WAD / cachedTarget;
+        // CachedPrice memory lastPrice = lastAuctionStartPrice[collateral.addr];
+        // if (lastPrice.price != 0 && lastPrice.price > startPrice) {
+        //     uint256 timeElapsed = block.timestamp - lastPrice.timestamp;
+        //     if (timeElapsed > 2 days) {
+        //         timeElapsed = 2 days;
+        //     }
+        //     uint256 max = FixedPointMathLib.mulWadDown(
+        //             lastPrice.price, MAX_PER_SECOND_PRICE_CHANGE * timeElapsed
+        //         );
+        //     if (max < startPrice) {
+        //         startPrice = max;
+        //     }
+        // }
+        startPrice = _priceOrNextAllowedPrice(startPrice, lastAuctionStartPrice[collateral.addr], false);
+        lastAuctionStartPrice[collateral.addr] = CachedPrice({timestamp: uint40(block.timestamp), price: uint216(startPrice)});
+
         _startAuction(
             auction = Auction({
                 nftOwner: account,
@@ -358,7 +379,7 @@ contract PaprController is
                 secondsInPeriod: _auctionDecayPeriod,
                 // start price is frozen price * _auctionStartPriceMultiplier,
                 // converted to papr value at the current contract price
-                startPrice: (oraclePrice * _auctionStartPriceMultiplier) * FixedPointMathLib.WAD / cachedTarget,
+                startPrice: startPrice,
                 paymentAsset: papr
             })
         );
