@@ -234,11 +234,6 @@ interface IPaprController {
     /// @param locked new value for liquidationsLocked
     function setLiquidationsLocked(bool locked) external;
 
-    // /// @notice sets whether a collateral is allowed to be used to mint debt
-    // /// @dev owner function
-    // /// @param collateralConfigs configuration settings indicating whether a collateral is allowed or not
-    // function setAllowedCollateral(IPaprController.CollateralAllowedConfig[] calldata collateralConfigs) external;
-
     /// @notice returns who owns a collateral token in a vault
     /// @param collateral address of the collateral
     /// @param tokenId tokenId of the collateral
