@@ -26,8 +26,6 @@ contract PaprController is
 {
     using SafeTransferLib for ERC20;
 
-    bool public override liquidationsLocked;
-
     bool internal immutable _token0IsUnderlying;
 
     /// @inheritdoc IPaprController
@@ -320,10 +318,6 @@ contract PaprController is
         IPaprController.Collateral calldata collateral,
         ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
     ) external override returns (INFTEDA.Auction memory auction) {
-        if (liquidationsLocked) {
-            revert LiquidationsLocked();
-        }
-
         uint256 cachedTarget = updateTarget();
 
         IPaprController.VaultInfo storage info = _vaultInfo[account][collateral.addr];
@@ -353,7 +347,7 @@ contract PaprController is
 
         // start price is frozen price * auctionStartPriceMultiplier,
         // converted to papr value at the current contract price
-        uint256 startPrice = (oraclePrice * auctionStartPriceMultiplier) * FixedPointMathLib.WAD / cachedTarget;
+        uint256 startPrice = (oraclePrice * _auctionStartPriceMultiplier) * FixedPointMathLib.WAD / cachedTarget;
         startPrice = _priceOrNextAllowedPrice(startPrice, lastAuctionStartPrice[collateral.addr], false);
         lastAuctionStartPrice[collateral.addr] = CachedPrice({timestamp: uint40(block.timestamp), price: uint216(startPrice)});
 
@@ -395,12 +389,6 @@ contract PaprController is
     function setFundingPeriod(uint256 _fundingPeriod) external override onlyOwner {
         _setFundingPeriod(_fundingPeriod);
         emit UpdateFundingPeriod(_fundingPeriod);
-    }
-
-    /// @inheritdoc IPaprController
-    function setLiquidationsLocked(bool locked) external override onlyOwner {
-        liquidationsLocked = locked;
-        emit UpdateLiquidationsLocked(locked);
     }
 
     function proposeAllowedCollateral(ERC721 asset) external onlyOwner {

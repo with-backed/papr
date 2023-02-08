@@ -79,13 +79,6 @@ contract StartLiquidationAuctionTest is BasePaprControllerTest {
         controller.startLiquidationAuction(borrower, collateral, oracleInfo);
     }
 
-    function testRevertsIfLiquidationsLocked() public {
-        controller.setLiquidationsLocked(true);
-        _makeMaxLoanLiquidatable();
-        vm.expectRevert(IPaprController.LiquidationsLocked.selector);
-        controller.startLiquidationAuction(address(0xded), collateral, oracleInfo);
-    }
-
     function testRevertsIfAuctionOngoing() public {
         _makeMaxLoanLiquidatable();
         controller.startLiquidationAuction(borrower, collateral, oracleInfo);

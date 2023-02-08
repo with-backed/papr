@@ -166,17 +166,4 @@ contract OwnerFunctionsTest is MainnetForking, UniswapForking {
         vm.expectRevert("Ownable: caller is not the owner");
         controller.setFundingPeriod(1);
     }
-
-    function testSetLiquidationsLockedUpdatesLiquidationsLocked() public {
-        vm.expectEmit(false, false, false, true);
-        emit UpdateLiquidationsLocked(true);
-        controller.setLiquidationsLocked(true);
-        assertTrue(controller.liquidationsLocked());
-    }
-
-    function testSetLiquidationsLockedRevertsIfCallerNotOwner() public {
-        vm.startPrank(address(1));
-        vm.expectRevert("Ownable: caller is not the owner");
-        controller.setLiquidationsLocked(false);
-    }
 }
