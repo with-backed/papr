@@ -310,7 +310,7 @@ contract PaprController is
         emit EndAuction(id, price);
     }
 
-    mapping(ERC721 => CachedPrice) lastAuctionStartPrice;
+    mapping(ERC721 => CachedPrice) public lastAuctionStartPrice;
 
     /// @inheritdoc IPaprController
     function startLiquidationAuction(
@@ -348,7 +348,8 @@ contract PaprController is
         // start price is frozen price * auctionStartPriceMultiplier,
         // converted to papr value at the current contract price
         uint256 startPrice = (oraclePrice * _auctionStartPriceMultiplier) * FixedPointMathLib.WAD / cachedTarget;
-        startPrice = _priceOrNextAllowedPrice(startPrice, lastAuctionStartPrice[collateral.addr], false);
+        // we guard auction price decay incase of oracle attack
+        startPrice = _priceOrNextAllowedPrice(startPrice, lastAuctionStartPrice[collateral.addr], 1 days, false);
         lastAuctionStartPrice[collateral.addr] = CachedPrice({timestamp: uint40(block.timestamp), price: uint216(startPrice)});
 
         _startAuction(
@@ -358,8 +359,6 @@ contract PaprController is
                 auctionAssetContract: collateral.addr,
                 perPeriodDecayPercentWad: _perPeriodAuctionDecayWAD,
                 secondsInPeriod: _auctionDecayPeriod,
-                // start price is frozen price * _auctionStartPriceMultiplier,
-                // converted to papr value at the current contract price
                 startPrice: startPrice,
                 paymentAsset: papr
             })
