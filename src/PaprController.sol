@@ -347,10 +347,23 @@ contract PaprController is
 
         // start price is frozen price * auctionStartPriceMultiplier,
         // converted to papr value at the current contract price
-        uint256 startPrice = (oraclePrice * _auctionStartPriceMultiplier) * FixedPointMathLib.WAD / cachedTarget;
+        uint256 price = (oraclePrice * _auctionStartPriceMultiplier) * FixedPointMathLib.WAD / cachedTarget;
         // we guard auction price decay incase of oracle attack
-        startPrice = _priceOrNextAllowedPrice(startPrice, lastAuctionStartPrice[collateral.addr], 1 days, false);
-        lastAuctionStartPrice[collateral.addr] = CachedPrice({timestamp: uint40(block.timestamp), price: uint216(startPrice)});
+        CachedPrice memory cached = lastAuctionStartPrice[collateral.addr];
+        if (cached.price != 0 && cached.price > price) {
+            uint256 timeElapsed = block.timestamp - cached.timestamp;
+            if (timeElapsed > 1 days) {
+                timeElapsed = 1 days;
+            }
+            uint256 min = FixedPointMathLib.mulWadDown(
+                cached.price, MAX_PER_SECOND_PRICE_CHANGE * timeElapsed
+            );
+            if (price < min) {
+                price = min;
+            }
+        }
+
+        lastAuctionStartPrice[collateral.addr] = CachedPrice({timestamp: uint40(block.timestamp), price: uint216(price)});
 
         _startAuction(
             auction = Auction({
@@ -359,7 +372,7 @@ contract PaprController is
                 auctionAssetContract: collateral.addr,
                 perPeriodDecayPercentWad: _perPeriodAuctionDecayWAD,
                 secondsInPeriod: _auctionDecayPeriod,
-                startPrice: startPrice,
+                startPrice: price,
                 paymentAsset: papr
             })
         );
