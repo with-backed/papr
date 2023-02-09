@@ -16,7 +16,6 @@ contract OwnerFunctionsTest is MainnetForking, UniswapForking {
     event AllowCollateral(ERC721 indexed collateral, bool isAllowed);
     event UpdateFundingPeriod(uint256 newPeriod);
     event UpdatePool(address indexed newPool);
-    event UpdateLiquidationsLocked(bool locked);
     event ProposeAllowedCollateral(ERC721 indexed asset);
     event CancelProposedAllowedCollateral(ERC721 indexed asset);
 
@@ -165,18 +164,5 @@ contract OwnerFunctionsTest is MainnetForking, UniswapForking {
         vm.startPrank(address(1));
         vm.expectRevert("Ownable: caller is not the owner");
         controller.setFundingPeriod(1);
-    }
-
-    function testSetLiquidationsLockedUpdatesLiquidationsLocked() public {
-        vm.expectEmit(false, false, false, true);
-        emit UpdateLiquidationsLocked(true);
-        controller.setLiquidationsLocked(true);
-        assertTrue(controller.liquidationsLocked());
-    }
-
-    function testSetLiquidationsLockedRevertsIfCallerNotOwner() public {
-        vm.startPrank(address(1));
-        vm.expectRevert("Ownable: caller is not the owner");
-        controller.setLiquidationsLocked(false);
     }
 }

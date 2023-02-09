@@ -101,10 +101,6 @@ interface IPaprController {
     /// @param newPool address of the new Uniswap V3 pool that was set
     event UpdatePool(address indexed newPool);
 
-    /// @notice emitted when the owner sets whether or not liquidations for the controller are locked
-    /// @param locked whether or not the owner set liquidations to be locked or not
-    event UpdateLiquidationsLocked(bool locked);
-
     /// @param vaultDebt how much debt the vault has
     /// @param maxDebt the max debt the vault is allowed to have
     error ExceedsMaxDebt(uint256 vaultDebt, uint256 maxDebt);
@@ -229,15 +225,14 @@ interface IPaprController {
     /// @param _fundingPeriod new funding period in seconds
     function setFundingPeriod(uint256 _fundingPeriod) external;
 
-    /// @notice sets value of liquidationsLocked
-    /// @dev owner function for use in emergencies
-    /// @param locked new value for liquidationsLocked
-    function setLiquidationsLocked(bool locked) external;
-
     /// @notice returns who owns a collateral token in a vault
     /// @param collateral address of the collateral
     /// @param tokenId tokenId of the collateral
     function collateralOwner(ERC721 collateral, uint256 tokenId) external view returns (address);
+
+    /// @notice returns the last auction timestamp and price for a given asset
+    /// @param asset address of the ERC721 token
+    function lastAuctionStartPrice(ERC721 asset) external view returns (uint40, uint216);
 
     /// @notice returns whether a token address is allowed to serve as collateral for a vault
     /// @param collateral address of the collateral token
@@ -246,11 +241,6 @@ interface IPaprController {
     /// @notice returns the timestamp at which an asset was proposed to be added as allowed collateral
     /// @param asset address of the ERC721 token
     function proposedTimestamp(ERC721 asset) external view returns (uint256);
-
-    /// @notice if liquidations are currently locked, meaning startLiquidationAuciton will revert
-    /// @dev for use in case of emergencies
-    /// @return liquidationsLocked whether liquidations are locked
-    function liquidationsLocked() external view returns (bool);
 
     /// @notice maximum LTV a vault can have, expressed as a decimal scaled by 1e18
     function maxLTV() external view returns (uint256);

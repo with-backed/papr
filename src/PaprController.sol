@@ -26,8 +26,6 @@ contract PaprController is
 {
     using SafeTransferLib for ERC20;
 
-    bool public override liquidationsLocked;
-
     bool internal immutable _token0IsUnderlying;
 
     /// @inheritdoc IPaprController
@@ -48,6 +46,9 @@ contract PaprController is
 
     /// @inheritdoc IPaprController
     mapping(ERC721 => mapping(uint256 => address)) public override collateralOwner;
+
+    /// @inheritdoc IPaprController
+    mapping(ERC721 => CachedPrice) public lastAuctionStartPrice;
 
     /// @inheritdoc IPaprController
     mapping(ERC721 => bool) public override isAllowed;
@@ -318,10 +319,6 @@ contract PaprController is
         IPaprController.Collateral calldata collateral,
         ReservoirOracleUnderwriter.OracleInfo calldata oracleInfo
     ) external override returns (INFTEDA.Auction memory auction) {
-        if (liquidationsLocked) {
-            revert LiquidationsLocked();
-        }
-
         uint256 cachedTarget = updateTarget();
 
         IPaprController.VaultInfo storage info = _vaultInfo[account][collateral.addr];
@@ -349,6 +346,25 @@ contract PaprController is
 
         delete collateralOwner[collateral.addr][collateral.id];
 
+        // start price is frozen price * auctionStartPriceMultiplier,
+        // converted to papr value at the current contract price
+        uint256 price = (oraclePrice * _auctionStartPriceMultiplier) * FixedPointMathLib.WAD / cachedTarget;
+        // we guard auction price decay incase of oracle attack
+        CachedPrice memory cached = lastAuctionStartPrice[collateral.addr];
+        if (cached.price != 0 && cached.price > price) {
+            uint256 timeElapsed = block.timestamp - cached.timestamp;
+            if (timeElapsed > 1 days) {
+                timeElapsed = 1 days;
+            }
+            uint256 min = FixedPointMathLib.mulWadDown(cached.price, FixedPointMathLib.WAD - (MAX_PER_SECOND_PRICE_CHANGE * timeElapsed));
+            if (price < min) {
+                price = min;
+            }
+        }
+
+        lastAuctionStartPrice[collateral.addr] =
+            CachedPrice({timestamp: uint40(block.timestamp), price: uint216(price)});
+
         _startAuction(
             auction = Auction({
                 nftOwner: account,
@@ -356,9 +372,7 @@ contract PaprController is
                 auctionAssetContract: collateral.addr,
                 perPeriodDecayPercentWad: _perPeriodAuctionDecayWAD,
                 secondsInPeriod: _auctionDecayPeriod,
-                // start price is frozen price * _auctionStartPriceMultiplier,
-                // converted to papr value at the current contract price
-                startPrice: (oraclePrice * _auctionStartPriceMultiplier) * FixedPointMathLib.WAD / cachedTarget,
+                startPrice: price,
                 paymentAsset: papr
             })
         );
@@ -387,12 +401,6 @@ contract PaprController is
     function setFundingPeriod(uint256 _fundingPeriod) external override onlyOwner {
         _setFundingPeriod(_fundingPeriod);
         emit UpdateFundingPeriod(_fundingPeriod);
-    }
-
-    /// @inheritdoc IPaprController
-    function setLiquidationsLocked(bool locked) external override onlyOwner {
-        liquidationsLocked = locked;
-        emit UpdateLiquidationsLocked(locked);
     }
 
     function proposeAllowedCollateral(ERC721 asset) external onlyOwner {
