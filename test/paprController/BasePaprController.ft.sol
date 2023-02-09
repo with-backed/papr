@@ -45,8 +45,6 @@ contract BasePaprControllerTest is MainnetForking, UniswapForking, OracleTest {
             "PUNKs Loans",
             "PL",
             0.5e18,
-            2e18,
-            0.8e18,
             underlying,
             oracleAddress,
             collateralArr

@@ -12,8 +12,8 @@ import "./BaseUniswapOracleFundingRateController.t.sol";
 import {UniswapHelpers, IUniswapV3Pool} from "src/libraries/UniswapHelpers.sol";
 
 contract InitableFundingRateController is UniswapOracleFundingRateController {
-    constructor(ERC20 _underlying, ERC20 _papr, uint256 _targetMarkRatioMax, uint256 _targetMarkRatioMin)
-        UniswapOracleFundingRateController(_underlying, _papr, _targetMarkRatioMax, _targetMarkRatioMin)
+    constructor(ERC20 _underlying, ERC20 _papr)
+        UniswapOracleFundingRateController(_underlying, _papr)
     {}
 
     function init(uint256 target, address _pool) external {
@@ -27,14 +27,6 @@ contract InitableFundingRateController is UniswapOracleFundingRateController {
     function lastTwapTick() external view returns (int24) {
         return _lastTwapTick;
     }
-
-    function targetMarkRatioMax() external view returns (uint256) {
-        return _targetMarkRatioMax;
-    }
-
-    function targetMarkRatioMin() external view returns (uint256) {
-        return _targetMarkRatioMin;
-    }
 }
 
 contract InitTest is MainnetForking, UniswapForking {
@@ -42,19 +34,15 @@ contract InitTest is MainnetForking, UniswapForking {
 
     ERC20 underlying = new TestERC20();
     ERC20 papr = new TestERC20Papr();
-    uint256 targetMarkRatioMax = 1.4e18;
-    uint256 targetMarkRatioMin = 0.8e18;
 
     InitableFundingRateController fundingRateController;
 
     function setUp() public {
         fundingRateController =
-            new InitableFundingRateController(underlying, papr, targetMarkRatioMax, targetMarkRatioMin);
+            new InitableFundingRateController(underlying, papr);
     }
 
     function testConstructorSetsValuesCorrectly() public {
-        assertEq(fundingRateController.targetMarkRatioMax(), targetMarkRatioMax);
-        assertEq(fundingRateController.targetMarkRatioMin(), targetMarkRatioMin);
         assertEq(address(fundingRateController.papr()), address(papr));
         assertEq(address(fundingRateController.underlying()), address(underlying));
     }

@@ -71,14 +71,12 @@ contract PaprController is
         string memory name,
         string memory symbol,
         uint256 _maxLTV,
-        uint256 indexMarkRatioMax,
-        uint256 indexMarkRatioMin,
         ERC20 underlying,
         address oracleSigner,
         ERC721[] memory startingCollateral
     )
         NFTEDAStarterIncentive(1e17)
-        UniswapOracleFundingRateController(underlying, new PaprToken(name, symbol), indexMarkRatioMax, indexMarkRatioMin)
+        UniswapOracleFundingRateController(underlying, new PaprToken(name, symbol))
         ReservoirOracleUnderwriter(oracleSigner, address(underlying))
     {
         maxLTV = _maxLTV;

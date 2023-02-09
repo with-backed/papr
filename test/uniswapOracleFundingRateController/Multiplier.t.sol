@@ -14,6 +14,6 @@ contract MultiplierTest is BaseUniswapOracleFundingRateControllerTest {
     function testMultiplierDoesNotGoOverMaxBound() public {
         fundingRateController.setFundingPeriod(5 weeks);
         vm.warp(block.timestamp + 5 weeks);
-        assertEq(fundingRateController.multiplier(0.5e6, 1e6), indexMarkRatioMax - 1);
+        assertEq(fundingRateController.multiplier(0.3e6, 1e6), indexMarkRatioMax - 2);
     }
 }

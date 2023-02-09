@@ -22,21 +22,18 @@ contract UniswapOracleFundingRateController is IUniswapOracleFundingRateControll
     /// @inheritdoc IUniswapOracleFundingRateController
     address public pool;
     /// @dev the max value of target / mark, used as a guard in _multiplier
-    uint256 internal immutable _targetMarkRatioMax;
+    uint256 internal immutable _targetMarkRatioMax = 3e18;
     /// @dev the min value of target / mark, used as a guard in _multiplier
-    uint256 internal immutable _targetMarkRatioMin;
+    uint256 internal immutable _targetMarkRatioMin = 0.5e18;
     // single slot, write together
     uint128 internal _target;
     int56 internal _lastCumulativeTick;
     uint48 internal _lastUpdated;
     int24 internal _lastTwapTick;
 
-    constructor(ERC20 _underlying, ERC20 _papr, uint256 _targetMarkRatioMax_, uint256 _targetMarkRatioMin_) {
+    constructor(ERC20 _underlying, ERC20 _papr) {
         underlying = _underlying;
         papr = _papr;
-
-        _targetMarkRatioMax = _targetMarkRatioMax_;
-        _targetMarkRatioMin = _targetMarkRatioMin_;
 
         _setFundingPeriod(90 days);
     }

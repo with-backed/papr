@@ -17,8 +17,6 @@ contract ProposedTimeAccessibleController is PaprController {
         string memory name,
         string memory symbol,
         uint256 _maxLTV,
-        uint256 indexMarkRatioMax,
-        uint256 indexMarkRatioMin,
         ERC20 underlying,
         address oracleSigner,
         ERC721[] memory startingCollateral
@@ -27,8 +25,6 @@ contract ProposedTimeAccessibleController is PaprController {
             name,
             symbol,
             _maxLTV,
-            indexMarkRatioMax,
-            indexMarkRatioMin,
             underlying,
             oracleSigner,
             startingCollateral
@@ -59,8 +55,6 @@ contract OwnerFunctionsTest is MainnetForking, UniswapForking {
             "PUNKs Loans",
             "PL",
             0.1e18,
-            2e18,
-            0.8e18,
             underlying,
             address(1),
             collateralArr
