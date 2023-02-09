@@ -238,10 +238,6 @@ interface IPaprController {
     /// @param collateral address of the collateral token
     function isAllowed(ERC721 collateral) external view returns (bool);
 
-    /// @notice returns the timestamp at which an asset was proposed to be added as allowed collateral
-    /// @param asset address of the ERC721 token
-    function proposedTimestamp(ERC721 asset) external view returns (uint256);
-
     /// @notice maximum LTV a vault can have, expressed as a decimal scaled by 1e18
     function maxLTV() external view returns (uint256);
 
