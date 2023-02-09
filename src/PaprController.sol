@@ -26,6 +26,7 @@ contract PaprController is
 {
     using SafeTransferLib for ERC20;
 
+    /// @notice boolean indicating whether token0 in pool is the underlying token
     bool internal immutable _token0IsUnderlying;
 
     /// @inheritdoc IPaprController
@@ -34,14 +35,19 @@ contract PaprController is
     /// @inheritdoc IPaprController
     uint256 public immutable override liquidationAuctionMinSpacing = 2 days;
 
+    /// @notice amount the price of an auction decreases by per auctionDecayPeriod, expressed as a decimal scaled by 1e18
     uint256 internal immutable _perPeriodAuctionDecayWAD = 0.7e18;
 
+    /// @notice amount of time that perPeriodAuctionDecayWAD is applied to, expressed in seconds
     uint256 internal immutable _auctionDecayPeriod = 1 days;
 
+    /// @notice the multiplier for the starting price of an auction, applied to the current price of the collateral in papr tokens
     uint256 internal immutable _auctionStartPriceMultiplier = 3;
 
+    /// @notice the minimum time between when proposeAllowedCollateral and acceptProposedCollateral can be called for a certain asset
     uint256 internal immutable _newCollateralProposalPeriod = 5 days;
 
+    /// @notice fee paid by the vault owner when their vault is liquidated if there was excess debt credited to their vault, in bips
     uint256 internal immutable _liquidationPenaltyBips = 1000;
 
     /// @inheritdoc IPaprController

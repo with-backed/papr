@@ -87,7 +87,7 @@ library UniswapHelpers {
     /// @notice returns the current price tick of a UniswapV3 pool
     /// @param pool the address of the pool
     /// @return tick the current price tick of the pool
-    function poolCurrentTick(address pool) internal returns (int24) {
+    function poolCurrentTick(address pool) internal view returns (int24) {
         (, int24 tick,,,,,) = IUniswapV3Pool(pool).slot0();
 
         return tick;
