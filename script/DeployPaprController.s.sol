@@ -41,14 +41,14 @@ contract DeployPaprController is Base {
         // milady
         collateral[9] = ERC721(0x5Af0D9827E0c53E4799BB226655A1de152A425a5);
 
-        controller = new PaprController(
-            "meme",
-            "MEME",
-            5e17,
-            underlying,
-            deployer,
-            collateral
-        );
+        controller = new PaprController({
+            name: "meme",
+            symbol: "MEME",
+            _maxLTV: 0.5e18,
+            underlying: underlying,
+            oracleSigner: 0xAeB1D03929bF87F69888f381e73FBf75753d75AF,
+            startingCollateral: collateral
+        });
 
         address admin = 0x6aFFF2C21676a9790390a0f7518adC59B849B7c7;
 
