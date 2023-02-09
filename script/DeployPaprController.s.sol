@@ -27,8 +27,6 @@ contract DeployPaprController is Base {
             "trash",
             "TRASH",
             5e17,
-            3e18,
-            0.5e18,
             underlying, // swap for phUSDC
             deployer,
             collateral

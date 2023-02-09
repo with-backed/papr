@@ -59,8 +59,8 @@ contract PaprController is
     /// @inheritdoc IPaprController
     mapping(ERC721 => bool) public override isAllowed;
 
-    /// @inheritdoc IPaprController
-    mapping(ERC721 => uint256) public proposedTimestamp;
+    /// @notice returns the timestamp at which an asset was proposed to be added as allowed collateral
+    mapping(ERC721 => uint256) internal _proposedTimestamp;
 
     /// @dev account => asset => vaultInfo
     mapping(address => mapping(ERC721 => IPaprController.VaultInfo)) private _vaultInfo;
@@ -71,14 +71,12 @@ contract PaprController is
         string memory name,
         string memory symbol,
         uint256 _maxLTV,
-        uint256 indexMarkRatioMax,
-        uint256 indexMarkRatioMin,
         ERC20 underlying,
         address oracleSigner,
         ERC721[] memory startingCollateral
     )
         NFTEDAStarterIncentive(1e17)
-        UniswapOracleFundingRateController(underlying, new PaprToken(name, symbol), indexMarkRatioMax, indexMarkRatioMin)
+        UniswapOracleFundingRateController(underlying, new PaprToken(name, symbol))
         ReservoirOracleUnderwriter(oracleSigner, address(underlying))
     {
         maxLTV = _maxLTV;
@@ -362,7 +360,9 @@ contract PaprController is
             if (timeElapsed > 1 days) {
                 timeElapsed = 1 days;
             }
-            uint256 min = FixedPointMathLib.mulWadDown(cached.price, FixedPointMathLib.WAD - (MAX_PER_SECOND_PRICE_CHANGE * timeElapsed));
+            uint256 min = FixedPointMathLib.mulWadDown(
+                cached.price, FixedPointMathLib.WAD - (MAX_PER_SECOND_PRICE_CHANGE * timeElapsed)
+            );
             if (price < min) {
                 price = min;
             }
@@ -385,12 +385,12 @@ contract PaprController is
     }
 
     function acceptProposedCollateral(ERC721 asset) external {
-        uint256 proposedTime = proposedTimestamp[asset];
+        uint256 proposedTime = _proposedTimestamp[asset];
         if (proposedTime == 0) revert AssetNotProposed();
 
         if (proposedTime + _newCollateralProposalPeriod > block.timestamp) revert ProposalPeriodNotComplete();
 
-        delete proposedTimestamp[asset];
+        delete _proposedTimestamp[asset];
 
         _allowCollateral(asset);
     }
@@ -410,13 +410,13 @@ contract PaprController is
     }
 
     function proposeAllowedCollateral(ERC721 asset) external onlyOwner {
-        proposedTimestamp[asset] = block.timestamp;
+        _proposedTimestamp[asset] = block.timestamp;
 
         emit ProposeAllowedCollateral(asset);
     }
 
     function cancelProposedCollateral(ERC721 asset) external onlyOwner {
-        delete proposedTimestamp[asset];
+        delete _proposedTimestamp[asset];
 
         emit CancelProposedAllowedCollateral(asset);
     }

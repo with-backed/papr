@@ -28,11 +28,11 @@ contract BaseUniswapOracleFundingRateControllerTest is Test {
 
     ERC20 underlying = new TestERC20();
     ERC20 papr = new TestERC20Papr();
-    uint256 indexMarkRatioMax = 1.2e18;
-    uint256 indexMarkRatioMin = 0.8e18;
+    uint256 indexMarkRatioMax = 3e18;
+    uint256 indexMarkRatioMin = 0.5e18;
 
     function setUp() public {
-        fundingRateController = new MockFundingRateController(underlying, papr, indexMarkRatioMax, indexMarkRatioMin);
+        fundingRateController = new MockFundingRateController(underlying, papr);
         fundingRateController.init(1e6, 0);
         fundingRateController.setPoolCheat(address(new MinimalObservablePool(underlying, papr)));
         int56[] memory _tickCumulatives = new int56[](1);

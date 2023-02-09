@@ -6,11 +6,35 @@ import {IUniswapV3Pool} from "v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
 import {PaprController} from "../../src/PaprController.sol";
 import {IPaprController} from "../../src/interfaces/IPaprController.sol";
-import {PaprToken} from "../../src/PaprToken.sol";
+import {PaprToken, ERC20} from "../../src/PaprToken.sol";
 import {TestERC721, ERC721} from "../mocks/TestERC721.sol";
 import {TestERC20} from "../mocks/TestERC20.sol";
 import {MainnetForking} from "../base/MainnetForking.sol";
 import {UniswapForking} from "../base/UniswapForking.sol";
+
+contract ProposedTimeAccessibleController is PaprController {
+    constructor(
+        string memory name,
+        string memory symbol,
+        uint256 _maxLTV,
+        ERC20 underlying,
+        address oracleSigner,
+        ERC721[] memory startingCollateral
+    )
+        PaprController(
+            name,
+            symbol,
+            _maxLTV,
+            underlying,
+            oracleSigner,
+            startingCollateral
+        )
+    {}
+
+    function proposedTimestamp(ERC721 asset) public view returns (uint256) {
+        return _proposedTimestamp[asset];
+    }
+}
 
 contract OwnerFunctionsTest is MainnetForking, UniswapForking {
     event AllowCollateral(ERC721 indexed collateral, bool isAllowed);
@@ -21,18 +45,16 @@ contract OwnerFunctionsTest is MainnetForking, UniswapForking {
 
     TestERC721 nft = new TestERC721();
     TestERC20 underlying = new TestERC20();
-    PaprController controller;
+    ProposedTimeAccessibleController controller;
 
     function setUp() public {
         ERC721[] memory collateralArr = new ERC721[](1);
         collateralArr[0] = nft;
 
-        controller = new PaprController(
+        controller = new ProposedTimeAccessibleController(
             "PUNKs Loans",
             "PL",
             0.1e18,
-            2e18,
-            0.8e18,
             underlying,
             address(1),
             collateralArr
