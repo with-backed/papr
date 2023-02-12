@@ -2,7 +2,7 @@ We *very strongly* encourage everyone to read our [whitepaper](https://backed.mi
 
 ## Deployments
 | Name      | Network | Controller | Token |
-| ----------- | ----------- | ----------- |
+| ----------- | ----------- | ----------- | ----------- |
 | paprMEME      | Ethereum       | [0x3b29c19ff2fcEa0Ff98D0ef5B184354D74eA74b0](https://etherscan.io/address/0x3b29c19ff2fcea0ff98d0ef5b184354d74ea74b0)       | [0x320aAAB3038bc08317f5a4be19EA1D9608551d79](https://etherscan.io/address/0x320aAAB3038bc08317f5a4be19EA1D9608551d79)       |
 
 ## Running code 
