@@ -1,5 +1,10 @@
 We *very strongly* encourage everyone to read our [whitepaper](https://backed.mirror.xyz/8SslPvU8of0h-fxoo6AybCpm51f30nd0qxPST8ep08c) to understand more!
 
+## Deployments
+| Name      | Network | Controller | Token |
+| ----------- | ----------- | ----------- | ----------- |
+| paprMEME      | Ethereum       | [0x3b29c19ff2fcEa0Ff98D0ef5B184354D74eA74b0](https://etherscan.io/address/0x3b29c19ff2fcea0ff98d0ef5b184354d74ea74b0)       | [0x320aAAB3038bc08317f5a4be19EA1D9608551d79](https://etherscan.io/address/0x320aAAB3038bc08317f5a4be19EA1D9608551d79)       |
+
 ## Running code 
 `foundryup` + `forge install` + `forge test` will get you up and going. (More info on Foundry [here](https://github.com/foundry-rs/foundry)). Most of the PaprController tests are forking tests: relying on real chain state. To get these working, add an RPC url value (e.g. from Alchemy or Infura) for `MAINNET_RPC_URL` in a `.env` file. 
 
