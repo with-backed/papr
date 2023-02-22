@@ -1,6 +1,6 @@
 ### Lil Pudgys
 - contract: 0x524cab2ec69124574082676e6f654a18df49a048
-- created: 2022-02-09T16:29:34.097Z
+- created: 2021-12-19
 - total supply: 20970
 - on sale: 1238
 #### volume (ETH)
@@ -14,7 +14,7 @@
 
 ### MoonCats
 - contract: 0xc3f733ca98e0dad0386979eb96fb1722a1a05e69
-- created: 2022-02-09T21:17:29.543Z
+- created: 2021-04-22
 - total supply: 19518
 - on sale: 958
 #### volume (ETH)
@@ -28,7 +28,7 @@
 
 ### Wassies by Wassies
 - contract: 0x1d20a51f088492a0f1c57f047a9e30c9ab5c07ea
-- created: 2022-02-09T21:15:44.345Z
+- created: 2021-09-22
 - total supply: 12345
 - on sale: 202
 #### volume (ETH)
@@ -56,7 +56,7 @@
 
 ### Sappy Seals
 - contract: 0x364c828ee171616a39897688a831c2499ad972ec
-- created: 2022-02-09T21:11:07.654Z
+- created: 2021-08-31
 - total supply: 10000
 - on sale: 287
 #### volume (ETH)
@@ -70,7 +70,7 @@
 
 ### Moonbirds
 - contract: 0x23581767a106ae21c074b2276d25e5c3e136a68b
-- created: 2022-04-15T17:36:05.484Z
+- created: 2022-04-15
 - total supply: 10000
 - on sale: 167
 #### volume (ETH)
@@ -84,7 +84,7 @@
 
 ### Chimpers
 - contract: 0x80336ad7a747236ef41f47ed2c7641828a480baa
-- created: 2022-05-19T02:31:50.560Z
+- created: 2022-05-19
 - total supply: 5555
 - on sale: 128
 #### volume (ETH)
@@ -98,7 +98,7 @@
 
 ### Finiliar
 - contract: 0x5a0121a0a21232ec0d024dab9017314509026480
-- created: 2022-02-09T21:32:33.938Z
+- created: 2022-01-06
 - total supply: 10000
 - on sale: 687
 #### volume (ETH)
@@ -112,7 +112,7 @@
 
 ### World of Women
 - contract: 0xe785e82358879f061bc3dcac6f0444462d4b5330
-- created: 2022-02-09T21:15:06.245Z
+- created: 2021-07-27
 - total supply: 10000
 - on sale: 374
 #### volume (ETH)
@@ -126,7 +126,7 @@
 
 ### Art Gobblers
 - contract: 0x60bb1e2aa1c9acafb4d34f71585d7e959f387769
-- created: 2022-10-31T20:20:17.821Z
+- created: 2022-10-31
 - total supply: 2937
 - on sale: 145
 #### volume (ETH)
